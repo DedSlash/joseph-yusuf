@@ -1,0 +1,53 @@
+---
+- name: Rollback to a previous build
+  hosts: all
+  gather_facts: false
+
+  vars_prompt:
+    - name: rollback_build
+      prompt: "Enter the build number to rollback to"
+      private: false
+
+  tasks:
+    - name: Update BUILD_NUMBER in .env
+      ansible.builtin.lineinfile:
+        path: "{{ app_dir }}/.env"
+        regexp: '^BUILD_NUMBER='
+        line: "BUILD_NUMBER={{ rollback_build }}"
+      when: rollback_build is defined
+
+    - name: Pull images for rollback build
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Restart services with rollback build
+      ansible.builtin.command:
+        cmd: docker compose up -d --remove-orphans
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Wait for containers to be healthy after rollback
+      ansible.builtin.shell: |
+        set -e
+        TIMEOUT={{ healthcheck_timeout }}
+        ELAPSED=0
+        while [ $ELAPSED -lt $TIMEOUT ]; do
+          UNHEALTHY=$(docker compose ps --format json 2>/dev/null | grep -c '"unhealthy"\|"starting"' || true)
+          if [ "$UNHEALTHY" = "0" ]; then
+            RUNNING=$(docker compose ps --status running -q | wc -l)
+            if [ "$RUNNING" -ge 10 ]; then
+              echo "All containers healthy after rollback"
+              exit 0
+            fi
+          fi
+          sleep 10
+          ELAPSED=$((ELAPSED + 10))
+        done
+        echo "Healthcheck timeout after rollback"
+        docker compose ps
+        exit 1
+      args:
+        chdir: "{{ app_dir }}"
+      changed_when: false

@@ -1,0 +1,5 @@
+staging_domain: staging.josephyusuf.com
+vps_host: "{{ vault_staging_vps_host }}"
+
+certbot_email: admin@josephyusuf.com
+certbot_staging_flag: "--staging"

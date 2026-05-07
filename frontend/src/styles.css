@@ -1,0 +1,367 @@
+/* ===================================
+   Joseph Yusuf - Global Styles
+   Dark luxury finance theme
+   =================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+/* === Root Variables === */
+:root {
+  --gold: #C9A84C;
+  --gold-light: #DAC372;
+  --gold-dim: rgba(201, 168, 76, 0.15);
+  --night: #0D0B07;
+  --night-mid: #1A1710;
+  --night-soft: #2A2720;
+  --text: #F0E8D0;
+  --text-dim: rgba(240, 232, 208, 0.55);
+  --border-gold: rgba(201, 168, 76, 0.2);
+  --status-abundance: #5cdb6f;
+  --status-lean: #ff6b7a;
+  --status-normal: #5dade2;
+  --status-warning: #f5b041;
+}
+
+/* === Base Reset === */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--night);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Typography === */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  color: var(--text);
+}
+
+a {
+  color: var(--gold);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--gold-light);
+}
+
+/* === Custom Scrollbar === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--night);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 168, 76, 0.35);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 168, 76, 0.2) var(--night);
+}
+
+/* === Status Badge Utilities === */
+.badge-abundance {
+  background: rgba(40, 167, 69, 0.15);
+  color: var(--status-abundance);
+  border: 1px solid rgba(40, 167, 69, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-lean {
+  background: rgba(220, 53, 69, 0.15);
+  color: var(--status-lean);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-normal {
+  background: rgba(52, 152, 219, 0.15);
+  color: var(--status-normal);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-plan-free {
+  background: var(--night-soft);
+  color: var(--text-dim);
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.badge-plan-premium {
+  background: var(--gold-dim);
+  color: var(--gold);
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.badge-plan-premium-plus {
+  background: linear-gradient(135deg, var(--gold-dim), rgba(201, 168, 76, 0.3));
+  color: var(--gold-light);
+  border: 1px solid var(--gold);
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* === PrimeNG Theme Overrides === */
+
+/* Dialog */
+.p-dialog {
+  background: var(--night-mid) !important;
+  border: 1px solid var(--border-gold) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
+}
+
+.p-dialog .p-dialog-header {
+  background: var(--night-mid) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.1) !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+.p-dialog .p-dialog-header .p-dialog-title {
+  color: var(--text) !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+}
+
+.p-dialog .p-dialog-header .p-dialog-header-icon {
+  color: var(--text-dim) !important;
+}
+
+.p-dialog .p-dialog-header .p-dialog-header-icon:hover {
+  background: rgba(201, 168, 76, 0.1) !important;
+}
+
+.p-dialog .p-dialog-content {
+  background: var(--night-mid) !important;
+  color: var(--text) !important;
+  padding: 1.5rem !important;
+}
+
+.p-dialog .p-dialog-footer {
+  background: var(--night-mid) !important;
+  border-top: 1px solid rgba(201, 168, 76, 0.1) !important;
+  padding: 1rem 1.5rem !important;
+}
+
+/* TabView */
+.p-tabview .p-tabview-nav {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.15) !important;
+}
+
+.p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-dim) !important;
+  font-weight: 500 !important;
+  padding: 0.85rem 1.25rem !important;
+  transition: color 0.2s !important;
+}
+
+.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  color: var(--gold) !important;
+  border-bottom: 2px solid var(--gold) !important;
+}
+
+.p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {
+  color: var(--text) !important;
+}
+
+.p-tabview .p-tabview-panels {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Dropdown */
+.p-dropdown {
+  background: var(--night-soft) !important;
+  border: 1px solid rgba(201, 168, 76, 0.15) !important;
+  border-radius: 6px !important;
+  color: var(--text) !important;
+}
+
+.p-dropdown:hover {
+  border-color: rgba(201, 168, 76, 0.3) !important;
+}
+
+.p-dropdown.p-focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.1) !important;
+}
+
+.p-dropdown .p-dropdown-label {
+  color: var(--text) !important;
+}
+
+.p-dropdown-panel {
+  background: var(--night-mid) !important;
+  border: 1px solid var(--border-gold) !important;
+}
+
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item {
+  color: var(--text) !important;
+}
+
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
+  background: rgba(201, 168, 76, 0.08) !important;
+}
+
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+  background: rgba(201, 168, 76, 0.15) !important;
+  color: var(--gold) !important;
+}
+
+/* InputText / InputNumber */
+.p-inputtext {
+  background: var(--night-soft) !important;
+  border: 1px solid rgba(201, 168, 76, 0.15) !important;
+  border-radius: 6px !important;
+  color: var(--text) !important;
+}
+
+.p-inputtext:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.1) !important;
+}
+
+.p-inputnumber .p-inputtext {
+  background: rgba(13, 11, 7, 0.6) !important;
+  border: 1px solid rgba(201, 168, 76, 0.15) !important;
+  border-radius: 6px !important;
+  color: var(--text) !important;
+  padding: 0.6rem 0.85rem !important;
+}
+
+.p-inputnumber .p-inputtext:focus {
+  border-color: var(--gold) !important;
+  box-shadow: none !important;
+}
+
+/* Button */
+.p-button {
+  background: var(--gold) !important;
+  border-color: var(--gold) !important;
+  color: var(--night) !important;
+  font-weight: 600 !important;
+}
+
+.p-button:hover {
+  background: var(--gold-light) !important;
+  border-color: var(--gold-light) !important;
+}
+
+/* Tooltip */
+.p-tooltip .p-tooltip-text {
+  background: var(--night-mid) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-gold) !important;
+  font-size: 0.8rem !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+/* Overlay mask */
+.p-component-overlay {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* === Utility Classes === */
+.text-gold {
+  color: var(--gold);
+}
+
+.text-muted {
+  color: var(--text-dim);
+}
+
+.bg-dark {
+  background: var(--night);
+}
+
+.bg-dark-secondary {
+  background: var(--night-mid);
+}
+
+/* === Selection === */
+::selection {
+  background: rgba(201, 168, 76, 0.3);
+  color: var(--text);
+}
+
+/* === Focus visible for accessibility === */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* === Input global reset === */
+input, select, textarea, button {
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* === select dark styling === */
+select option {
+  background: var(--night-mid);
+  color: var(--text);
+}

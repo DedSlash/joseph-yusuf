@@ -1,0 +1,56 @@
+---
+- name: Install nginx and certbot
+  become: true
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Deploy nginx site configuration
+  become: true
+  ansible.builtin.template:
+    src: joseph-yusuf.conf.j2
+    dest: /etc/nginx/sites-available/joseph-yusuf.conf
+    mode: '0644'
+  notify: reload nginx
+
+- name: Enable site
+  become: true
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/joseph-yusuf.conf
+    dest: /etc/nginx/sites-enabled/joseph-yusuf.conf
+    state: link
+  notify: reload nginx
+
+- name: Remove default site
+  become: true
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Ensure nginx is started
+  become: true
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Obtain SSL certificate with Certbot
+  become: true
+  ansible.builtin.command:
+    cmd: >
+      certbot --nginx -d {{ domain }}
+      --non-interactive --agree-tos
+      --email {{ certbot_email }}
+      {{ certbot_staging_flag }}
+    creates: /etc/letsencrypt/live/{{ domain }}/fullchain.pem
+
+- name: Ensure certbot renewal timer is active
+  become: true
+  ansible.builtin.systemd:
+    name: certbot.timer
+    state: started
+    enabled: true

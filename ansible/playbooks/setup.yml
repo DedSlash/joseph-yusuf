@@ -1,0 +1,13 @@
+---
+- name: Initial VPS setup
+  hosts: all
+  gather_facts: true
+
+  pre_tasks:
+    - name: Wait for connection
+      ansible.builtin.wait_for_connection:
+        timeout: 60
+
+  roles:
+    - role: common
+    - role: nginx

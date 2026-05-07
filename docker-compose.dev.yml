@@ -1,0 +1,29 @@
+services:
+  postgresql:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-joseph}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-joseph_secret}
+      POSTGRES_DB: ${DB_NAME:-joseph_db}
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  kafka:
+    environment:
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  discovery-server:
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms64m -Xmx128m -XX:+UseG1GC
+      - LOGGING_LEVEL_ROOT=DEBUG
+
+  gateway-service:
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms64m -Xmx128m -XX:+UseG1GC
+      - LOGGING_LEVEL_ROOT=DEBUG
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY=DEBUG

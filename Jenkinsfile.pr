@@ -1,0 +1,128 @@
+pipeline {
+    agent any
+
+    environment {
+        SONAR_HOST_URL = credentials('sonar-host-url')
+        SONAR_TOKEN = credentials('sonar-token')
+        GITHUB_TOKEN = credentials('github_token')
+    }
+
+    options {
+        timeout(time: 20, unit: 'MINUTES')
+        disableConcurrentBuilds(abortPrevious: true)
+    }
+
+    stages {
+        stage('Checkout PR') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean compile -B -pl discovery-server,gateway-service,auth-service,income-service,rule-engine-service -am'
+            }
+        }
+
+        stage('Test + Coverage') {
+            parallel {
+                stage('Backend Tests') {
+                    steps {
+                        sh 'mvn test jacoco:report -B -pl auth-service,income-service,rule-engine-service'
+                    }
+                    post {
+                        always {
+                            junit '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+                stage('Frontend Tests') {
+                    steps {
+                        dir('frontend') {
+                            sh 'npm ci'
+                            sh 'npx ng test --code-coverage --watch=false --browsers=ChromeHeadless'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        mvn sonar:sonar -B \
+                            -pl auth-service,income-service,rule-engine-service \
+                            -Dsonar.host.url=${SONAR_HOST_URL} \
+                            -Dsonar.token=${SONAR_TOKEN} \
+                            -Psonar
+                    """
+
+                    dir('frontend') {
+                        sh """
+                            npx sonar-scanner \
+                                -Dsonar.host.url=${SONAR_HOST_URL} \
+                                -Dsonar.token=${SONAR_TOKEN}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                if (env.CHANGE_ID) {
+                    def sonarUrl = "${SONAR_HOST_URL}/dashboard"
+                    def comment = """✅ **Quality Gate PASSED**
+
+| Service | Dashboard |
+|---------|-----------|
+| Auth | [Voir](${sonarUrl}?id=joseph-yusuf-auth-service) |
+| Income | [Voir](${sonarUrl}?id=joseph-yusuf-income-service) |
+| Rule Engine | [Voir](${sonarUrl}?id=joseph-yusuf-rule-engine-service) |
+| Frontend | [Voir](${sonarUrl}?id=joseph-yusuf-frontend) |
+
+Build #${BUILD_NUMBER}"""
+
+                    sh """
+                        curl -s -X POST \
+                            -H "Authorization: token ${GITHUB_TOKEN}" \
+                            -H "Content-Type: application/json" \
+                            -d '{"body": "${comment.replace('\n', '\\n').replace('"', '\\"')}"}' \
+                            "https://api.github.com/repos/\${GIT_URL.replaceAll('.*/([^/]+/[^/]+)\\.git', '\$1')}/issues/${CHANGE_ID}/comments"
+                    """
+                }
+            }
+        }
+        failure {
+            script {
+                if (env.CHANGE_ID) {
+                    def comment = """❌ **Quality Gate FAILED**
+
+Le pipeline a échoué. Vérifiez les rapports SonarQube et les tests.
+
+Build #${BUILD_NUMBER} — [Voir les logs](${BUILD_URL})"""
+
+                    sh """
+                        curl -s -X POST \
+                            -H "Authorization: token ${GITHUB_TOKEN}" \
+                            -H "Content-Type: application/json" \
+                            -d '{"body": "${comment.replace('\n', '\\n').replace('"', '\\"')}"}' \
+                            "https://api.github.com/repos/\${GIT_URL.replaceAll('.*/([^/]+/[^/]+)\\.git', '\$1')}/issues/${CHANGE_ID}/comments"
+                    """
+                }
+            }
+        }
+    }
+}

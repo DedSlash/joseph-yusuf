@@ -1,0 +1,35 @@
+app_name: joseph-yusuf
+app_dir: /opt/joseph-yusuf
+compose_file: docker-compose.prod.yml
+
+deploy_user: deploy
+deploy_group: docker
+
+db_user: joseph
+db_name: joseph_db
+
+registry_url: "{{ vault_registry_url }}"
+registry_user: "{{ vault_registry_user }}"
+registry_pass: "{{ vault_registry_pass }}"
+
+db_password: "{{ vault_db_password }}"
+jwt_secret: "{{ vault_jwt_secret }}"
+
+healthcheck_timeout: 300
+
+services:
+  - postgresql
+  - redis
+  - zookeeper
+  - kafka
+  - discovery-server
+  - gateway-service
+  - auth-service
+  - income-service
+  - rule-engine-service
+  - frontend
+
+ufw_allowed_ports:
+  - "22/tcp"
+  - "80/tcp"
+  - "443/tcp"

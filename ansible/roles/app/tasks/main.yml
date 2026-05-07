@@ -1,0 +1,77 @@
+---
+- name: Create application directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0755'
+
+- name: Copy docker-compose.prod.yml
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../docker-compose.prod.yml"
+    dest: "{{ app_dir }}/docker-compose.yml"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0644'
+
+- name: Create .env file with secrets
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0600'
+
+- name: Login to Docker registry
+  ansible.builtin.command:
+    cmd: docker login {{ registry_url }} -u {{ registry_user }} -p {{ registry_pass }}
+  changed_when: true
+  no_log: true
+
+- name: Pull latest images
+  ansible.builtin.command:
+    cmd: docker compose pull
+    chdir: "{{ app_dir }}"
+  changed_when: true
+
+- name: Start services
+  ansible.builtin.command:
+    cmd: docker compose up -d --remove-orphans
+    chdir: "{{ app_dir }}"
+  changed_when: true
+
+- name: Wait for all containers to be healthy
+  ansible.builtin.shell: |
+    set -e
+    TIMEOUT={{ healthcheck_timeout }}
+    ELAPSED=0
+    while [ $ELAPSED -lt $TIMEOUT ]; do
+      UNHEALTHY=$(docker compose ps --format json 2>/dev/null | grep -c '"unhealthy"\|"starting"' || true)
+      if [ "$UNHEALTHY" = "0" ]; then
+        RUNNING=$(docker compose ps --status running -q | wc -l)
+        if [ "$RUNNING" -ge 10 ]; then
+          echo "All containers healthy"
+          exit 0
+        fi
+      fi
+      sleep 10
+      ELAPSED=$((ELAPSED + 10))
+    done
+    echo "Healthcheck timeout after ${TIMEOUT}s"
+    docker compose ps
+    exit 1
+  args:
+    chdir: "{{ app_dir }}"
+  register: healthcheck_result
+  changed_when: false
+
+- name: Trigger rollback on healthcheck failure
+  ansible.builtin.include_tasks: rollback.yml
+  when: healthcheck_result.rc != 0
+
+- name: Logout from Docker registry
+  ansible.builtin.command:
+    cmd: docker logout {{ registry_url }}
+  changed_when: false
+  ignore_errors: true

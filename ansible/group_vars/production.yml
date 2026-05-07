@@ -1,0 +1,5 @@
+production_domain: app.josephyusuf.com
+vps_host: "{{ vault_production_vps_host }}"
+
+certbot_email: admin@josephyusuf.com
+certbot_staging_flag: ""

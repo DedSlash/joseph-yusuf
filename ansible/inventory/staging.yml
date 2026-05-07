@@ -1,0 +1,10 @@
+all:
+  hosts:
+    joseph-staging:
+      ansible_host: "{{ vps_host }}"
+      ansible_user: deploy
+      ansible_ssh_private_key_file: "{{ lookup('env', 'SSH_KEY_PATH') | default('~/.ssh/id_rsa', true) }}"
+      ansible_python_interpreter: /usr/bin/python3
+  vars:
+    env_name: staging
+    domain: "{{ staging_domain }}"

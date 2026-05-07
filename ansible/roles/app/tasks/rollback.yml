@@ -1,0 +1,70 @@
+---
+- name: Get previous build number from .env.bak
+  ansible.builtin.slurp:
+    src: "{{ app_dir }}/.env.bak"
+  register: prev_env
+  ignore_errors: true
+
+- name: Restore previous .env
+  ansible.builtin.copy:
+    src: "{{ app_dir }}/.env.bak"
+    dest: "{{ app_dir }}/.env"
+    remote_src: true
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    mode: '0600'
+  when: prev_env is succeededTout est en place. Voici le résumé de ce qui a été généré pour le Jalon 5 :                                                 
+                                                                                                                                                                                                
+  Structure livrée                                                                                                                                                                              
+                                                                                                                                                                                                
+  ├── Jenkinsfile                    ← Pipeline CI/CD (5 stages + paramètres)                                                                                                                   
+  ├── Makefile                       ← Commandes make setup/deploy/rollback/logs/status                                                                                                         
+  ├── docker-compose.prod.yml        ← Images taguées, limites RAM, pas de ports publics                                                                                                        
+  ├── .gitignore                     ← Protège .env, vault_pass, secrets.yml                                                                                                                    
+  └── ansible/                                                                                                                                                                                  
+      ├── inventory/staging.yml + production.yml                                                                                                                                                
+      ├── group_vars/all.yml + staging.yml + production.yml                                                                                                                                     
+      ├── vault/secrets.yml + .vault_pass                                                                                                                                                       
+      ├── playbooks/                                                                                                                                                                            
+      │   ├── setup.yml              ← Premier provisionning (common + nginx)                                                                                                                   
+      │   ├── deploy.yml             ← Déploiement (backup .env → app role)                                                                                                                     
+      │   └── rollback.yml           ← Rollback vers BUILD_NUMBER donné                                                                                                                         
+      └── roles/                                                                                                                                                                                
+          ├── common/                ← Docker, UFW (22/80/443), fail2ban, user deploy                                                                                                           
+          ├── nginx/                 ← Reverse proxy + Certbot + /eureka restreint                                                                                                              
+          ├── app/                   ← .env secrets, pull, up, healthcheck 5min, auto-rollback                                                                                                  
+          └── monitoring/            ← Placeholder                                                                                                                                              
+                                                                                                                                                                                                
+  Points clés sécurité                                                                                                                                                                          
+                                                                                                                                                                                                
+  - Ports internes (8081-8083, 8761) bindés sur 127.0.0.1 uniquement                                                                                                                            
+  - User deploy dans le groupe docker — pas de become: yes sur les tâches docker
+  - Secrets dans Ansible Vault + .env (jamais dans le repo)                                                                                                                                     
+  - UFW : seuls 22, 80, 443 sont publics                                                                                                                                                        
+                                                                                                                                                                                                
+  Prochaines étapes pour activer                                                                                                                                                                
+                                                                                                                                                                                                
+  1. Modifier ansible/vault/secrets.yml avec les vraies valeurs puis chiffrer : ansible-vault encrypt ansible/vault/secrets.yml                                                                 
+  2. Mettre le mot de passe vault dans ansible/vault/.vault_pass
+  3. Configurer les credentials Jenkins (registry-url, vps-host, vps-ssh-key…)                                                                                                                  
+  4. make setup ENV=staging pour provisionner le VPS                                                                                                                                            
+  5. Premier deploy : make deploy ENV=staging BUILD=1   
+
+- name: Pull previous images
+  ansible.builtin.command:
+    cmd: docker compose pull
+    chdir: "{{ app_dir }}"
+  changed_when: true
+  when: prev_env is succeeded
+
+- name: Restart with previous version
+  ansible.builtin.command:
+    cmd: docker compose up -d --remove-orphans
+    chdir: "{{ app_dir }}"
+  changed_when: true
+  when: prev_env is succeeded
+
+- name: Fail build after rollback
+  ansible.builtin.fail:
+    msg: "Deployment failed healthcheck. Rolled back to previous version."
+  when: prev_env is succeeded

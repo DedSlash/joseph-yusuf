@@ -1,0 +1,337 @@
+services:
+  # ======================
+  # BASES DE DONNÉES
+  # ======================
+  postgresql:
+    image: postgres:15
+    container_name: joseph_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-joseph}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-joseph_secret}
+      POSTGRES_DB: ${DB_NAME:-joseph_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: joseph_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  # ======================
+  # MESSAGING
+  # ======================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: joseph_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: joseph_kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ======================
+  # MICROSERVICES
+  # ======================
+  discovery-server:
+    build:
+      context: ./discovery-server
+      dockerfile: Dockerfile
+    container_name: joseph_discovery_server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseG1GC
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    container_name: joseph_gateway_service
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseG1GC
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ======================
+  # SERVICES MÉTIER
+  # ======================
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: joseph_auth_service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME:-joseph_db}?currentSchema=joseph_auth
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-joseph}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-joseph_secret}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+
+  income-service:
+    build:
+      context: ./income-service
+      dockerfile: Dockerfile
+    container_name: joseph_income_service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME:-joseph_db}?currentSchema=joseph_income
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-joseph}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-joseph_secret}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+
+  rule-engine-service:
+    build:
+      context: ./rule-engine-service
+      dockerfile: Dockerfile
+    container_name: joseph_rule_engine_service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME:-joseph_db}?currentSchema=joseph_rules
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-joseph}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-joseph_secret}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      income-service:
+        condition: service_healthy
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+
+  # ======================
+  # FRONTEND
+  # ======================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: joseph_frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      gateway-service:
+        condition: service_healthy
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # ======================
+  # SERVICES À ACTIVER PAR JALON
+  # ======================
+
+  # alert-service:
+  #   build:
+  #     context: ./alert-service
+  #     dockerfile: Dockerfile
+  #   container_name: joseph_alert_service
+  #   ports:
+  #     - "8084:8084"
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=docker
+  #   depends_on:
+  #     discovery-server:
+  #       condition: service_healthy
+  #     kafka:
+  #       condition: service_healthy
+  #   networks:
+  #     - joseph-network
+
+  # report-service:
+  #   build:
+  #     context: ./report-service
+  #     dockerfile: Dockerfile
+  #   container_name: joseph_report_service
+  #   ports:
+  #     - "8085:8085"
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=docker
+  #   depends_on:
+  #     discovery-server:
+  #       condition: service_healthy
+  #     postgresql:
+  #       condition: service_healthy
+  #   networks:
+  #     - joseph-network
+
+  # subscription-service:
+  #   build:
+  #     context: ./subscription-service
+  #     dockerfile: Dockerfile
+  #   container_name: joseph_subscription_service
+  #   ports:
+  #     - "8086:8086"
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=docker
+  #   depends_on:
+  #     discovery-server:
+  #       condition: service_healthy
+  #     postgresql:
+  #       condition: service_healthy
+  #   networks:
+  #     - joseph-network
+
+  # ======================
+  # QUALITY / SONARQUBE — LOCAL UNIQUEMENT
+  # Voir docker-compose.sonar.yml pour lancer SonarQube en local
+  # ======================
+
+# ======================
+# VOLUMES
+# ======================
+volumes:
+  postgres_data:
+  redis_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:
+
+# ======================
+# NETWORKS
+# ======================
+networks:
+  joseph-network:
+    driver: bridge

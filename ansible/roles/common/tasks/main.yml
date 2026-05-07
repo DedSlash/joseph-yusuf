@@ -1,0 +1,75 @@
+---
+- name: Update apt cache and upgrade packages
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: safe
+    cache_valid_time: 3600
+
+- name: Install required packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose-plugin
+      - git
+      - curl
+      - ufw
+      - fail2ban
+      - python3-docker
+    state: present
+
+- name: Ensure Docker service is started and enabled
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Create deploy user
+  become: true
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    shell: /bin/bash
+    groups: docker
+    append: true
+    create_home: true
+    password: "!"
+
+- name: Add Jenkins SSH public key for deploy user
+  become: true
+  ansible.posix.authorized_key:
+    user: "{{ deploy_user }}"
+    key: "{{ lookup('file', lookup('env', 'JENKINS_SSH_PUB_KEY') | default('~/.ssh/id_rsa.pub', true)) }}"
+    state: present
+
+- name: Configure UFW defaults
+  become: true
+  community.general.ufw:
+    state: enabled
+    default: deny
+    direction: incoming
+
+- name: Allow UFW ports
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.split('/')[0] }}"
+    proto: "{{ item.split('/')[1] | default('tcp') }}"
+  loop: "{{ ufw_allowed_ports }}"
+
+- name: Configure fail2ban for SSH
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [sshd]
+      enabled = true
+      port = ssh
+      filter = sshd
+      logpath = /var/log/auth.log
+      maxretry = 5
+      bantime = 3600
+      findtime = 600
+    mode: '0644'
+  notify: restart fail2ban

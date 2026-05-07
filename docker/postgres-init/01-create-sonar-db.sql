@@ -1,0 +1,3 @@
+CREATE USER sonar WITH PASSWORD 'sonar_secret';
+CREATE DATABASE sonar_db OWNER sonar;
+GRANT ALL PRIVILEGES ON DATABASE sonar_db TO sonar;

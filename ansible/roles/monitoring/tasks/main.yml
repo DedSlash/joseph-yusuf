@@ -1,0 +1,6 @@
+---
+# Monitoring role - placeholder for future jalon
+# Will include: Prometheus, Grafana, Loki, alerting
+- name: Monitoring placeholder
+  ansible.builtin.debug:
+    msg: "Monitoring role not yet implemented"

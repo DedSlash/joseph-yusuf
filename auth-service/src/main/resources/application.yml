@@ -1,0 +1,68 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/joseph_db?currentSchema=joseph_auth
+    username: joseph
+    password: ${DB_PASSWORD:joseph_secret}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: joseph_auth
+        format_sql: true
+    show-sql: false
+
+  flyway:
+    enabled: true
+    schemas: joseph_auth
+    default-schema: joseph_auth
+
+jwt:
+  secret: ${JWT_SECRET:am9zZXBoeXVzdWYtand0LXNlY3JldC1rZXktMjAyNi1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  datasource:
+    url: jdbc:postgresql://postgresql:5432/joseph_db?currentSchema=joseph_auth
+    username: ${DB_USER:joseph}
+    password: ${DB_PASSWORD:joseph_secret}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+  instance:
+    prefer-ip-address: false
+    hostname: auth-service
