@@ -86,15 +86,7 @@ pipeline {
     }
 
     environment {
-        REGISTRY_URL = credentials('registry-url')
-        REGISTRY_USER = credentials('registry-user')
-        REGISTRY_PASS = credentials('registry-pass')
-        VPS_HOST = credentials('vps-host')
-        VPS_USER = credentials('vps-user')
         VPS_SSH_KEY_ID = 'vps-ssh-key'
-        SONARQUBE_URL = credentials('sonar-host-url')
-        SONARQUBE_TOKEN = credentials('sonar-token')
-
         BACKEND_SERVICES = 'discovery-server,gateway-service,auth-service,income-service,rule-engine-service'
         MAJOR_VERSION = '1'
         MINOR_VERSION = '0'
@@ -225,7 +217,7 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
         }
 
         // --------------------------------------------------------
-        //  2. TESTS + SONARQUBE (feature/* only)
+        //  2. TESTS + SONARQUBE (feature/* and phase/* only)
         // --------------------------------------------------------
         stage('Test & Quality Gate') {
             when {
@@ -253,13 +245,15 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                                 dir(svcName) {
                                     sh "mvn clean test -B"
                                     withSonarQubeEnv('SonarQube') {
-                                        sh """
-                                            mvn verify sonar:sonar \
-                                                -Dsonar.projectKey=joseph-${svcName} \
-                                                -Dsonar.projectName='joseph-${svcName}' \
-                                                -Dsonar.projectVersion=${env.VERSION} \
-                                                -Dsonar.token=${SONARQUBE_TOKEN}
-                                        """
+                                        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                            sh """
+                                                mvn verify sonar:sonar \
+                                                    -Dsonar.projectKey=joseph-${svcName} \
+                                                    -Dsonar.projectName='joseph-${svcName}' \
+                                                    -Dsonar.projectVersion=${env.VERSION} \
+                                                    -Dsonar.token=\${SONAR_TOKEN}
+                                            """
+                                        }
                                     }
                                     timeout(time: 2, unit: 'MINUTES') {
                                         def qg = waitForQualityGate()
@@ -278,13 +272,15 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                         dir('frontend') {
                             sh "npm ci && npx ng test --watch=false --browsers=ChromeHeadless --code-coverage"
                             withSonarQubeEnv('SonarQube') {
-                                sh """
-                                    npx sonar-scanner \
-                                        -Dsonar.projectKey=joseph-frontend \
-                                        -Dsonar.projectName='joseph-frontend' \
-                                        -Dsonar.projectVersion=${env.VERSION} \
-                                        -Dsonar.token=${SONARQUBE_TOKEN}
-                                """
+                                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                    sh """
+                                        npx sonar-scanner \
+                                            -Dsonar.projectKey=joseph-frontend \
+                                            -Dsonar.projectName='joseph-frontend' \
+                                            -Dsonar.projectVersion=${env.VERSION} \
+                                            -Dsonar.token=\${SONAR_TOKEN}
+                                    """
+                                }
                             }
                             timeout(time: 2, unit: 'MINUTES') {
                                 def qgF = waitForQualityGate()
@@ -345,38 +341,41 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                         return
                     }
 
-                    sh "echo ${REGISTRY_PASS} | docker login ${REGISTRY_URL} -u ${REGISTRY_USER} --password-stdin"
+                    withCredentials([
+                        string(credentialsId: 'registry-url', variable: 'REGISTRY_URL'),
+                        string(credentialsId: 'registry-user', variable: 'REGISTRY_USER'),
+                        string(credentialsId: 'registry-pass', variable: 'REGISTRY_PASS')
+                    ]) {
+                        sh "echo \${REGISTRY_PASS} | docker login \${REGISTRY_URL} -u \${REGISTRY_USER} --password-stdin"
 
-                    def servicesToBuild = env.SERVICES_TO_BUILD?.trim()
-                        ? env.SERVICES_TO_BUILD.split(',').toList()
-                        : []
+                        def servicesToBuild = env.SERVICES_TO_BUILD?.trim()
+                            ? env.SERVICES_TO_BUILD.split(',').toList()
+                            : []
 
-                    servicesToBuild.each { svc ->
-                        dir(svc) {
-                            sh """
-                                docker build -t ${REGISTRY_URL}/joseph-${svc}:${BUILD_NUMBER} -t ${REGISTRY_URL}/joseph-${svc}:latest .
-                                docker push ${REGISTRY_URL}/joseph-${svc}:${BUILD_NUMBER}
-                                docker push ${REGISTRY_URL}/joseph-${svc}:latest
-                            """
+                        servicesToBuild.each { svc ->
+                            dir(svc) {
+                                sh """
+                                    docker build -t \${REGISTRY_URL}/joseph-${svc}:${BUILD_NUMBER} -t \${REGISTRY_URL}/joseph-${svc}:latest .
+                                    docker push \${REGISTRY_URL}/joseph-${svc}:${BUILD_NUMBER}
+                                    docker push \${REGISTRY_URL}/joseph-${svc}:latest
+                                """
+                            }
+                            deployedServices.add("joseph-${svc}:${BUILD_NUMBER}")
                         }
-                        deployedServices.add("joseph-${svc}:${BUILD_NUMBER}")
-                    }
 
-                    if (env.FRONTEND_TO_BUILD == 'true') {
-                        dir('frontend') {
-                            sh """
-                                docker build -t ${REGISTRY_URL}/joseph-frontend:${BUILD_NUMBER} -t ${REGISTRY_URL}/joseph-frontend:latest .
-                                docker push ${REGISTRY_URL}/joseph-frontend:${BUILD_NUMBER}
-                                docker push ${REGISTRY_URL}/joseph-frontend:latest
-                            """
+                        if (env.FRONTEND_TO_BUILD == 'true') {
+                            dir('frontend') {
+                                sh """
+                                    docker build -t \${REGISTRY_URL}/joseph-frontend:${BUILD_NUMBER} -t \${REGISTRY_URL}/joseph-frontend:latest .
+                                    docker push \${REGISTRY_URL}/joseph-frontend:${BUILD_NUMBER}
+                                    docker push \${REGISTRY_URL}/joseph-frontend:latest
+                                """
+                            }
+                            deployedServices.add("joseph-frontend:${BUILD_NUMBER}")
                         }
-                        deployedServices.add("joseph-frontend:${BUILD_NUMBER}")
+
+                        sh "docker logout \${REGISTRY_URL} || true"
                     }
-                }
-            }
-            post {
-                always {
-                    sh "docker logout ${REGISTRY_URL} || true"
                 }
             }
         }
@@ -398,15 +397,17 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                         return
                     }
 
-                    sshagent(credentials: [env.VPS_SSH_KEY_ID]) {
-                        sh """
-                            cd ansible && ansible-playbook playbooks/deploy.yml \
-                                -e build_number=${BUILD_NUMBER} \
-                                -e registry_url=${REGISTRY_URL} \
-                                -e services_to_deploy=${env.SERVICES_TO_DEPLOY ?: ''} \
-                                -e deploy_frontend=${env.FRONTEND_TO_DEPLOY} \
-                                --vault-password-file vault/.vault_pass
-                        """
+                    withCredentials([string(credentialsId: 'registry-url', variable: 'REGISTRY_URL')]) {
+                        sshagent(credentials: [env.VPS_SSH_KEY_ID]) {
+                            sh """
+                                cd ansible && ansible-playbook playbooks/deploy.yml \
+                                    -e build_number=${BUILD_NUMBER} \
+                                    -e registry_url=\${REGISTRY_URL} \
+                                    -e services_to_deploy=${env.SERVICES_TO_DEPLOY ?: ''} \
+                                    -e deploy_frontend=${env.FRONTEND_TO_DEPLOY} \
+                                    --vault-password-file vault/.vault_pass
+                            """
+                        }
                     }
                 }
             }
@@ -429,29 +430,31 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                         return
                     }
 
-                    def servicesToCheck = env.SERVICES_TO_DEPLOY?.trim()
-                        ? env.SERVICES_TO_DEPLOY.split(',').toList()
-                        : []
+                    withCredentials([string(credentialsId: 'vps-host', variable: 'VPS_HOST')]) {
+                        def servicesToCheck = env.SERVICES_TO_DEPLOY?.trim()
+                            ? env.SERVICES_TO_DEPLOY.split(',').toList()
+                            : []
 
-                    def portMap = [
-                        'discovery-server'  : 8761,
-                        'gateway-service'   : 8080,
-                        'auth-service'      : 8081,
-                        'income-service'    : 8082,
-                        'rule-engine-service': 8083
-                    ]
+                        def portMap = [
+                            'discovery-server'   : 8761,
+                            'gateway-service'    : 8080,
+                            'auth-service'       : 8081,
+                            'income-service'     : 8082,
+                            'rule-engine-service': 8083
+                        ]
 
-                    servicesToCheck.each { svc ->
-                        def port = portMap[svc]
-                        if (port) {
-                            sh "curl -sf --retry 5 --retry-delay 5 http://${VPS_HOST}:${port}/actuator/health || exit 1"
-                            echo "Health OK — ${svc}"
+                        servicesToCheck.each { svc ->
+                            def port = portMap[svc]
+                            if (port) {
+                                sh "curl -sf --retry 5 --retry-delay 5 http://\${VPS_HOST}:${port}/actuator/health || exit 1"
+                                echo "Health OK — ${svc}"
+                            }
                         }
-                    }
 
-                    if (env.FRONTEND_TO_DEPLOY == 'true') {
-                        sh "curl -sf --retry 5 --retry-delay 5 http://${VPS_HOST}:4200 || exit 1"
-                        echo "Health OK — frontend"
+                        if (env.FRONTEND_TO_DEPLOY == 'true') {
+                            sh "curl -sf --retry 5 --retry-delay 5 http://\${VPS_HOST}:4200 || exit 1"
+                            echo "Health OK — frontend"
+                        }
                     }
                 }
             }
@@ -463,23 +466,27 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
     // ============================================================
     post {
         failure {
-            script {
-                if (env.BRANCH_NAME == 'main') {
-                    rollbackRequired = true
-                    echo "Deployment failed — triggering rollback"
-                    try {
-                        sshagent(credentials: [env.VPS_SSH_KEY_ID]) {
-                            sh """
-                                cd ansible && ansible-playbook playbooks/rollback.yml \
-                                    -e registry_url=${REGISTRY_URL} \
-                                    -e services_to_rollback=${env.SERVICES_TO_DEPLOY ?: ''} \
-                                    -e rollback_frontend=${env.FRONTEND_TO_DEPLOY ?: 'false'} \
-                                    --vault-password-file vault/.vault_pass
-                            """
+            node('master') {
+                script {
+                    if (env.BRANCH_NAME == 'main') {
+                        rollbackRequired = true
+                        echo "Deployment failed — triggering rollback"
+                        try {
+                            withCredentials([string(credentialsId: 'registry-url', variable: 'REGISTRY_URL')]) {
+                                sshagent(credentials: [env.VPS_SSH_KEY_ID]) {
+                                    sh """
+                                        cd ansible && ansible-playbook playbooks/rollback.yml \
+                                            -e registry_url=\${REGISTRY_URL} \
+                                            -e services_to_rollback=${env.SERVICES_TO_DEPLOY ?: ''} \
+                                            -e rollback_frontend=${env.FRONTEND_TO_DEPLOY ?: 'false'} \
+                                            --vault-password-file vault/.vault_pass
+                                    """
+                                }
+                            }
+                            echo "Rollback completed"
+                        } catch (Exception e) {
+                            echo "Rollback failed: ${e.getMessage()}"
                         }
-                        echo "Rollback completed"
-                    } catch (Exception e) {
-                        echo "Rollback failed: ${e.getMessage()}"
                     }
                 }
             }
@@ -488,7 +495,9 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
             echo "Pipeline SUCCESS — v${env.VERSION} on ${env.BRANCH_NAME}"
         }
         always {
-            cleanWs()
+            node('master') {
+                cleanWs()
+            }
         }
     }
 }
