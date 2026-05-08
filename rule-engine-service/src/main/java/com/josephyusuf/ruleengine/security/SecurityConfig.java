@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@SuppressWarnings("java:S4502") // CSRF disabled intentionally - stateless REST API secured with JWT tokens
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
