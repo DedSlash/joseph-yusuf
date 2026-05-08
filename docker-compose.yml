@@ -186,6 +186,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USER:-joseph}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-joseph_secret}
       - JWT_SECRET=${JWT_SECRET}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
     depends_on:
       discovery-server:
@@ -193,6 +194,8 @@ services:
       postgresql:
         condition: service_healthy
       auth-service:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - joseph-network
@@ -218,6 +221,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USER:-joseph}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-joseph_secret}
       - JWT_SECRET=${JWT_SECRET}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
     depends_on:
       discovery-server:
@@ -225,6 +229,8 @@ services:
       postgresql:
         condition: service_healthy
       income-service:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - joseph-network
@@ -263,22 +269,38 @@ services:
   # SERVICES À ACTIVER PAR JALON
   # ======================
 
-  # alert-service:
-  #   build:
-  #     context: ./alert-service
-  #     dockerfile: Dockerfile
-  #   container_name: joseph_alert_service
-  #   ports:
-  #     - "8084:8084"
-  #   environment:
-  #     - SPRING_PROFILES_ACTIVE=docker
-  #   depends_on:
-  #     discovery-server:
-  #       condition: service_healthy
-  #     kafka:
-  #       condition: service_healthy
-  #   networks:
-  #     - joseph-network
+  alert-service:
+    build:
+      context: ./alert-service
+      dockerfile: Dockerfile
+    container_name: joseph_alert_service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME:-joseph_db}?currentSchema=joseph_alerts
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-joseph}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-joseph_secret}
+      - JWT_SECRET=${JWT_SECRET}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
 
   # report-service:
   #   build:

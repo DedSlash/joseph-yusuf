@@ -6,6 +6,7 @@ import com.josephyusuf.income.entity.IncomeSource;
 import com.josephyusuf.income.exception.DuplicateEntryException;
 import com.josephyusuf.income.exception.IncomeSourceNotFoundException;
 import com.josephyusuf.income.exception.UnauthorizedAccessException;
+import com.josephyusuf.income.producer.IncomeEventProducer;
 import com.josephyusuf.income.repository.IncomeEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,8 @@ public class IncomeEntryService {
 
     private final IncomeEntryRepository entryRepository;
     private final IncomeSourceService sourceService;
+    private final MonthSummaryService monthSummaryService;
+    private final IncomeEventProducer eventProducer;
     private final IncomeMapper incomeMapper;
 
     @Transactional
@@ -42,6 +45,10 @@ public class IncomeEntryService {
                 .build();
 
         entry = entryRepository.save(entry);
+
+        MonthSummary summary = monthSummaryService.getSummary(userId, request.getMonth(), request.getYear());
+        eventProducer.publishIncomeClassified(summary);
+
         return incomeMapper.toEntryDto(entry);
     }
 

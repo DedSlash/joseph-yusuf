@@ -1,12 +1,12 @@
 server:
-  port: 8083
+  port: 8084
 
 spring:
   application:
-    name: rule-engine-service
+    name: alert-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/joseph_db?currentSchema=joseph_rules
+    url: jdbc:postgresql://localhost:5432/joseph_db?currentSchema=joseph_alerts
     username: joseph
     password: ${DB_PASSWORD:joseph_secret}
     driver-class-name: org.postgresql.Driver
@@ -16,17 +16,21 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        default_schema: joseph_rules
+        default_schema: joseph_alerts
         format_sql: true
     show-sql: false
 
   flyway:
     enabled: true
-    schemas: joseph_rules
-    default-schema: joseph_rules
+    schemas: joseph_alerts
+    default-schema: joseph_alerts
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: alert-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
     producer:
       acks: all
       retries: 3
@@ -59,7 +63,7 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://postgresql:5432/joseph_db?currentSchema=joseph_rules
+    url: jdbc:postgresql://postgresql:5432/joseph_db?currentSchema=joseph_alerts
     username: ${DB_USER:joseph}
     password: ${DB_PASSWORD:joseph_secret}
 
@@ -72,4 +76,4 @@ eureka:
       defaultZone: http://discovery-server:8761/eureka/
   instance:
     prefer-ip-address: false
-    hostname: rule-engine-service
+    hostname: alert-service

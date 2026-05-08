@@ -5,6 +5,7 @@ import com.josephyusuf.ruleengine.dto.*;
 import com.josephyusuf.ruleengine.entity.RuleType;
 import com.josephyusuf.ruleengine.entity.UserRuleConfig;
 import com.josephyusuf.ruleengine.exception.RuleNotAccessibleException;
+import com.josephyusuf.ruleengine.producer.RuleEventProducer;
 import com.josephyusuf.ruleengine.repository.UserRuleConfigRepository;
 import com.josephyusuf.ruleengine.rule.Rule503020Calculator;
 import com.josephyusuf.ruleengine.rule.Rule702010Calculator;
@@ -37,6 +38,9 @@ class RuleEngineServiceTest {
     @Mock
     private IncomeClient incomeClient;
 
+    @Mock
+    private RuleEventProducer ruleEventProducer;
+
     private RuleEngineService ruleEngineService;
 
     private UUID userId;
@@ -51,7 +55,7 @@ class RuleEngineServiceTest {
                 new RuleJosephCalculator()
         );
 
-        ruleEngineService = new RuleEngineService(calculators, configRepository, incomeClient);
+        ruleEngineService = new RuleEngineService(calculators, configRepository, incomeClient, ruleEventProducer);
 
         userId = UUID.randomUUID();
         defaultConfig = UserRuleConfig.builder()
