@@ -6,6 +6,7 @@ import com.josephyusuf.ruleengine.entity.RuleType;
 import com.josephyusuf.ruleengine.entity.UserRuleConfig;
 import com.josephyusuf.ruleengine.exception.IncomeDataNotFoundException;
 import com.josephyusuf.ruleengine.exception.RuleNotAccessibleException;
+import com.josephyusuf.ruleengine.producer.RuleEventProducer;
 import com.josephyusuf.ruleengine.repository.UserRuleConfigRepository;
 import com.josephyusuf.ruleengine.rule.RuleCalculator;
 import org.springframework.stereotype.Service;
@@ -25,12 +26,15 @@ public class RuleEngineService {
     private final Map<RuleType, RuleCalculator> calculators;
     private final UserRuleConfigRepository configRepository;
     private final IncomeClient incomeClient;
+    private final RuleEventProducer ruleEventProducer;
 
     public RuleEngineService(List<RuleCalculator> calculatorList,
                              UserRuleConfigRepository configRepository,
-                             IncomeClient incomeClient) {
+                             IncomeClient incomeClient,
+                             RuleEventProducer ruleEventProducer) {
         this.configRepository = configRepository;
         this.incomeClient = incomeClient;
+        this.ruleEventProducer = ruleEventProducer;
         this.calculators = calculatorList.stream()
                 .collect(Collectors.toMap(RuleCalculator::getSupportedRule, Function.identity()));
     }
@@ -51,12 +55,15 @@ public class RuleEngineService {
         }
 
         RuleCalculator calculator = calculators.get(request.getRule());
-        return calculator.calculate(
+        AllocationResult result = calculator.calculate(
                 request.getTotalIncome(),
                 monthStatus,
                 config.getJosephAbundanceSavingsPercent(),
                 config.getJosephLeanSavingsPercent()
         );
+
+        ruleEventProducer.publishRuleApplied(userId, result, request.getMonth(), request.getYear());
+        return result;
     }
 
     public AllocationResult calculateCurrent(UUID userId, String plan) {
@@ -81,12 +88,15 @@ public class RuleEngineService {
         }
 
         RuleCalculator calculator = calculators.get(config.getActiveRule());
-        return calculator.calculate(
+        AllocationResult result = calculator.calculate(
                 summary.getTotalIncome(),
                 summary.getStatus(),
                 config.getJosephAbundanceSavingsPercent(),
                 config.getJosephLeanSavingsPercent()
         );
+
+        ruleEventProducer.publishRuleApplied(userId, result, month, year);
+        return result;
     }
 
     public UserRuleConfigDto getConfig(UUID userId) {

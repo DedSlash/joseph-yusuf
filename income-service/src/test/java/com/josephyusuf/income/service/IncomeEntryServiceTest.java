@@ -9,6 +9,7 @@ import com.josephyusuf.income.entity.IncomeSourceType;
 import com.josephyusuf.income.exception.DuplicateEntryException;
 import com.josephyusuf.income.exception.IncomeSourceNotFoundException;
 import com.josephyusuf.income.exception.UnauthorizedAccessException;
+import com.josephyusuf.income.producer.IncomeEventProducer;
 import com.josephyusuf.income.repository.IncomeEntryRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,6 +40,12 @@ class IncomeEntryServiceTest {
 
     @Mock
     private IncomeMapper incomeMapper;
+
+    @Mock
+    private MonthSummaryService monthSummaryService;
+
+    @Mock
+    private IncomeEventProducer eventProducer;
 
     @InjectMocks
     private IncomeEntryService entryService;

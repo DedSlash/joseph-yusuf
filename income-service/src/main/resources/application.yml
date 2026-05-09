@@ -25,6 +25,12 @@ spring:
     schemas: joseph_income
     default-schema: joseph_income
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 3
+
 jwt:
   secret: ${JWT_SECRET:am9zZXBoeXVzdWYtand0LXNlY3JldC1rZXktMjAyNi1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}
 
@@ -56,6 +62,9 @@ spring:
     url: jdbc:postgresql://postgresql:5432/joseph_db?currentSchema=joseph_income
     username: ${DB_USER:joseph}
     password: ${DB_PASSWORD:joseph_secret}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
 
 eureka:
   client:

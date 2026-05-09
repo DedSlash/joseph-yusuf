@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.5</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <groupId>com.josephyusuf</groupId>
@@ -54,6 +54,10 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
@@ -77,6 +81,11 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -166,6 +175,7 @@
                                 <exclude>**/*Application.*</exclude>
                                 <exclude>**/dto/**</exclude>
                                 <exclude>**/entity/**</exclude>
+                                <exclude>**/event/**</exclude>
                                 <exclude>**/exception/**</exclude>
                             </excludes>
                         </configuration>
@@ -185,7 +195,8 @@
                 <sonar.tests>src/test/java</sonar.tests>
                 <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
                 <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-                <sonar.exclusions>**/config/**,**/*Application.java,**/dto/**,**/entity/**,**/exception/**</sonar.exclusions>
+                <sonar.exclusions>
+                    **/config/**,**/*Application.java,**/dto/**,**/entity/**,**/event/**,**/exception/**</sonar.exclusions>
             </properties>
         </profile>
     </profiles>

@@ -4,11 +4,12 @@ import { RouterModule } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { User, Plan } from '../../../shared/models/user.model';
+import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, NotificationBellComponent],
   template: `
     <nav class="navbar" *ngIf="currentUser$ | async as user">
       <div class="navbar-left">
@@ -19,6 +20,7 @@ import { User, Plan } from '../../../shared/models/user.model';
         </div>
       </div>
       <div class="navbar-right">
+        <app-notification-bell></app-notification-bell>
         <span class="plan-badge" [ngClass]="getPlanClass(user.plan)">
           {{ getPlanLabel(user.plan) }}
         </span>
