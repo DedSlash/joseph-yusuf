@@ -40,6 +40,9 @@ class IncomeEntryServiceTest {
     @Mock
     private IncomeMapper incomeMapper;
 
+    @Mock
+    private MonthSummaryService monthSummaryService;
+
     @InjectMocks
     private IncomeEntryService entryService;
 
