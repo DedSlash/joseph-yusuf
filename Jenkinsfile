@@ -93,7 +93,7 @@ pipeline {
     }
 
     options {
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 60, unit: 'MINUTES')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
@@ -255,7 +255,7 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                                             """
                                         }
                                     }
-                                    timeout(time: 2, unit: 'MINUTES') {
+                                    timeout(time: 5, unit: 'MINUTES') {
                                         def qg = waitForQualityGate()
                                         if (qg.status != 'OK') {
                                             error "Quality Gate FAILED for ${svcName}: ${qg.status}"
@@ -282,7 +282,7 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                                     """
                                 }
                             }
-                            timeout(time: 2, unit: 'MINUTES') {
+                            timeout(time: 5, unit: 'MINUTES') {
                                 def qgF = waitForQualityGate()
                                 if (qgF.status != 'OK') {
                                     error "Quality Gate FAILED for frontend: ${qgF.status}"
