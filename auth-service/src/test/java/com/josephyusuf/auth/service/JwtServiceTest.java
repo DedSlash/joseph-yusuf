@@ -1,9 +1,7 @@
 package com.josephyusuf.auth.service;
 
 import com.josephyusuf.auth.entity.Plan;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import com.josephyusuf.auth.entity.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,7 +10,6 @@ import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +40,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("generateAccessToken - creates valid parseable token")
     void generateAccessToken_createsValidToken() {
-        String token = jwtService.generateAccessToken(userId, email, plan);
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
 
         assertThat(token).isNotNull();
         assertThat(token).isNotEmpty();
@@ -53,7 +50,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("extractEmail - returns correct email from token")
     void extractEmail_returnsCorrectEmail() {
-        String token = jwtService.generateAccessToken(userId, email, plan);
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
 
         String extractedEmail = jwtService.extractEmail(token);
 
@@ -63,7 +60,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("extractUserId - returns correct userId from token")
     void extractUserId_returnsCorrectUserId() {
-        String token = jwtService.generateAccessToken(userId, email, plan);
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
 
         String extractedUserId = jwtService.extractUserId(token);
 
@@ -73,7 +70,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("extractPlan - returns correct plan from token")
     void extractPlan_returnsCorrectPlan() {
-        String token = jwtService.generateAccessToken(userId, email, plan);
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
 
         String extractedPlan = jwtService.extractPlan(token);
 
@@ -83,7 +80,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("isTokenValid - returns true for valid token")
     void isTokenValid_returnsTrueForValidToken() {
-        String token = jwtService.generateAccessToken(userId, email, plan);
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
 
         boolean isValid = jwtService.isTokenValid(token);
 
@@ -96,7 +93,7 @@ class JwtServiceTest {
         // Set a negative expiration to generate an already-expired token
         ReflectionTestUtils.setField(jwtService, "accessTokenExpiration", -1000L);
 
-        String token = jwtService.generateAccessToken(userId, email, plan);
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
 
         boolean isValid = jwtService.isTokenValid(token);
 
@@ -106,7 +103,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("isTokenValid - returns false for tampered token")
     void isTokenValid_returnsFalseForTamperedToken() {
-        String token = jwtService.generateAccessToken(userId, email, plan);
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
         String tamperedToken = token + "tampered";
 
         boolean isValid = jwtService.isTokenValid(tamperedToken);
@@ -126,10 +123,21 @@ class JwtServiceTest {
     @DisplayName("generateAccessToken - token contains correct claims for PREMIUM plan")
     void generateAccessToken_correctClaimsForPremiumPlan() {
         Plan premiumPlan = Plan.PREMIUM;
-        String token = jwtService.generateAccessToken(userId, email, premiumPlan);
+        String token = jwtService.generateAccessToken(userId, email, premiumPlan, Role.ADMIN);
 
         assertThat(jwtService.extractPlan(token)).isEqualTo("PREMIUM");
         assertThat(jwtService.extractEmail(token)).isEqualTo(email);
         assertThat(jwtService.extractUserId(token)).isEqualTo(userId.toString());
+        assertThat(jwtService.extractRole(token)).isEqualTo("ADMIN");
+    }
+
+    @Test
+    @DisplayName("extractRole - returns correct role from token")
+    void extractRole_returnsCorrectRole() {
+        String token = jwtService.generateAccessToken(userId, email, plan, Role.USER);
+
+        String extractedRole = jwtService.extractRole(token);
+
+        assertThat(extractedRole).isEqualTo(Role.USER.name());
     }
 }

@@ -38,6 +38,11 @@ public class User {
     @Builder.Default
     private Plan plan = Plan.FREE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private Role role = Role.USER;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean enabled = true;

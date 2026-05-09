@@ -27,6 +27,7 @@
         <module>alert-service</module>
         <module>report-service</module>
         <module>subscription-service</module>
+        <module>admin-service</module>
     </modules>
 
     <properties>

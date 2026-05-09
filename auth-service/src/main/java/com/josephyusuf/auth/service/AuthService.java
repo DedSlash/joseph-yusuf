@@ -3,6 +3,7 @@ package com.josephyusuf.auth.service;
 import com.josephyusuf.auth.dto.*;
 import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.RefreshToken;
+import com.josephyusuf.auth.entity.Role;
 import com.josephyusuf.auth.entity.User;
 import com.josephyusuf.auth.exception.EmailAlreadyExistsException;
 import com.josephyusuf.auth.repository.UserRepository;
@@ -36,12 +37,13 @@ public class AuthService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .plan(Plan.FREE)
+                .role(Role.USER)
                 .enabled(true)
                 .build();
 
         user = userRepository.save(user);
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -64,7 +66,7 @@ public class AuthService {
             throw new BadCredentialsException("Identifiants invalides");
         }
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -78,7 +80,7 @@ public class AuthService {
         RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
         User user = refreshToken.getUser();
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole());
 
         return TokenResponse.builder()
                 .accessToken(accessToken)

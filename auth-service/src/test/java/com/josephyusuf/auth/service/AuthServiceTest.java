@@ -3,6 +3,7 @@ package com.josephyusuf.auth.service;
 import com.josephyusuf.auth.dto.*;
 import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.RefreshToken;
+import com.josephyusuf.auth.entity.Role;
 import com.josephyusuf.auth.entity.User;
 import com.josephyusuf.auth.exception.EmailAlreadyExistsException;
 import com.josephyusuf.auth.repository.UserRepository;
@@ -61,6 +62,7 @@ class AuthServiceTest {
                 .firstName("Joseph")
                 .lastName("Yusuf")
                 .plan(Plan.FREE)
+                .role(Role.USER)
                 .enabled(true)
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
@@ -72,6 +74,7 @@ class AuthServiceTest {
                 .firstName("Joseph")
                 .lastName("Yusuf")
                 .plan(Plan.FREE)
+                .role(Role.USER)
                 .enabled(true)
                 .createdAt(Instant.now())
                 .build();
@@ -96,7 +99,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE)).thenReturn("access-token-value");
+        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER)).thenReturn("access-token-value");
         when(refreshTokenService.createRefreshToken(testUser)).thenReturn(refreshToken);
         when(userMapper.toDto(testUser)).thenReturn(testUserDto);
 
@@ -109,7 +112,7 @@ class AuthServiceTest {
 
         verify(userRepository).existsByEmail("test@example.com");
         verify(userRepository).save(any(User.class));
-        verify(jwtService).generateAccessToken(userId, "test@example.com", Plan.FREE);
+        verify(jwtService).generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER);
         verify(refreshTokenService).createRefreshToken(testUser);
     }
 
@@ -148,7 +151,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE)).thenReturn("access-token-value");
+        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER)).thenReturn("access-token-value");
         when(refreshTokenService.createRefreshToken(testUser)).thenReturn(refreshToken);
         when(userMapper.toDto(testUser)).thenReturn(testUserDto);
 
@@ -222,7 +225,7 @@ class AuthServiceTest {
                 .build();
 
         when(refreshTokenService.verifyRefreshToken("valid-refresh-token")).thenReturn(refreshToken);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE)).thenReturn("new-access-token");
+        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER)).thenReturn("new-access-token");
 
         TokenResponse response = authService.refresh(request);
 
