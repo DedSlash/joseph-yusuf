@@ -41,7 +41,7 @@ pipeline {
                     steps {
                         dir('frontend') {
                             sh 'npm ci'
-                            sh 'npx ng test --code-coverage --watch=false --browsers=ChromeHeadless'
+                            sh 'npx ng test --configuration=ci'
                         }
                     }
                 }
