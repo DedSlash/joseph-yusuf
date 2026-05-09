@@ -87,7 +87,7 @@ pipeline {
 
     environment {
         VPS_SSH_KEY_ID = 'vps-ssh-key'
-        BACKEND_SERVICES = 'discovery-server,gateway-service,auth-service,income-service,rule-engine-service'
+        BACKEND_SERVICES = 'discovery-server,gateway-service,auth-service,income-service,rule-engine-service,alert-service,report-service,subscription-service'
         MAJOR_VERSION = '1'
         MINOR_VERSION = '0'
     }
@@ -468,11 +468,14 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                             : []
 
                         def portMap = [
-                            'discovery-server'   : 8761,
-                            'gateway-service'    : 8080,
-                            'auth-service'       : 8081,
-                            'income-service'     : 8082,
-                            'rule-engine-service': 8083
+                            'discovery-server'    : 8761,
+                            'gateway-service'     : 8080,
+                            'auth-service'        : 8081,
+                            'income-service'      : 8082,
+                            'rule-engine-service' : 8083,
+                            'alert-service'       : 8084,
+                            'report-service'      : 8085,
+                            'subscription-service': 8086
                         ]
 
                         servicesToCheck.each { svc ->
