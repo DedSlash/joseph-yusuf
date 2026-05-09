@@ -2,6 +2,7 @@ package com.josephyusuf.auth.controller;
 
 import com.josephyusuf.auth.dto.*;
 import com.josephyusuf.auth.service.AuthService;
+import com.josephyusuf.auth.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -43,5 +45,17 @@ public class AuthController {
     public ResponseEntity<UserDto> me(Authentication authentication) {
         UUID userId = UUID.fromString((String) authentication.getPrincipal());
         return ResponseEntity.ok(authService.getCurrentUser(userId));
+    }
+
+    @PostMapping("/password/forgot")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestReset(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request);
+        return ResponseEntity.ok().build();
     }
 }
