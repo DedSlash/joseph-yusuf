@@ -93,7 +93,7 @@ pipeline {
     }
 
     options {
-        timeout(time: 60, unit: 'MINUTES')
+        timeout(time: 90, unit: 'MINUTES')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
@@ -237,40 +237,68 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                         ? env.SERVICES_TO_BUILD.split(',').toList()
                         : []
 
+                    // ═════════════════════════════════════════════════════════
+                    //  PHASE 1 — Tests unitaires backend (parallèle, sans Sonar)
+                    //  Rapide, ne sollicite pas SonarQube.
+                    // ═════════════════════════════════════════════════════════
                     if (servicesToTest) {
-                        def backendTests = [:]
+                        echo "═══ PHASE 1 — Unit tests backend (parallel) ═══"
+                        def unitTests = [:]
                         servicesToTest.each { svc ->
                             def svcName = svc
-                            backendTests["Test ${svcName}"] = {
+                            unitTests["Test ${svcName}"] = {
                                 dir(svcName) {
                                     sh "mvn clean test -B"
-                                    withSonarQubeEnv('SonarQube') {
-                                        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                            sh """
-                                                mvn verify sonar:sonar \
-                                                    -Dsonar.projectKey=joseph-${svcName} \
-                                                    -Dsonar.projectName='joseph-${svcName}' \
-                                                    -Dsonar.projectVersion=${env.VERSION} \
-                                                    -Dsonar.token=\${SONAR_TOKEN}
-                                            """
-                                        }
-                                    }
-                                    timeout(time: 5, unit: 'MINUTES') {
-                                        def qg = waitForQualityGate()
-                                        if (qg.status != 'OK') {
-                                            error "Quality Gate FAILED for ${svcName}: ${qg.status}"
-                                        }
-                                        echo "Quality Gate OK — ${svcName}"
-                                    }
                                 }
                             }
                         }
-                        parallel backendTests
+                        parallel unitTests
                     }
 
+                    // ═════════════════════════════════════════════════════════
+                    //  PHASE 2 — Analyses SonarQube backend (séquentielles)
+                    //  Un service à la fois pour ne pas saturer SonarQube.
+                    //  Tests déjà passés en Phase 1, donc -DskipTests ici.
+                    //  Sleep 10s avant waitForQualityGate pour laisser le
+                    //  Compute Engine enregistrer le rapport.
+                    // ═════════════════════════════════════════════════════════
+                    if (servicesToTest) {
+                        echo "═══ PHASE 2 — SonarQube analyses (sequential) ═══"
+                        servicesToTest.each { svc ->
+                            def svcName = svc
+                            echo "── Sonar ${svcName} ──"
+                            dir(svcName) {
+                                withSonarQubeEnv('SonarQube') {
+                                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                        sh """
+                                            mvn verify sonar:sonar -DskipTests -B \
+                                                -Dsonar.projectKey=joseph-${svcName} \
+                                                -Dsonar.projectName='joseph-${svcName}' \
+                                                -Dsonar.projectVersion=${env.VERSION} \
+                                                -Dsonar.token=\${SONAR_TOKEN}
+                                        """
+                                    }
+                                }
+                                sleep time: 10, unit: 'SECONDS'
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    def qg = waitForQualityGate()
+                                    if (qg.status != 'OK') {
+                                        error "Quality Gate FAILED for ${svcName}: ${qg.status}"
+                                    }
+                                    echo "Quality Gate OK — ${svcName}"
+                                }
+                            }
+                        }
+                    }
+
+                    // ═════════════════════════════════════════════════════════
+                    //  PHASE 3 — Frontend (après tous les backends)
+                    //  Tests Karma puis sonar-scanner + Quality Gate.
+                    // ═════════════════════════════════════════════════════════
                     if (env.FRONTEND_TO_BUILD == 'true') {
+                        echo "═══ PHASE 3 — Frontend tests + Sonar ═══"
                         dir('frontend') {
-                            sh "npm ci && npx ng test --watch=false --browsers=ChromeHeadless --code-coverage"
+                            sh "npm ci && npx ng test --configuration=ci"
                             withSonarQubeEnv('SonarQube') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                                     sh """
@@ -282,6 +310,7 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                                     """
                                 }
                             }
+                            sleep time: 10, unit: 'SECONDS'
                             timeout(time: 5, unit: 'MINUTES') {
                                 def qgF = waitForQualityGate()
                                 if (qgF.status != 'OK') {
