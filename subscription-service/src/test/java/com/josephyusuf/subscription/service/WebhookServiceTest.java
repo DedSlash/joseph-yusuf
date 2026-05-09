@@ -79,7 +79,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("Signature invalide → PaymentException")
-    void invalidSignature_throws() throws Exception {
+    void invalidSignature_throws() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         webhookMock.when(() -> Webhook.constructEvent(anyString(), anyString(), anyString()))
                 .thenThrow(new SignatureVerificationException("bad sig", "sig"));
@@ -93,7 +93,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("Idempotence : event déjà traité, pas de re-processing")
-    void alreadyProcessed_skip() throws Exception {
+    void alreadyProcessed_skip() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         Event event = mockEvent("payment_intent.succeeded", null);
         webhookMock.when(() -> Webhook.constructEvent(anyString(), anyString(), anyString()))
@@ -108,7 +108,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("payment_intent.succeeded → activateAfterPayment + save processed event")
-    void succeeded_activates() throws Exception {
+    void succeeded_activates() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         PaymentIntent pi = mockPaymentIntent(USER_ID, PlanTier.PREMIUM);
         Event event = mockEvent("payment_intent.succeeded", pi);
@@ -127,7 +127,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("payment_intent.payment_failed → markTransactionFailed avec raison")
-    void failed_marksFailed() throws Exception {
+    void failed_marksFailed() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         PaymentIntent pi = mock(PaymentIntent.class);
         when(pi.getId()).thenReturn(PI_ID);
@@ -147,7 +147,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("charge.refunded → markTransactionRefunded")
-    void refunded_marksRefunded() throws Exception {
+    void refunded_marksRefunded() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         Charge charge = mock(Charge.class);
         when(charge.getPaymentIntent()).thenReturn(PI_ID);
@@ -163,7 +163,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("Event non géré : pas d'action mais marqué comme traité")
-    void unknownEvent_recorded() throws Exception {
+    void unknownEvent_recorded() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         Event event = mockEvent("customer.created", null);
         webhookMock.when(() -> Webhook.constructEvent(anyString(), anyString(), anyString()))
@@ -178,7 +178,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("Metadata Stripe invalides → activate non appelé")
-    void succeeded_invalidMetadata_skips() throws Exception {
+    void succeeded_invalidMetadata_skips() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         PaymentIntent pi = mock(PaymentIntent.class);
         when(pi.getId()).thenReturn(PI_ID);
