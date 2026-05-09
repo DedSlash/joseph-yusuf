@@ -46,6 +46,10 @@ class PasswordResetServiceTest {
         return User.builder().id(USER_ID).email(EMAIL).password("oldHash").build();
     }
 
+    private ResetPasswordRequest resetReq(String token) {
+        return ResetPasswordRequest.builder().token(token).newPassword("newPassword123").build();
+    }
+
     @Nested
     @DisplayName("requestReset")
     class RequestResetTests {
@@ -110,9 +114,9 @@ class PasswordResetServiceTest {
                     .expiresAt(Instant.now().plus(10, ChronoUnit.MINUTES))
                     .used(true).build();
             when(tokenRepository.findByToken(TOKEN_UUID)).thenReturn(Optional.of(token));
+            ResetPasswordRequest request = resetReq(TOKEN_UUID.toString());
 
-            assertThatThrownBy(() -> service.resetPassword(ResetPasswordRequest.builder()
-                    .token(TOKEN_UUID.toString()).newPassword("newPassword123").build()))
+            assertThatThrownBy(() -> service.resetPassword(request))
                     .isInstanceOf(InvalidResetTokenException.class)
                     .hasMessageContaining("utilis");
 
@@ -127,9 +131,9 @@ class PasswordResetServiceTest {
                     .expiresAt(Instant.now().minus(1, ChronoUnit.MINUTES))
                     .used(false).build();
             when(tokenRepository.findByToken(TOKEN_UUID)).thenReturn(Optional.of(token));
+            ResetPasswordRequest request = resetReq(TOKEN_UUID.toString());
 
-            assertThatThrownBy(() -> service.resetPassword(ResetPasswordRequest.builder()
-                    .token(TOKEN_UUID.toString()).newPassword("newPassword123").build()))
+            assertThatThrownBy(() -> service.resetPassword(request))
                     .isInstanceOf(InvalidResetTokenException.class)
                     .hasMessageContaining("expir");
         }
@@ -138,9 +142,9 @@ class PasswordResetServiceTest {
         @DisplayName("Token introuvable : InvalidResetTokenException")
         void unknownToken_throws() {
             when(tokenRepository.findByToken(TOKEN_UUID)).thenReturn(Optional.empty());
+            ResetPasswordRequest request = resetReq(TOKEN_UUID.toString());
 
-            assertThatThrownBy(() -> service.resetPassword(ResetPasswordRequest.builder()
-                    .token(TOKEN_UUID.toString()).newPassword("newPassword123").build()))
+            assertThatThrownBy(() -> service.resetPassword(request))
                     .isInstanceOf(InvalidResetTokenException.class)
                     .hasMessageContaining("invalide");
         }
@@ -148,8 +152,9 @@ class PasswordResetServiceTest {
         @Test
         @DisplayName("Token au format invalide : InvalidResetTokenException")
         void malformedToken_throws() {
-            assertThatThrownBy(() -> service.resetPassword(ResetPasswordRequest.builder()
-                    .token("not-a-uuid").newPassword("newPassword123").build()))
+            ResetPasswordRequest request = resetReq("not-a-uuid");
+
+            assertThatThrownBy(() -> service.resetPassword(request))
                     .isInstanceOf(InvalidResetTokenException.class)
                     .hasMessageContaining("Format");
         }
@@ -163,9 +168,9 @@ class PasswordResetServiceTest {
                     .used(false).build();
             when(tokenRepository.findByToken(TOKEN_UUID)).thenReturn(Optional.of(token));
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+            ResetPasswordRequest request = resetReq(TOKEN_UUID.toString());
 
-            assertThatThrownBy(() -> service.resetPassword(ResetPasswordRequest.builder()
-                    .token(TOKEN_UUID.toString()).newPassword("newPassword123").build()))
+            assertThatThrownBy(() -> service.resetPassword(request))
                     .isInstanceOf(InvalidResetTokenException.class);
         }
     }

@@ -14,10 +14,10 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.from:no-reply@josephyusuf.com}")
+    @Value("${spring.mail.from}")
     private String from;
 
-    @Value("${app.reset-url:http://localhost:4200/reset-password}")
+    @Value("${app.reset-url}")
     private String resetUrl;
 
     public void sendPasswordResetEmail(String to, String token) {
