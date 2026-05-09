@@ -39,6 +39,11 @@ def detectFrontendChanged(List<String> changedFiles) {
     return changedFiles.any { it.startsWith("frontend/") }
 }
 
+def detectAdminFrontendChanged(List<String> changedFiles) {
+    if (!changedFiles) return false
+    return changedFiles.any { it.startsWith("admin-frontend/") }
+}
+
 // ============================================================
 //  UTILITAIRE : Sauvegarder / Restaurer l'état du pipeline
 // ============================================================
@@ -48,6 +53,8 @@ def saveState() {
 FRONTEND_TO_DEPLOY=${env.FRONTEND_TO_DEPLOY ?: 'false'}
 SERVICES_TO_BUILD=${env.SERVICES_TO_BUILD ?: ''}
 FRONTEND_TO_BUILD=${env.FRONTEND_TO_BUILD ?: 'false'}
+ADMIN_FRONTEND_TO_BUILD=${env.ADMIN_FRONTEND_TO_BUILD ?: 'false'}
+ADMIN_FRONTEND_TO_DEPLOY=${env.ADMIN_FRONTEND_TO_DEPLOY ?: 'false'}
 SKIP_ALL=${env.SKIP_ALL ?: 'false'}
 VERSION=${env.VERSION ?: ''}
 GIT_COMMIT_SHORT=${env.GIT_COMMIT_SHORT ?: ''}"""
@@ -56,20 +63,24 @@ GIT_COMMIT_SHORT=${env.GIT_COMMIT_SHORT ?: ''}"""
 def restoreState() {
     unstash 'pipeline-state'
     def props = readProperties file: 'pipeline-state.properties'
-    env.SERVICES_TO_DEPLOY = props.SERVICES_TO_DEPLOY ?: ''
-    env.FRONTEND_TO_DEPLOY = props.FRONTEND_TO_DEPLOY ?: 'false'
-    env.SERVICES_TO_BUILD  = props.SERVICES_TO_BUILD  ?: ''
-    env.FRONTEND_TO_BUILD  = props.FRONTEND_TO_BUILD  ?: 'false'
-    env.SKIP_ALL           = props.SKIP_ALL           ?: 'false'
-    env.VERSION            = props.VERSION            ?: ''
-    env.GIT_COMMIT_SHORT   = props.GIT_COMMIT_SHORT   ?: ''
+    env.SERVICES_TO_DEPLOY        = props.SERVICES_TO_DEPLOY        ?: ''
+    env.FRONTEND_TO_DEPLOY        = props.FRONTEND_TO_DEPLOY        ?: 'false'
+    env.SERVICES_TO_BUILD         = props.SERVICES_TO_BUILD         ?: ''
+    env.FRONTEND_TO_BUILD         = props.FRONTEND_TO_BUILD         ?: 'false'
+    env.ADMIN_FRONTEND_TO_BUILD   = props.ADMIN_FRONTEND_TO_BUILD   ?: 'false'
+    env.ADMIN_FRONTEND_TO_DEPLOY  = props.ADMIN_FRONTEND_TO_DEPLOY  ?: 'false'
+    env.SKIP_ALL                  = props.SKIP_ALL                  ?: 'false'
+    env.VERSION                   = props.VERSION                   ?: ''
+    env.GIT_COMMIT_SHORT          = props.GIT_COMMIT_SHORT          ?: ''
     echo """State restored:
-   VERSION            = ${env.VERSION}
-   SKIP_ALL           = ${env.SKIP_ALL}
-   SERVICES_TO_BUILD  = ${env.SERVICES_TO_BUILD  ?: '(none)'}
-   SERVICES_TO_DEPLOY = ${env.SERVICES_TO_DEPLOY ?: '(none)'}
-   FRONTEND_TO_BUILD  = ${env.FRONTEND_TO_BUILD}
-   FRONTEND_TO_DEPLOY = ${env.FRONTEND_TO_DEPLOY}"""
+   VERSION                  = ${env.VERSION}
+   SKIP_ALL                 = ${env.SKIP_ALL}
+   SERVICES_TO_BUILD        = ${env.SERVICES_TO_BUILD  ?: '(none)'}
+   SERVICES_TO_DEPLOY       = ${env.SERVICES_TO_DEPLOY ?: '(none)'}
+   FRONTEND_TO_BUILD        = ${env.FRONTEND_TO_BUILD}
+   FRONTEND_TO_DEPLOY       = ${env.FRONTEND_TO_DEPLOY}
+   ADMIN_FRONTEND_TO_BUILD  = ${env.ADMIN_FRONTEND_TO_BUILD}
+   ADMIN_FRONTEND_TO_DEPLOY = ${env.ADMIN_FRONTEND_TO_DEPLOY}"""
 }
 
 // ============================================================
@@ -87,7 +98,7 @@ pipeline {
 
     environment {
         VPS_SSH_KEY_ID = 'vps-ssh-key'
-        BACKEND_SERVICES = 'discovery-server,gateway-service,auth-service,income-service,rule-engine-service,alert-service,report-service,subscription-service'
+        BACKEND_SERVICES = 'discovery-server,gateway-service,auth-service,income-service,rule-engine-service,alert-service,report-service,subscription-service,admin-service'
         MAJOR_VERSION = '1'
         MINOR_VERSION = '0'
     }
@@ -131,9 +142,10 @@ pipeline {
                         newVersion = "${env.MAJOR_VERSION}.${env.MINOR_VERSION}.${env.BUILD_NUMBER}-dev-${gitCommit}"
                     }
 
-                    def changedFiles    = getChangedFiles(lastTag ?: '')
-                    def changedServices = detectChangedServices(allServices, changedFiles)
-                    def frontendChanged = detectFrontendChanged(changedFiles)
+                    def changedFiles         = getChangedFiles(lastTag ?: '')
+                    def changedServices      = detectChangedServices(allServices, changedFiles)
+                    def frontendChanged      = detectFrontendChanged(changedFiles)
+                    def adminFrontendChanged = detectAdminFrontendChanged(changedFiles)
 
                     if (changedFiles) {
                         echo "Changed files since ${lastTag ?: 'beginning'} (${changedFiles.size()}):"
@@ -141,23 +153,28 @@ pipeline {
                     } else {
                         echo "No diff detected"
                     }
-                    echo "Changed services: ${changedServices ?: '(none)'}"
-                    echo "Frontend changed: ${frontendChanged}"
+                    echo "Changed services       : ${changedServices ?: '(none)'}"
+                    echo "Frontend changed       : ${frontendChanged}"
+                    echo "Admin frontend changed : ${adminFrontendChanged}"
 
                     // ── 3 MODES ──────────────────────────────────────────
 
-                    def svcsToBuild    = []
-                    def svcsToDeploy   = []
-                    def buildFrontend  = false
-                    def deployFrontend = false
+                    def svcsToBuild         = []
+                    def svcsToDeploy        = []
+                    def buildFrontend       = false
+                    def deployFrontend      = false
+                    def buildAdminFrontend  = false
+                    def deployAdminFrontend = false
 
                     if (params.FORCE_BUILD) {
                         echo "MODE: FORCE_BUILD — rebuild all"
-                        svcsToBuild    = allServices.toList()
-                        svcsToDeploy   = allServices.toList()
-                        buildFrontend  = true
-                        deployFrontend = true
-                        env.VERSION    = newVersion
+                        svcsToBuild         = allServices.toList()
+                        svcsToDeploy        = allServices.toList()
+                        buildFrontend       = true
+                        deployFrontend      = true
+                        buildAdminFrontend  = true
+                        deployAdminFrontend = true
+                        env.VERSION         = newVersion
                     } else if (params.FORCE_DEPLOY) {
                         echo "MODE: FORCE_DEPLOY — rebuild changed + deploy all"
                         changedServices.each { svc ->
@@ -169,45 +186,55 @@ pipeline {
                                 svcsToDeploy << svc
                             }
                         }
-                        buildFrontend  = frontendChanged
-                        deployFrontend = true
-                        env.VERSION    = newVersion
+                        buildFrontend       = frontendChanged
+                        deployFrontend      = true
+                        buildAdminFrontend  = adminFrontendChanged
+                        deployAdminFrontend = true
+                        env.VERSION         = newVersion
                     } else {
                         echo "MODE: NORMAL — delta only"
-                        if (!changedServices && !frontendChanged) {
+                        if (!changedServices && !frontendChanged && !adminFrontendChanged) {
                             echo "No changes detected — skipping pipeline"
-                            env.SKIP_ALL           = 'true'
-                            env.VERSION            = newVersion
-                            env.SERVICES_TO_BUILD  = ''
-                            env.SERVICES_TO_DEPLOY = ''
-                            env.FRONTEND_TO_BUILD  = 'false'
-                            env.FRONTEND_TO_DEPLOY = 'false'
+                            env.SKIP_ALL                 = 'true'
+                            env.VERSION                  = newVersion
+                            env.SERVICES_TO_BUILD        = ''
+                            env.SERVICES_TO_DEPLOY       = ''
+                            env.FRONTEND_TO_BUILD        = 'false'
+                            env.FRONTEND_TO_DEPLOY       = 'false'
+                            env.ADMIN_FRONTEND_TO_BUILD  = 'false'
+                            env.ADMIN_FRONTEND_TO_DEPLOY = 'false'
                             saveState()
                             stash name: 'pipeline-state', includes: 'pipeline-state.properties'
                             return
                         }
-                        svcsToBuild    = changedServices.toList()
-                        svcsToDeploy   = changedServices.toList()
-                        buildFrontend  = frontendChanged
-                        deployFrontend = frontendChanged
-                        env.VERSION    = newVersion
+                        svcsToBuild         = changedServices.toList()
+                        svcsToDeploy        = changedServices.toList()
+                        buildFrontend       = frontendChanged
+                        deployFrontend      = frontendChanged
+                        buildAdminFrontend  = adminFrontendChanged
+                        deployAdminFrontend = adminFrontendChanged
+                        env.VERSION         = newVersion
                     }
 
-                    env.SERVICES_TO_BUILD  = svcsToBuild.join(',')
-                    env.SERVICES_TO_DEPLOY = svcsToDeploy.join(',')
-                    env.FRONTEND_TO_BUILD  = buildFrontend  ? 'true' : 'false'
-                    env.FRONTEND_TO_DEPLOY = deployFrontend ? 'true' : 'false'
+                    env.SERVICES_TO_BUILD        = svcsToBuild.join(',')
+                    env.SERVICES_TO_DEPLOY       = svcsToDeploy.join(',')
+                    env.FRONTEND_TO_BUILD        = buildFrontend        ? 'true' : 'false'
+                    env.FRONTEND_TO_DEPLOY       = deployFrontend       ? 'true' : 'false'
+                    env.ADMIN_FRONTEND_TO_BUILD  = buildAdminFrontend   ? 'true' : 'false'
+                    env.ADMIN_FRONTEND_TO_DEPLOY = deployAdminFrontend  ? 'true' : 'false'
 
                     echo """
 === SUMMARY ===
-Version          : ${env.VERSION}
-Commit           : ${gitCommit}
-Branch           : ${env.BRANCH_NAME}
-Mode             : ${params.FORCE_BUILD ? 'FORCE_BUILD' : params.FORCE_DEPLOY ? 'FORCE_DEPLOY' : 'NORMAL'}
-Services to build: ${env.SERVICES_TO_BUILD ?: '(none)'}
-Services to deploy: ${env.SERVICES_TO_DEPLOY ?: '(none)'}
-Frontend build   : ${env.FRONTEND_TO_BUILD}
-Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
+Version              : ${env.VERSION}
+Commit               : ${gitCommit}
+Branch               : ${env.BRANCH_NAME}
+Mode                 : ${params.FORCE_BUILD ? 'FORCE_BUILD' : params.FORCE_DEPLOY ? 'FORCE_DEPLOY' : 'NORMAL'}
+Services to build    : ${env.SERVICES_TO_BUILD ?: '(none)'}
+Services to deploy   : ${env.SERVICES_TO_DEPLOY ?: '(none)'}
+Frontend build       : ${env.FRONTEND_TO_BUILD}
+Frontend deploy      : ${env.FRONTEND_TO_DEPLOY}
+Admin frontend build : ${env.ADMIN_FRONTEND_TO_BUILD}
+Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
 ==============="""
 
                     saveState()
@@ -228,7 +255,9 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                     restoreState()
 
                     if (env.SKIP_ALL == 'true' ||
-                        (!env.SERVICES_TO_BUILD?.trim() && env.FRONTEND_TO_BUILD != 'true')) {
+                        (!env.SERVICES_TO_BUILD?.trim()
+                         && env.FRONTEND_TO_BUILD != 'true'
+                         && env.ADMIN_FRONTEND_TO_BUILD != 'true')) {
                         echo "Nothing to test — skipping"
                         return
                     }
@@ -320,6 +349,40 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                                     error "Quality Gate FAILED for frontend: ${qgF.status}"
                                 }
                                 echo "Quality Gate OK — frontend"
+                            }
+                        }
+                    }
+
+                    // ═════════════════════════════════════════════════════════
+                    //  PHASE 3 bis — Admin Frontend
+                    //  Build (npm ci && npm run build, pas de tests Karma)
+                    //  + sonar-scanner + Quality Gate.
+                    // ═════════════════════════════════════════════════════════
+                    if (env.ADMIN_FRONTEND_TO_BUILD == 'true') {
+                        echo "═══ PHASE 3 bis — Admin frontend build + Sonar ═══"
+                        dir('admin-frontend') {
+                            sh "npm ci && npm run build"
+                            withSonarQubeEnv('SonarQube') {
+                                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                                    withEnv(["JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"]) {
+                                        sh """
+                                            npx sonar-scanner \
+                                                -Dsonar.projectKey=joseph-admin-frontend \
+                                                -Dsonar.projectName='joseph-admin-frontend' \
+                                                -Dsonar.projectVersion=${env.VERSION} \
+                                                -Dsonar.token=\${SONAR_TOKEN} \
+                                                -Dsonar.scanner.skipJreProvisioning=true
+                                        """
+                                    }
+                                }
+                            }
+                            sleep time: 10, unit: 'SECONDS'
+                            timeout(time: 5, unit: 'MINUTES') {
+                                def qgA = waitForQualityGate()
+                                if (qgA.status != 'OK') {
+                                    error "Quality Gate FAILED for admin-frontend: ${qgA.status}"
+                                }
+                                echo "Quality Gate OK — admin-frontend"
                             }
                         }
                     }
@@ -475,7 +538,8 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                             'rule-engine-service' : 8083,
                             'alert-service'       : 8084,
                             'report-service'      : 8085,
-                            'subscription-service': 8086
+                            'subscription-service': 8086,
+                            'admin-service'       : 8087
                         ]
 
                         servicesToCheck.each { svc ->
