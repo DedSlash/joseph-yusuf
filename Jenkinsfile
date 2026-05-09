@@ -301,13 +301,16 @@ Frontend deploy  : ${env.FRONTEND_TO_DEPLOY}
                             sh "npm ci && npx ng test --configuration=ci"
                             withSonarQubeEnv('SonarQube') {
                                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                                    sh """
-                                        npx sonar-scanner \
-                                            -Dsonar.projectKey=joseph-frontend \
-                                            -Dsonar.projectName='joseph-frontend' \
-                                            -Dsonar.projectVersion=${env.VERSION} \
-                                            -Dsonar.token=\${SONAR_TOKEN}
-                                    """
+                                    withEnv(["JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"]) {
+                                        sh """
+                                            npx sonar-scanner \
+                                                -Dsonar.projectKey=joseph-frontend \
+                                                -Dsonar.projectName='joseph-frontend' \
+                                                -Dsonar.projectVersion=${env.VERSION} \
+                                                -Dsonar.token=\${SONAR_TOKEN} \
+                                                -Dsonar.scanner.skipJreProvisioning=true
+                                        """
+                                    }
                                 }
                             }
                             sleep time: 10, unit: 'SECONDS'
