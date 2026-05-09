@@ -27,3 +27,15 @@ services:
       - JAVA_OPTS=-Xms64m -Xmx128m -XX:+UseG1GC
       - LOGGING_LEVEL_ROOT=DEBUG
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY=DEBUG
+
+  # SMTP de dev — capture les emails envoyés par auth-service (password reset)
+  # UI web disponible sur http://localhost:8025
+  mailhog:
+    image: mailhog/mailhog
+    container_name: joseph_mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # UI web
+    networks:
+      - joseph-network
+    restart: unless-stopped

@@ -66,6 +66,10 @@ import { LoginRequest } from '../../../shared/models/user.model';
             </button>
           </form>
 
+          <p class="form-footer-link">
+            <a routerLink="/forgot-password" class="link-secondary">Mot de passe oublie ?</a>
+          </p>
+
           <p class="form-footer">
             Pas encore de compte ?
             <a routerLink="/register" class="link-gold">Creer un compte</a>
@@ -231,6 +235,23 @@ import { LoginRequest } from '../../../shared/models/user.model';
       color: #F0E8D0;
       opacity: 0.7;
       font-size: 0.85rem;
+    }
+
+    .form-footer-link {
+      margin-top: 1rem;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    .link-secondary {
+      color: #F0E8D0;
+      opacity: 0.7;
+      text-decoration: none;
+    }
+
+    .link-secondary:hover {
+      opacity: 1;
+      text-decoration: underline;
     }
 
     .link-gold {

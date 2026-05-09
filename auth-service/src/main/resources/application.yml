@@ -25,6 +25,22 @@ spring:
     schemas: joseph_auth
     default-schema: joseph_auth
 
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    from: ${MAIL_FROM:no-reply@josephyusuf.com}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+
+app:
+  reset-url: ${RESET_URL:http://localhost:4200/reset-password}
+
 jwt:
   secret: ${JWT_SECRET:am9zZXBoeXVzdWYtand0LXNlY3JldC1rZXktMjAyNi1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}
   access-token-expiration: 900000
