@@ -90,10 +90,6 @@
             <version>6.21.0</version>
         </dependency>
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-openfeign</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
@@ -214,13 +210,17 @@
                                 </rule>
                             </rules>
                             <excludes>
+                                <exclude>**/client/**</exclude>
                                 <exclude>**/config/**</exclude>
                                 <exclude>**/*Application.*</exclude>
                                 <exclude>**/dto/**</exclude>
                                 <exclude>**/entity/**</exclude>
+                                <exclude>**/enums/**</exclude>
                                 <exclude>**/event/**</exclude>
                                 <exclude>**/exception/**</exclude>
+                                <exclude>**/mapper/**</exclude>
                                 <exclude>**/producer/**</exclude>
+                                <exclude>**/security/**</exclude>
                             </excludes>
                         </configuration>
                     </execution>
@@ -240,7 +240,7 @@
                 <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
                 <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
                 <sonar.exclusions>
-                    **/config/**,**/*Application.java,**/dto/**,**/entity/**,**/event/**,**/exception/**,**/producer/**</sonar.exclusions>
+                    **/client/**,**/config/**,**/*Application.java,**/dto/**,**/entity/**,**/enums/**,**/event/**,**/exception/**,**/mapper/**,**/producer/**,**/security/**</sonar.exclusions>
             </properties>
         </profile>
     </profiles>

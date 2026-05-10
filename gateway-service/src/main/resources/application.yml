@@ -14,7 +14,9 @@ spring:
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: "http://localhost:4200"
+            allowedOrigins:
+              - "http://localhost:4200"
+              - "http://localhost:4201"
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
@@ -35,6 +37,10 @@ spring:
           uri: lb://alert-service
           predicates:
             - Path=/api/alerts/**
+        - id: admin-service
+          uri: lb://admin-service
+          predicates:
+            - Path=/api/admin/**
 
 eureka:
   client:

@@ -40,7 +40,8 @@ public class SubscriptionController {
     public ResponseEntity<PaymentIntentResponse> createStripePaymentIntent(Authentication auth,
                                                                            @Valid @RequestBody PaymentIntentRequest request) {
         UUID userId = userIdOf(auth);
-        PaymentIntentResponse response = stripeService.createPaymentIntent(userId, request.getPlan(), request.getCurrency());
+        PaymentIntentResponse response = stripeService.createPaymentIntent(userId, request.getPlan(),
+                request.getCurrency(), request.getPromoCode());
         subscriptionService.recordPendingTransaction(userId, request.getPlan(), PaymentProvider.STRIPE,
                 response.getPaymentIntentId(), response.getAmount(), response.getCurrency());
         return ResponseEntity.ok(response);

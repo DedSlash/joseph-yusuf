@@ -34,6 +34,17 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(
+            org.springframework.security.access.AccessDeniedException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, "Accès refusé : rôle ADMIN requis");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getAllErrors().stream()

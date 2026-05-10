@@ -1,6 +1,7 @@
 package com.josephyusuf.auth.service;
 
 import com.josephyusuf.auth.entity.Plan;
+import com.josephyusuf.auth.entity.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -22,11 +23,12 @@ public class JwtService {
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpiration;
 
-    public String generateAccessToken(UUID userId, String email, Plan plan) {
+    public String generateAccessToken(UUID userId, String email, Plan plan, Role role) {
         return Jwts.builder()
                 .subject(email)
                 .claim("userId", userId.toString())
                 .claim("plan", plan.name())
+                .claim("role", role.name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(getSigningKey())
@@ -43,6 +45,10 @@ public class JwtService {
 
     public String extractPlan(String token) {
         return extractClaim(token, claims -> claims.get("plan", String.class));
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     public boolean isTokenValid(String token) {

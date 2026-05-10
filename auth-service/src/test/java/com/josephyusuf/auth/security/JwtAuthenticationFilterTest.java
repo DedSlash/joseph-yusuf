@@ -73,9 +73,9 @@ class JwtAuthenticationFilterTest {
         String token = "valid.jwt.token";
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtService.isTokenValid(token)).thenReturn(true);
-        when(jwtService.extractEmail(token)).thenReturn("test@example.com");
         when(jwtService.extractUserId(token)).thenReturn("user-uuid-123");
         when(jwtService.extractPlan(token)).thenReturn("PREMIUM");
+        when(jwtService.extractRole(token)).thenReturn("USER");
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
 

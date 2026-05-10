@@ -19,4 +19,6 @@ public class PaymentIntentRequest {
     @NotBlank
     @Pattern(regexp = "EUR|XOF", message = "currency must be EUR or XOF")
     private String currency;
+
+    private String promoCode;
 }

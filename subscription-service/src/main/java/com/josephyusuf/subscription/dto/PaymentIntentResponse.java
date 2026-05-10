@@ -16,4 +16,7 @@ public class PaymentIntentResponse {
     private BigDecimal amount;
     private String currency;
     private String status;
+    private String promoCode;
+    private Integer discountPercent;
+    private BigDecimal originalAmount;
 }
