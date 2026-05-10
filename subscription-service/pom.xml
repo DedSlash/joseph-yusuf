@@ -214,8 +214,10 @@
                                 <exclude>**/*Application.*</exclude>
                                 <exclude>**/dto/**</exclude>
                                 <exclude>**/entity/**</exclude>
+                                <exclude>**/enums/**</exclude>
                                 <exclude>**/event/**</exclude>
                                 <exclude>**/exception/**</exclude>
+                                <exclude>**/mapper/**</exclude>
                                 <exclude>**/producer/**</exclude>
                             </excludes>
                         </configuration>
@@ -236,7 +238,7 @@
                 <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
                 <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
                 <sonar.exclusions>
-                    **/config/**,**/*Application.java,**/dto/**,**/entity/**,**/event/**,**/exception/**,**/producer/**</sonar.exclusions>
+                    **/config/**,**/*Application.java,**/dto/**,**/entity/**,**/enums/**,**/event/**,**/exception/**,**/mapper/**,**/producer/**</sonar.exclusions>
             </properties>
         </profile>
     </profiles>
