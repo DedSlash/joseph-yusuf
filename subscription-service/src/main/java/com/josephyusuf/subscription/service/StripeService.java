@@ -125,7 +125,7 @@ public class StripeService {
     }
 
     private long applyDiscount(long amount, int discountPercent) {
-        BigDecimal multiplier = BigDecimal.valueOf(100 - discountPercent)
+        BigDecimal multiplier = BigDecimal.valueOf((long) 100 - discountPercent)
                 .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
         return BigDecimal.valueOf(amount).multiply(multiplier)
                 .setScale(0, RoundingMode.HALF_UP).longValue();
