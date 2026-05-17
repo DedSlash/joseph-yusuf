@@ -38,4 +38,16 @@ public class AdminTransactionController {
     public ResponseEntity<AdminTransactionDto> refund(@PathVariable UUID id) {
         return ResponseEntity.ok(service.refund(id));
     }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AdminTransactionDto> cancel(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.cancel(id));
+    }
+
+    @PostMapping("/{id}/force-activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AdminTransactionDto> forceActivate(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.forceActivate(id));
+    }
 }

@@ -25,4 +25,7 @@ public class AdminTransactionDto {
     private PlanTier plan;
     private TransactionStatus status;
     private Instant createdAt;
+    private String promoCode;
+    private Integer discountPercent;
+    private java.math.BigDecimal originalAmount;
 }

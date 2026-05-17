@@ -1,6 +1,8 @@
 package com.josephyusuf.subscription.service;
 
+import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.StripeConfig;
+import com.josephyusuf.subscription.dto.PromoCodeApplyRequest;
 import com.josephyusuf.subscription.entity.ProcessedWebhookEvent;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
@@ -31,6 +33,7 @@ public class WebhookService {
     private final StripeConfig stripeConfig;
     private final ProcessedWebhookEventRepository processedEventRepository;
     private final SubscriptionService subscriptionService;
+    private final AdminClient adminClient;
 
     @Transactional
     public void processStripeWebhook(String payload, String sigHeader) {
@@ -78,6 +81,22 @@ public class WebhookService {
         }
 
         subscriptionService.activateAfterPayment(userId, plan, PaymentProvider.STRIPE, intent.getId());
+
+        // Enregistrer l'usage du code promo après confirmation du paiement
+        String promoCode = intent.getMetadata().get("promoCode");
+        if (promoCode != null && !promoCode.isBlank()) {
+            try {
+                adminClient.apply(PromoCodeApplyRequest.builder()
+                        .code(promoCode)
+                        .userId(userId)
+                        .transactionId(intent.getId())
+                        .build());
+                log.info("Usage code promo {} enregistré pour userId={} tx={}", promoCode, userId, intent.getId());
+            } catch (Exception e) {
+                log.error("Échec enregistrement usage code promo {} userId={} tx={} : {}",
+                        promoCode, userId, intent.getId(), e.getMessage());
+            }
+        }
     }
 
     private void handleFailed(Event event) {
@@ -100,12 +119,22 @@ public class WebhookService {
 
     private <T> T extract(Event event, Class<T> type) {
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-        if (deserializer.getObject().isEmpty()) {
-            log.error("Désérialisation impossible eventId={}", event.getId());
+
+        // Tentative avec la version stricte d'abord
+        if (deserializer.getObject().isPresent()) {
+            Object obj = deserializer.getObject().get();
+            return type.isInstance(obj) ? type.cast(obj) : null;
+        }
+
+        // Fallback : désérialisation sans vérification de version API
+        // Nécessaire quand la version de l'événement Stripe diffère de celle de la SDK
+        try {
+            com.stripe.model.StripeObject raw = deserializer.deserializeUnsafe();
+            return type.isInstance(raw) ? type.cast(raw) : null;
+        } catch (Exception e) {
+            log.error("Désérialisation impossible eventId={} type={} : {}", event.getId(), event.getType(), e.getMessage());
             return null;
         }
-        Object obj = deserializer.getObject().orElse(null);
-        return type.isInstance(obj) ? type.cast(obj) : null;
     }
 
     private UUID parseUserId(String value) {

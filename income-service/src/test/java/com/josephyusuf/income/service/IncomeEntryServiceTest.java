@@ -47,6 +47,9 @@ class IncomeEntryServiceTest {
     @Mock
     private IncomeEventProducer eventProducer;
 
+    @Mock
+    private CurrencyConverter currencyConverter;
+
     @InjectMocks
     private IncomeEntryService entryService;
 
@@ -63,7 +66,7 @@ class IncomeEntryServiceTest {
         void create_success() {
             IncomeSource source = IncomeSource.builder()
                     .id(SOURCE_ID).userId(USER_ID).name("Salaire")
-                    .type(IncomeSourceType.SALARY).active(true).build();
+                    .type(IncomeSourceType.SALARY).currency("XOF").active(true).build();
 
             IncomeEntryRequest request = IncomeEntryRequest.builder()
                     .incomeSourceId(SOURCE_ID)
@@ -72,6 +75,7 @@ class IncomeEntryServiceTest {
 
             when(sourceService.getAndVerifyOwnership(USER_ID, SOURCE_ID)).thenReturn(source);
             when(entryRepository.existsByIncomeSourceIdAndMonthAndYear(SOURCE_ID, 5, 2026)).thenReturn(false);
+            when(currencyConverter.toXOF(new BigDecimal("500000"), "XOF")).thenReturn(new BigDecimal("500000.00"));
 
             IncomeEntry savedEntry = IncomeEntry.builder()
                     .id(ENTRY_ID).incomeSource(source).userId(USER_ID)
@@ -139,8 +143,10 @@ class IncomeEntryServiceTest {
         @Test
         @DisplayName("Mise a jour reussie")
         void update_success() {
+            IncomeSource source = IncomeSource.builder()
+                    .id(UUID.randomUUID()).currency("XOF").build();
             IncomeEntry entry = IncomeEntry.builder()
-                    .id(ENTRY_ID).userId(USER_ID)
+                    .id(ENTRY_ID).userId(USER_ID).incomeSource(source)
                     .amount(new BigDecimal("300000")).note("old").build();
 
             when(entryRepository.findById(ENTRY_ID)).thenReturn(Optional.of(entry));

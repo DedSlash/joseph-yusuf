@@ -75,6 +75,15 @@ export class AdminAuthService {
     return this.decodeRole(token) === 'ADMIN';
   }
 
+  isTokenExpiringSoon(): boolean {
+    const token = this.getAccessToken();
+    if (!token) return false;
+    const payload = this.decodeToken(token);
+    if (!payload) return false;
+    // true si le token expire dans moins de 60 secondes
+    return payload.exp * 1000 - Date.now() < 60_000;
+  }
+
   getCurrentUser(): User | null {
     return this.currentUser$.value;
   }

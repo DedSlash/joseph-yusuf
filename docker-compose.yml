@@ -159,6 +159,12 @@ services:
       - SUPER_ADMIN_EMAILS=${SUPER_ADMIN_EMAILS:-admin@josephyusuf.com}
       - SUPER_ADMIN_DEFAULT_PASSWORD=${SUPER_ADMIN_DEFAULT_PASSWORD:-}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_MAIL_HOST=${MAIL_HOST:-mailhog}
+      - SPRING_MAIL_PORT=${MAIL_PORT:-1025}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME:-}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-no-reply@josephyusuf.com}
+      - RESET_URL=${RESET_URL:-http://localhost:4200/reset-password}
     depends_on:
       discovery-server:
         condition: service_healthy

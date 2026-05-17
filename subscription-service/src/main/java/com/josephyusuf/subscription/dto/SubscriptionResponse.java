@@ -23,4 +23,5 @@ public class SubscriptionResponse {
     private Instant startedAt;
     private Instant expiresAt;
     private Instant cancelledAt;
+    private boolean autoRenew;
 }

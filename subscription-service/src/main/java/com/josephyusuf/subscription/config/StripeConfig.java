@@ -22,10 +22,10 @@ public class StripeConfig {
     @Value("${stripe.prices.premium-plus-eur:999}")
     private long premiumPlusPriceEur;
 
-    @Value("${stripe.prices.premium-xof:300000}")
+    @Value("${stripe.prices.premium-xof:3000}")
     private long premiumPriceXof;
 
-    @Value("${stripe.prices.premium-plus-xof:600000}")
+    @Value("${stripe.prices.premium-plus-xof:6000}")
     private long premiumPlusPriceXof;
 
     @PostConstruct

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Observable } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
 import { AuthService } from '../../../core/auth/auth.service';
 import { User, Plan } from '../../../shared/models/user.model';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
@@ -9,7 +10,7 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, NotificationBellComponent],
+  imports: [CommonModule, RouterModule, DialogModule, NotificationBellComponent],
   template: `
     <nav class="navbar" *ngIf="currentUser$ | async as user">
       <div class="navbar-left">
@@ -21,18 +22,90 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       </div>
       <div class="navbar-right">
         <app-notification-bell></app-notification-bell>
-        <span class="plan-badge" [ngClass]="getPlanClass(user.plan)">
-          {{ getPlanLabel(user.plan) }}
-        </span>
+        <button class="btn-help" (click)="showHelp = true" aria-label="Comment ça marche ?">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+          </svg>
+          <span>Comment ça marche</span>
+        </button>
+        <a
+          routerLink="/subscription"
+          class="btn-upgrade-nav"
+          *ngIf="user.plan === 'FREE'"
+        >✦ Passer Premium</a>
+        <span
+          class="plan-badge"
+          [ngClass]="getPlanClass(user.plan)"
+          *ngIf="user.plan !== 'FREE'"
+        >{{ getPlanLabel(user.plan) }}</span>
         <div class="avatar-container" (click)="toggleDropdown()">
           <div class="avatar">{{ getInitials(user) }}</div>
           <div class="dropdown" *ngIf="dropdownOpen">
             <a class="dropdown-item" routerLink="/account">Mon compte</a>
+            <a class="dropdown-item" routerLink="/subscription">Mon abonnement</a>
             <button class="dropdown-item" (click)="logout()">Deconnexion</button>
           </div>
         </div>
       </div>
     </nav>
+
+    <!-- Modale d'aide — Principe de Joseph -->
+    <p-dialog
+      header=" "
+      [(visible)]="showHelp"
+      [modal]="true"
+      [style]="{ width: '600px', maxWidth: '95vw' }"
+      [baseZIndex]="2000"
+      [draggable]="false"
+      [resizable]="false"
+      styleClass="help-dialog"
+    >
+      <div class="help-body">
+        <div class="help-icon">✦</div>
+        <h2 class="help-title">Le Principe de Joseph</h2>
+        <p class="help-intro">
+          Joseph · Yusuf s'inspire d'un principe millénaire simple :
+          <strong>épargner pendant l'abondance pour tenir pendant la disette</strong>.
+          Votre tableau de bord prend vie dès que vous enregistrez vos revenus.
+        </p>
+        <p class="help-intro" style="margin-top: 0.5rem">
+          Il faut au moins <strong>3 mois de données</strong> pour comparer votre mois actuel
+          à votre moyenne et déterminer si vous traversez une période d'abondance ou de vaches maigres.
+        </p>
+
+        <div class="help-steps">
+          <div class="help-step">
+            <span class="help-step-num">1</span>
+            <div>
+              <strong>Saisissez vos revenus du mois</strong>
+              <p>Rendez-vous dans « Mes Revenus » pour ajouter votre premier revenu.</p>
+            </div>
+          </div>
+          <div class="help-step">
+            <span class="help-step-num">2</span>
+            <div>
+              <strong>Importez votre historique si vous en avez</strong>
+              <p>
+                Vous avez déjà des données sur Excel, CSV ou JSON ?
+                Importez-les depuis « Mes Revenus » → bouton <em>Importer</em>
+                et reprenez votre aventure dans le principe de richesse sans stress.
+              </p>
+            </div>
+          </div>
+          <div class="help-step">
+            <span class="help-step-num">3</span>
+            <div>
+              <strong>Laissez Joseph travailler pour vous</strong>
+              <p>Après 3 mois, votre tableau de bord vous indique précisément où vous en êtes et comment répartir vos revenus.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-footer">
+          <a routerLink="/incomes" (click)="showHelp = false" class="btn-help-start">Commencer maintenant →</a>
+        </div>
+      </div>
+    </p-dialog>
   `,
   styles: [`
     .navbar {
@@ -118,6 +191,43 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       border: 1px solid rgba(218, 195, 114, 0.5);
     }
 
+    .btn-help {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      background: rgba(201, 168, 76, 0.08);
+      border: 1px solid rgba(201, 168, 76, 0.35);
+      border-radius: 20px;
+      color: #C9A84C;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-help:hover {
+      background: rgba(201, 168, 76, 0.18);
+      border-color: rgba(201, 168, 76, 0.6);
+    }
+
+    .btn-upgrade-nav {
+      padding: 0.3rem 0.85rem;
+      background: rgba(201, 168, 76, 0.12);
+      border: 1px solid rgba(201, 168, 76, 0.4);
+      border-radius: 20px;
+      color: #C9A84C;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-upgrade-nav:hover { background: rgba(201, 168, 76, 0.22); }
+
     .avatar-container {
       position: relative;
       cursor: pointer;
@@ -166,11 +276,119 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
     .dropdown-item:hover {
       background: rgba(201, 168, 76, 0.1);
     }
+
+    /* ── Modale d'aide ── */
+    .help-body {
+      text-align: center;
+      padding: 0.5rem 0.5rem 1rem;
+    }
+
+    .help-icon {
+      font-size: 2rem;
+      color: #C9A84C;
+      margin-bottom: 0.75rem;
+    }
+
+    .help-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.7rem;
+      font-weight: 600;
+      color: #F0E8D0;
+      margin: 0 0 1rem;
+    }
+
+    .help-intro {
+      color: #F0E8D0;
+      opacity: 0.75;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .help-intro strong {
+      color: #C9A84C;
+      opacity: 1;
+    }
+
+    .help-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      text-align: left;
+      max-width: 500px;
+      margin: 1.75rem auto 0;
+    }
+
+    .help-step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .help-step-num {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(201, 168, 76, 0.12);
+      border: 1px solid rgba(201, 168, 76, 0.4);
+      color: #C9A84C;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .help-step strong {
+      display: block;
+      font-size: 0.88rem;
+      color: #F0E8D0;
+      margin-bottom: 0.2rem;
+    }
+
+    .help-step p {
+      font-size: 0.82rem;
+      color: #F0E8D0;
+      opacity: 0.6;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .help-step em {
+      color: #C9A84C;
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    .help-footer {
+      margin-top: 2rem;
+    }
+
+    .btn-help-start {
+      display: inline-block;
+      padding: 0.65rem 1.75rem;
+      background: rgba(201, 168, 76, 0.12);
+      border: 1px solid rgba(201, 168, 76, 0.5);
+      border-radius: 8px;
+      color: #C9A84C;
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .btn-help-start:hover {
+      background: rgba(201, 168, 76, 0.22);
+    }
   `]
 })
 export class NavbarComponent implements OnInit {
   currentUser$: Observable<User | null>;
   dropdownOpen = false;
+  showHelp = false;
 
   constructor(private authService: AuthService) {
     this.currentUser$ = this.authService.currentUser$;

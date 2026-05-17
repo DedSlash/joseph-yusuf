@@ -28,4 +28,16 @@ public class AdminTransactionService {
         auditLogService.log(adminId, "TRANSACTION_REFUND", "TRANSACTION", id.toString(), null, ip);
         return refunded;
     }
+
+    public TransactionDto cancel(UUID id, UUID adminId, String ip) {
+        TransactionDto cancelled = subscriptionClient.cancel(id);
+        auditLogService.log(adminId, "TRANSACTION_CANCEL", "TRANSACTION", id.toString(), null, ip);
+        return cancelled;
+    }
+
+    public TransactionDto forceActivate(UUID id, UUID adminId, String ip) {
+        TransactionDto activated = subscriptionClient.forceActivate(id);
+        auditLogService.log(adminId, "TRANSACTION_FORCE_ACTIVATE", "TRANSACTION", id.toString(), null, ip);
+        return activated;
+    }
 }

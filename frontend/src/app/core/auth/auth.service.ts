@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, of, switchMap, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, LoginRequest, RegisterRequest, TokenResponse, User, Plan } from '../../shared/models/user.model';
@@ -44,7 +44,7 @@ export class AuthService {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     this.currentUserSubject.next(null);
-    this.router.navigate(['/login']);
+    this.router.navigate(['/']);
   }
 
   me(): Observable<User> {
@@ -63,12 +63,30 @@ export class AuthService {
     );
   }
 
+  refreshSession(): Observable<User | null> {
+    return this.refreshToken().pipe(
+      switchMap(() => this.me()),
+      catchError(() => of(null))
+    );
+  }
+
   getAccessToken(): string | null {
     return localStorage.getItem('accessToken');
   }
 
   isLoggedIn(): boolean {
-    return !!this.getAccessToken();
+    return this.isTokenValid();
+  }
+
+  isTokenValid(): boolean {
+    const token = this.getAccessToken();
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+    } catch {
+      return false;
+    }
   }
 
   getPlan(): Plan {

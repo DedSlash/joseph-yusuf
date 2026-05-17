@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { CommonModule } from '@angular/common';
+import { AuthService } from './core/auth/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -12,10 +13,26 @@ import { CommonModule } from '@angular/common';
     <router-outlet></router-outlet>
   `
 })
-export class AppComponent {
-  constructor(private router: Router) {}
+export class AppComponent implements OnInit, OnDestroy {
+  private visibilityHandler = () => {
+    if (document.visibilityState === 'visible' && this.authService.isLoggedIn()) {
+      this.authService.refreshSession().subscribe();
+    }
+  };
+
+  constructor(private router: Router, private authService: AuthService) {}
+
+  ngOnInit(): void {
+    document.addEventListener('visibilitychange', this.visibilityHandler);
+  }
+
+  ngOnDestroy(): void {
+    document.removeEventListener('visibilitychange', this.visibilityHandler);
+  }
 
   isAuthPage(): boolean {
-    return this.router.url === '/login' || this.router.url === '/register';
+    const url = this.router.url.split('?')[0];
+    return url === '/' || url === '/login' || url === '/register'
+      || url === '/forgot-password' || url === '/reset-password';
   }
 }

@@ -27,6 +27,7 @@ import java.util.UUID;
 public class AdminTransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final SubscriptionService subscriptionService;
 
     @Transactional(readOnly = true)
     public AdminPageResponse<AdminTransactionDto> list(int page, int size, String status, UUID userId) {
@@ -64,7 +65,8 @@ public class AdminTransactionService {
                     .build());
             log.info("Stripe refund créé pour PI={}", transaction.getTransactionId());
         } catch (StripeException e) {
-            throw new PaymentException("Échec remboursement Stripe : " + e.getMessage(), e);
+            log.error("Échec remboursement Stripe PI={} : {}", transaction.getTransactionId(), e.getMessage());
+            throw new PaymentException("Le remboursement n'a pas pu être effectué. Veuillez réessayer.", e);
         }
 
         transaction.setStatus(TransactionStatus.REFUNDED);
@@ -72,9 +74,41 @@ public class AdminTransactionService {
         return toDto(transaction);
     }
 
+    @Transactional
+    public AdminTransactionDto cancel(UUID id) {
+        Transaction transaction = findById(id);
+        if (transaction.getStatus() != TransactionStatus.PENDING
+                && transaction.getStatus() != TransactionStatus.FAILED) {
+            throw new PaymentException("Seules les transactions PENDING ou FAILED peuvent être annulées");
+        }
+        transaction.setStatus(TransactionStatus.CANCELLED);
+        transaction.setFailureReason("Annulée manuellement par l'administrateur");
+        transactionRepository.save(transaction);
+        log.info("Transaction annulée manuellement id={}", id);
+        return toDto(transaction);
+    }
+
+    @Transactional
+    public AdminTransactionDto forceActivate(UUID id) {
+        Transaction transaction = findById(id);
+        if (transaction.getStatus() == TransactionStatus.REFUNDED
+                || transaction.getStatus() == TransactionStatus.CANCELLED) {
+            throw new PaymentException("Cette transaction ne peut pas être activée dans son état actuel.");
+        }
+        subscriptionService.activateAfterPayment(
+                transaction.getUserId(),
+                transaction.getPlan(),
+                transaction.getProvider(),
+                transaction.getTransactionId());
+        // recharger après mise à jour par activateAfterPayment
+        Transaction updated = findById(id);
+        log.info("Abonnement activé manuellement pour userId={} plan={}", transaction.getUserId(), transaction.getPlan());
+        return toDto(updated);
+    }
+
     private Transaction findById(UUID id) {
         return transactionRepository.findById(id)
-                .orElseThrow(() -> new SubscriptionNotFoundException("Transaction introuvable : " + id));
+                .orElseThrow(() -> new SubscriptionNotFoundException("Transaction introuvable."));
     }
 
     private AdminTransactionDto toDto(Transaction tx) {
@@ -88,6 +122,9 @@ public class AdminTransactionService {
                 .plan(tx.getPlan())
                 .status(tx.getStatus())
                 .createdAt(tx.getCreatedAt())
+                .promoCode(tx.getPromoCode())
+                .discountPercent(tx.getDiscountPercent())
+                .originalAmount(tx.getOriginalAmount())
                 .build();
     }
 

@@ -129,7 +129,8 @@ class StripeServiceTest {
         assertThat(response.getOriginalAmount()).isEqualByComparingTo("499");
         assertThat(response.getDiscountPercent()).isEqualTo(20);
         assertThat(response.getPromoCode()).isEqualTo("JOSEPH20");
-        verify(adminClient).apply(any(PromoCodeApplyRequest.class));
+        // L'enregistrement de l'usage est désormais géré par WebhookService.handleSucceeded()
+        verify(adminClient, never()).apply(any());
     }
 
     @Test

@@ -13,9 +13,11 @@ public interface IncomeEntryRepository extends JpaRepository<IncomeEntry, UUID> 
 
     List<IncomeEntry> findByUserIdAndMonthAndYear(UUID userId, int month, int year);
 
+    List<IncomeEntry> findByIncomeSourceIdAndUserId(UUID incomeSourceId, UUID userId);
+
     boolean existsByIncomeSourceIdAndMonthAndYear(UUID incomeSourceId, int month, int year);
 
-    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM IncomeEntry e " +
+    @Query("SELECT COALESCE(SUM(e.amountXof), 0) FROM IncomeEntry e " +
             "WHERE e.userId = :userId AND e.month = :month AND e.year = :year")
     BigDecimal sumByUserIdAndMonthAndYear(@Param("userId") UUID userId,
                                           @Param("month") int month,

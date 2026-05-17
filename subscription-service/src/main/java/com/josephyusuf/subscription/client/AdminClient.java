@@ -17,6 +17,6 @@ public interface AdminClient {
     PromoCodeValidation validate(@RequestParam("code") String code,
                                  @RequestParam("userId") UUID userId);
 
-    @PostMapping("/api/admin/promo-codes/apply")
+    @PostMapping("/api/internal/promo-codes/apply")
     PromoCodeValidation apply(@RequestBody PromoCodeApplyRequest request);
 }

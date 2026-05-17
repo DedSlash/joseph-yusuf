@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +25,7 @@ public class IncomeEntryService {
     private final MonthSummaryService monthSummaryService;
     private final IncomeEventProducer eventProducer;
     private final IncomeMapper incomeMapper;
+    private final CurrencyConverter currencyConverter;
 
     @Transactional
     public IncomeEntryDto create(UUID userId, IncomeEntryRequest request) {
@@ -35,10 +37,13 @@ public class IncomeEntryService {
                     "Une saisie existe déjà pour cette source en " + request.getMonth() + "/" + request.getYear());
         }
 
+        BigDecimal amountXof = currencyConverter.toXOF(request.getAmount(), source.getCurrency());
+
         IncomeEntry entry = IncomeEntry.builder()
                 .incomeSource(source)
                 .userId(userId)
                 .amount(request.getAmount())
+                .amountXof(amountXof)
                 .month(request.getMonth())
                 .year(request.getYear())
                 .note(request.getNote())
@@ -58,10 +63,25 @@ public class IncomeEntryService {
                 .toList();
     }
 
+    public List<IncomeEntryDto> listBySource(UUID userId, UUID sourceId) {
+        sourceService.getAndVerifyOwnership(userId, sourceId);
+        return entryRepository.findByIncomeSourceIdAndUserId(sourceId, userId).stream()
+                .map(incomeMapper::toEntryDto)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteAllBySource(UUID userId, UUID sourceId) {
+        sourceService.getAndVerifyOwnership(userId, sourceId);
+        List<IncomeEntry> entries = entryRepository.findByIncomeSourceIdAndUserId(sourceId, userId);
+        entryRepository.deleteAll(entries);
+    }
+
     @Transactional
     public IncomeEntryDto update(UUID userId, UUID entryId, IncomeEntryRequest request) {
         IncomeEntry entry = getAndVerifyOwnership(userId, entryId);
         entry.setAmount(request.getAmount());
+        entry.setAmountXof(currencyConverter.toXOF(request.getAmount(), entry.getIncomeSource().getCurrency()));
         entry.setNote(request.getNote());
         entry = entryRepository.save(entry);
         return incomeMapper.toEntryDto(entry);

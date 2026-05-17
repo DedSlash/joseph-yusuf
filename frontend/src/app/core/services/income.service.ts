@@ -38,7 +38,7 @@ export class IncomeService {
   }
 
   getAllEntriesForSource(sourceId: string): Observable<IncomeEntry[]> {
-    const params = new HttpParams().set('sourceId', sourceId).set('all', 'true');
+    const params = new HttpParams().set('sourceId', sourceId);
     return this.http.get<IncomeEntry[]>(`${this.apiUrl}/entries`, { params });
   }
 

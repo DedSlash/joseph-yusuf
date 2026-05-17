@@ -37,6 +37,18 @@ spring:
           uri: lb://alert-service
           predicates:
             - Path=/api/alerts/**
+        - id: report-service
+          uri: lb://report-service
+          predicates:
+            - Path=/api/reports/**
+        - id: subscription-service
+          uri: lb://subscription-service
+          predicates:
+            - Path=/api/subscriptions/**
+        - id: subscription-webhooks
+          uri: lb://subscription-service
+          predicates:
+            - Path=/api/webhooks/**
         - id: admin-service
           uri: lb://admin-service
           predicates:

@@ -1,5 +1,6 @@
 package com.josephyusuf.admin.exception;
 
+import feign.FeignException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -32,6 +33,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         return buildResponse(HttpStatus.FORBIDDEN, "Accès refusé : rôle ADMIN requis");
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ApiErrorResponse> handleFeignException(FeignException ex) {
+        HttpStatus status = HttpStatus.resolve(ex.status());
+        if (status == null) status = HttpStatus.BAD_GATEWAY;
+        return buildResponse(status, "Un service est temporairement indisponible. Veuillez réessayer.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

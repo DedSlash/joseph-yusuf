@@ -36,8 +36,8 @@ stripe:
   prices:
     premium-eur: 499
     premium-plus-eur: 999
-    premium-xof: 300000
-    premium-plus-xof: 600000
+    premium-xof: 3000
+    premium-plus-xof: 6000
 
 eureka:
   client:

@@ -3,7 +3,6 @@ package com.josephyusuf.subscription.service;
 import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.StripeConfig;
 import com.josephyusuf.subscription.dto.PaymentIntentResponse;
-import com.josephyusuf.subscription.dto.PromoCodeApplyRequest;
 import com.josephyusuf.subscription.dto.PromoCodeValidation;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.exception.InvalidPlanException;
@@ -74,10 +73,6 @@ public class StripeService {
             log.info("Stripe PaymentIntent créé id={} userId={} plan={} amount={} {}",
                     intent.getId(), userId, plan, finalAmount, currency);
 
-            if (appliedPromoCode != null) {
-                applyPromoCodeUsage(appliedPromoCode, userId, intent.getId());
-            }
-
             return PaymentIntentResponse.builder()
                     .paymentIntentId(intent.getId())
                     .clientSecret(intent.getClientSecret())
@@ -90,7 +85,7 @@ public class StripeService {
                     .build();
         } catch (StripeException e) {
             log.error("Échec Stripe PaymentIntent userId={} : {}", userId, e.getMessage());
-            throw new PaymentException("Échec création PaymentIntent Stripe : " + e.getMessage(), e);
+            throw new PaymentException("Le paiement n'a pas pu être initialisé. Veuillez réessayer.", e);
         }
     }
 
@@ -98,7 +93,8 @@ public class StripeService {
         try {
             return PaymentIntent.retrieve(paymentIntentId);
         } catch (StripeException e) {
-            throw new PaymentException("Impossible de récupérer le PaymentIntent : " + paymentIntentId, e);
+            log.error("Impossible de récupérer le PaymentIntent={} : {}", paymentIntentId, e.getMessage());
+            throw new PaymentException("Impossible de vérifier l'état du paiement. Veuillez contacter le support.", e);
         }
     }
 
@@ -107,20 +103,7 @@ public class StripeService {
             return adminClient.validate(code, userId);
         } catch (Exception e) {
             log.error("Échec validation code promo {} userId={} : {}", code, userId, e.getMessage());
-            throw new PaymentException("Validation du code promo impossible : " + e.getMessage(), e);
-        }
-    }
-
-    private void applyPromoCodeUsage(String code, UUID userId, String transactionId) {
-        try {
-            adminClient.apply(PromoCodeApplyRequest.builder()
-                    .code(code)
-                    .userId(userId)
-                    .transactionId(transactionId)
-                    .build());
-        } catch (Exception e) {
-            log.error("Échec enregistrement utilisation code promo {} userId={} tx={} : {}",
-                    code, userId, transactionId, e.getMessage());
+            throw new PaymentException("Impossible de valider le code promo. Veuillez réessayer.", e);
         }
     }
 
@@ -139,7 +122,7 @@ public class StripeService {
         return switch (plan) {
             case PREMIUM -> eur ? stripeConfig.getPremiumPriceEur() : stripeConfig.getPremiumPriceXof();
             case PREMIUM_PLUS -> eur ? stripeConfig.getPremiumPlusPriceEur() : stripeConfig.getPremiumPlusPriceXof();
-            default -> throw new InvalidPlanException("Plan non supporté : " + plan);
+            default -> throw new InvalidPlanException("Ce plan ne peut pas être souscrit via ce mode de paiement.");
         };
     }
 }

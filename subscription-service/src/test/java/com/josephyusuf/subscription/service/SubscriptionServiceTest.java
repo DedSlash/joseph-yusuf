@@ -59,7 +59,8 @@ class SubscriptionServiceTest {
             when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
 
             Transaction tx = service.recordPendingTransaction(USER_ID, PlanTier.PREMIUM,
-                    PaymentProvider.STRIPE, EXTERNAL_TX, new BigDecimal("499"), "EUR");
+                    PaymentProvider.STRIPE, EXTERNAL_TX, new BigDecimal("499"), "EUR",
+                    null, null, null);
 
             assertThat(tx.getStatus()).isEqualTo(TransactionStatus.PENDING);
             assertThat(tx.getProvider()).isEqualTo(PaymentProvider.STRIPE);
@@ -70,7 +71,8 @@ class SubscriptionServiceTest {
         @DisplayName("FREE → InvalidPlanException")
         void recordPending_free_throws() {
             assertThatThrownBy(() -> service.recordPendingTransaction(USER_ID, PlanTier.FREE,
-                    PaymentProvider.STRIPE, EXTERNAL_TX, BigDecimal.ZERO, "EUR"))
+                    PaymentProvider.STRIPE, EXTERNAL_TX, BigDecimal.ZERO, "EUR",
+                    null, null, null))
                     .isInstanceOf(InvalidPlanException.class);
         }
     }

@@ -5,74 +5,187 @@
               name="monthly-report" pageWidth="595" pageHeight="842" columnWidth="535"
               leftMargin="30" rightMargin="30" topMargin="30" bottomMargin="30">
 
-    <parameter name="userId" class="java.lang.String"/>
-    <parameter name="month" class="java.lang.Integer"/>
-    <parameter name="year" class="java.lang.Integer"/>
-    <parameter name="totalIncome" class="java.math.BigDecimal"/>
+    <style name="DefaultStyle" isDefault="true" fontName="DejaVu Sans" fontSize="10"/>
+    <style name="Title"     fontName="DejaVu Sans" fontSize="22" isBold="true"   forecolor="#C9A84C"/>
+    <style name="Subtitle"  fontName="DejaVu Sans" fontSize="11"                 forecolor="#888888"/>
+    <style name="SectionLabel" fontName="DejaVu Sans" fontSize="9" isBold="true" forecolor="#FFFFFF"/>
+    <style name="RowLabel"  fontName="DejaVu Sans" fontSize="11"                 forecolor="#333333"/>
+    <style name="RowAmount" fontName="DejaVu Sans" fontSize="11" isBold="true"   forecolor="#C9A84C"/>
+    <style name="Footer"    fontName="DejaVu Sans" fontSize="9"  isItalic="true" forecolor="#999999"/>
+    <style name="Message"   fontName="DejaVu Sans" fontSize="10" isItalic="true" forecolor="#C9A84C"/>
+
+    <parameter name="userId"           class="java.lang.String"/>
+    <parameter name="month"            class="java.lang.Integer"/>
+    <parameter name="year"             class="java.lang.Integer"/>
+    <parameter name="totalIncome"      class="java.math.BigDecimal"/>
     <parameter name="averageLast3Months" class="java.math.BigDecimal"/>
-    <parameter name="status" class="java.lang.String"/>
-    <parameter name="rule" class="java.lang.String"/>
-    <parameter name="message" class="java.lang.String"/>
+    <parameter name="status"           class="java.lang.String"/>
+    <parameter name="rule"             class="java.lang.String"/>
+    <parameter name="message"          class="java.lang.String"/>
 
-    <field name="label" class="java.lang.String"/>
-    <field name="amount" class="java.math.BigDecimal"/>
+    <field name="label"      class="java.lang.String"/>
+    <field name="amount"     class="java.math.BigDecimal"/>
+    <field name="percentage" class="java.math.BigDecimal"/>
 
+    <!-- ═══════════════════════════════════════════════════ TITLE ══ -->
     <title>
-        <band height="80">
+        <band height="110">
+            <!-- Gold accent bar -->
+            <rectangle>
+                <reportElement x="0" y="0" width="535" height="6" forecolor="#C9A84C" backcolor="#C9A84C"/>
+                <graphicElement>
+                    <pen lineWidth="0"/>
+                </graphicElement>
+            </rectangle>
+            <!-- App name -->
             <staticText>
-                <reportElement x="0" y="0" width="535" height="30"/>
-                <textElement textAlignment="Center">
-                    <font size="20" isBold="true"/>
-                </textElement>
-                <text><![CDATA[Joseph · Yusuf — Rapport mensuel]]></text>
+                <reportElement x="0" y="14" width="535" height="32" style="Title"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[Joseph · Yusuf]]></text>
             </staticText>
+            <!-- Report type -->
+            <staticText>
+                <reportElement x="0" y="46" width="535" height="16" style="Subtitle"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[RAPPORT MENSUEL]]></text>
+            </staticText>
+            <!-- Period -->
             <textField>
-                <reportElement x="0" y="40" width="535" height="20"/>
-                <textElement textAlignment="Center"><font size="12"/></textElement>
-                <textFieldExpression><![CDATA["Période : " + $P{month} + "/" + $P{year}]]></textFieldExpression>
+                <reportElement x="0" y="66" width="535" height="16" style="Subtitle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["Période : " + $P{month} + " / " + $P{year}]]></textFieldExpression>
             </textField>
+            <!-- Separator -->
+            <line>
+                <reportElement x="0" y="90" width="535" height="1" forecolor="#C9A84C"/>
+            </line>
         </band>
     </title>
 
-    <pageHeader><band height="20"/></pageHeader>
-
+    <!-- ══════════════════════════════════════════════ COLUMN HEADER ══ -->
     <columnHeader>
-        <band height="40">
+        <band height="112">
+            <!-- Section "Synthèse du mois" -->
+            <rectangle>
+                <reportElement x="0" y="0" width="535" height="18" forecolor="#1A1A2E" backcolor="#1A1A2E"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="8" y="2" width="527" height="14" style="SectionLabel"/>
+                <textElement/>
+                <text><![CDATA[SYNTHÈSE DU MOIS]]></text>
+            </staticText>
+
+            <!-- Statut -->
+            <staticText>
+                <reportElement x="0" y="24" width="120" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Statut du mois]]></text>
+            </staticText>
             <textField>
-                <reportElement x="0" y="0" width="535" height="18"/>
-                <textElement><font size="11" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA["Statut du mois : " + $P{status} + " — Règle : " + $P{rule}]]></textFieldExpression>
+                <reportElement x="120" y="24" width="415" height="14"/>
+                <textElement><font size="9" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{status}]]></textFieldExpression>
             </textField>
+
+            <!-- Règle -->
+            <staticText>
+                <reportElement x="0" y="40" width="120" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Règle appliquée]]></text>
+            </staticText>
             <textField>
-                <reportElement x="0" y="20" width="535" height="18"/>
-                <textElement><font size="10"/></textElement>
-                <textFieldExpression><![CDATA["Revenu total : " + $P{totalIncome} + " — Moyenne 3 mois : " + $P{averageLast3Months}]]></textFieldExpression>
+                <reportElement x="120" y="40" width="415" height="14"/>
+                <textElement><font size="9" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{rule}]]></textFieldExpression>
             </textField>
+
+            <!-- Revenu total -->
+            <staticText>
+                <reportElement x="0" y="56" width="120" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Revenu du mois]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="120" y="56" width="415" height="14"/>
+                <textElement><font size="9" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{totalIncome}]]></textFieldExpression>
+            </textField>
+
+            <!-- Moyenne -->
+            <staticText>
+                <reportElement x="0" y="72" width="120" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Moyenne 3 mois]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="120" y="72" width="415" height="14"/>
+                <textElement><font size="9"/></textElement>
+                <textFieldExpression><![CDATA[$P{averageLast3Months}]]></textFieldExpression>
+            </textField>
+
+            <!-- Section "Répartition recommandée" -->
+            <rectangle>
+                <reportElement x="0" y="90" width="535" height="18" forecolor="#1A1A2E" backcolor="#1A1A2E"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="8" y="92" width="527" height="14" style="SectionLabel"/>
+                <textElement/>
+                <text><![CDATA[RÉPARTITION RECOMMANDÉE]]></text>
+            </staticText>
         </band>
     </columnHeader>
 
+    <!-- ═══════════════════════════════════════════════════ DETAIL ══ -->
     <detail>
-        <band height="22">
-            <textField>
-                <reportElement x="0" y="0" width="350" height="20"/>
-                <textElement><font size="11"/></textElement>
+        <band height="26">
+            <!-- Category label -->
+            <textField isBlankWhenNull="true">
+                <reportElement x="8" y="4" width="300" height="18" style="RowLabel"/>
+                <textElement/>
                 <textFieldExpression><![CDATA[$F{label}]]></textFieldExpression>
             </textField>
-            <textField pattern="#,##0.00">
-                <reportElement x="350" y="0" width="185" height="20"/>
-                <textElement textAlignment="Right"><font size="11"/></textElement>
+
+            <!-- Percentage -->
+            <textField isBlankWhenNull="true">
+                <reportElement x="308" y="4" width="60" height="18" forecolor="#888888"/>
+                <textElement textAlignment="Right"><font size="9"/></textElement>
+                <textFieldExpression><![CDATA[$F{percentage} != null ? $F{percentage}.toPlainString() + " %" : ""]]></textFieldExpression>
+            </textField>
+
+            <!-- Amount -->
+            <textField isBlankWhenNull="true" pattern="#,##0.00">
+                <reportElement x="368" y="4" width="165" height="18" style="RowAmount"/>
+                <textElement textAlignment="Right"/>
                 <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
             </textField>
+
+            <!-- Bottom border -->
+            <line>
+                <reportElement x="0" y="25" width="535" height="1" forecolor="#EEEEEE"/>
+            </line>
         </band>
     </detail>
 
+    <!-- ══════════════════════════════════════════════════ SUMMARY ══ -->
     <summary>
-        <band height="60">
-            <textField>
-                <reportElement x="0" y="20" width="535" height="40"/>
-                <textElement><font size="10" isItalic="true"/></textElement>
+        <band height="80">
+            <line>
+                <reportElement x="0" y="5" width="535" height="1" forecolor="#C9A84C"/>
+            </line>
+            <!-- Message contextuel -->
+            <textField isBlankWhenNull="true">
+                <reportElement x="0" y="14" width="535" height="30" style="Message"/>
+                <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[$P{message}]]></textFieldExpression>
             </textField>
+            <!-- Footer -->
+            <staticText>
+                <reportElement x="0" y="52" width="535" height="14" style="Footer"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[Joseph · Yusuf — Plateforme de gestion des revenus selon le Principe de Joseph]]></text>
+            </staticText>
         </band>
     </summary>
 </jasperReport>

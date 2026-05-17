@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
 import java.util.List;
@@ -72,7 +73,7 @@ class UserManagementServiceTest {
     @DisplayName("listUsers - returns paginated response")
     void listUsers_paginated() {
         Page<User> page = new PageImpl<>(List.of(user));
-        when(userRepository.searchUsers(any(), any(), any(), any(Pageable.class))).thenReturn(page);
+        when(userRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
         when(userMapper.toDto(user)).thenReturn(userDto);
 
         PageResponse<UserDto> response = service.listUsers(0, 20, null, null, null);

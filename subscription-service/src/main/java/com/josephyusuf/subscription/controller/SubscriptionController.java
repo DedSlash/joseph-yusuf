@@ -1,5 +1,6 @@
 package com.josephyusuf.subscription.controller;
 
+import com.josephyusuf.subscription.dto.ConfirmPaymentRequest;
 import com.josephyusuf.subscription.dto.OrangeMoneyRequest;
 import com.josephyusuf.subscription.dto.PaymentIntentRequest;
 import com.josephyusuf.subscription.dto.PaymentIntentResponse;
@@ -7,6 +8,8 @@ import com.josephyusuf.subscription.dto.PaymentProviderResponse;
 import com.josephyusuf.subscription.dto.SubscriptionResponse;
 import com.josephyusuf.subscription.dto.TransactionResponse;
 import com.josephyusuf.subscription.dto.WavePaymentRequest;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.service.OrangeMoneyService;
 import com.josephyusuf.subscription.service.StripeService;
@@ -43,7 +46,8 @@ public class SubscriptionController {
         PaymentIntentResponse response = stripeService.createPaymentIntent(userId, request.getPlan(),
                 request.getCurrency(), request.getPromoCode());
         subscriptionService.recordPendingTransaction(userId, request.getPlan(), PaymentProvider.STRIPE,
-                response.getPaymentIntentId(), response.getAmount(), response.getCurrency());
+                response.getPaymentIntentId(), response.getAmount(), response.getCurrency(),
+                response.getPromoCode(), response.getDiscountPercent(), response.getOriginalAmount());
         return ResponseEntity.ok(response);
     }
 
@@ -53,7 +57,8 @@ public class SubscriptionController {
         UUID userId = userIdOf(auth);
         PaymentProviderResponse response = waveService.initiate(userId, request);
         subscriptionService.recordPendingTransaction(userId, request.getPlan(), PaymentProvider.WAVE,
-                response.getTransactionId(), response.getAmount(), response.getCurrency());
+                response.getTransactionId(), response.getAmount(), response.getCurrency(),
+                null, null, null);
         return ResponseEntity.ok(response);
     }
 
@@ -63,12 +68,31 @@ public class SubscriptionController {
         UUID userId = userIdOf(auth);
         PaymentProviderResponse response = orangeMoneyService.initiate(userId, request);
         subscriptionService.recordPendingTransaction(userId, request.getPlan(), PaymentProvider.ORANGE_MONEY,
-                response.getTransactionId(), response.getAmount(), response.getCurrency());
+                response.getTransactionId(), response.getAmount(), response.getCurrency(),
+                null, null, null);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/current")
     public ResponseEntity<SubscriptionResponse> current(Authentication auth) {
+        return ResponseEntity.ok(subscriptionService.getCurrent(userIdOf(auth)));
+    }
+
+    @PostMapping("/confirm")
+    public ResponseEntity<SubscriptionResponse> confirmPayment(Authentication auth,
+                                                                @jakarta.validation.Valid @RequestBody ConfirmPaymentRequest request) {
+        return ResponseEntity.ok(subscriptionService.confirmStripePayment(userIdOf(auth), request.getPaymentIntentId()));
+    }
+
+    @PutMapping("/auto-renew")
+    public ResponseEntity<SubscriptionResponse> setAutoRenew(Authentication auth,
+                                                              @RequestParam boolean enabled) {
+        return ResponseEntity.ok(subscriptionService.setAutoRenew(userIdOf(auth), enabled));
+    }
+
+    @PostMapping("/cancel")
+    public ResponseEntity<SubscriptionResponse> cancel(Authentication auth) {
+        subscriptionService.cancel(userIdOf(auth));
         return ResponseEntity.ok(subscriptionService.getCurrent(userIdOf(auth)));
     }
 

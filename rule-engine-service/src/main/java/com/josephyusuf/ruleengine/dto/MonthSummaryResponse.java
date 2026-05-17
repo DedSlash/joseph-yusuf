@@ -21,4 +21,5 @@ public class MonthSummaryResponse {
     private BigDecimal leanThreshold;
     private String status;
     private double percentageVsAverage;
+    private int monthsInBaseline;
 }

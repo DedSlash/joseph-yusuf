@@ -57,15 +57,36 @@ class IncomeEntryControllerTest {
     }
 
     @Test
-    @DisplayName("list - returns 200")
+    @DisplayName("list - returns 200 by month/year")
     void list_returns200() {
         IncomeEntryDto dto = IncomeEntryDto.builder().id(ENTRY_ID).build();
         when(entryService.listByMonthYear(USER_ID, 5, 2026)).thenReturn(List.of(dto));
 
-        ResponseEntity<List<IncomeEntryDto>> response = controller.list(createAuth(), 5, 2026);
+        ResponseEntity<List<IncomeEntryDto>> response = controller.list(createAuth(), 5, 2026, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("list - returns 200 by sourceId")
+    void list_returns200_bySource() {
+        UUID sourceId = UUID.randomUUID();
+        IncomeEntryDto dto = IncomeEntryDto.builder().id(ENTRY_ID).build();
+        when(entryService.listBySource(USER_ID, sourceId)).thenReturn(List.of(dto));
+
+        ResponseEntity<List<IncomeEntryDto>> response = controller.list(createAuth(), null, null, sourceId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("list - returns 400 when no params")
+    void list_returns400_whenNoParams() {
+        ResponseEntity<List<IncomeEntryDto>> response = controller.list(createAuth(), null, null, null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test

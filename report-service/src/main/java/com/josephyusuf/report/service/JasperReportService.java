@@ -1,6 +1,7 @@
 package com.josephyusuf.report.service;
 
 import com.josephyusuf.report.dto.AllocationLineDto;
+import com.josephyusuf.report.dto.AnnualMonthRow;
 import com.josephyusuf.report.dto.AnnualReportData;
 import com.josephyusuf.report.dto.MonthlyReportData;
 import com.josephyusuf.report.exception.ReportGenerationException;
@@ -26,6 +27,27 @@ public class JasperReportService {
     private static final String MONTHLY_TEMPLATE = "reports/monthly-report.jrxml";
     private static final String ANNUAL_TEMPLATE = "reports/annual-report.jrxml";
 
+    private static String translateStatus(String status) {
+        if (status == null) return "—";
+        return switch (status) {
+            case "ABUNDANCE" -> "Abondance";
+            case "LEAN"      -> "Disette";
+            case "NORMAL"    -> "Normal";
+            default          -> status;
+        };
+    }
+
+    private static String translateRule(String rule) {
+        if (rule == null) return "—";
+        return switch (rule) {
+            case "RULE_50_30_20" -> "Règle 50/30/20";
+            case "RULE_80_20"    -> "Règle 80/20 (Pareto)";
+            case "RULE_70_20_10" -> "Règle 70/20/10";
+            case "RULE_JOSEPH"   -> "Principe de Joseph";
+            default              -> rule;
+        };
+    }
+
     public byte[] generateMonthlyPdf(MonthlyReportData data) {
         Map<String, Object> params = new HashMap<>();
         params.put("userId", data.getUserId().toString());
@@ -33,9 +55,10 @@ public class JasperReportService {
         params.put("year", data.getYear());
         params.put("totalIncome", data.getSummary().getTotalIncome());
         params.put("averageLast3Months", data.getSummary().getAverageLast3Months());
-        params.put("status", data.getSummary().getStatus());
-        params.put("rule", data.getAllocation().getRule());
-        params.put("message", data.getAllocation().getMessage());
+        params.put("status", translateStatus(data.getSummary().getStatus()));
+        params.put("rule", translateRule(String.valueOf(data.getAllocation().getRule())));
+        String message = data.getAllocation().getMessage();
+        params.put("message", message != null ? message : "");
 
         List<AllocationLineDto> lines = data.getAllocation().getAllocations() != null
                 ? data.getAllocation().getAllocations()
@@ -53,7 +76,15 @@ public class JasperReportService {
         params.put("leanMonths", data.getLeanMonths());
         params.put("normalMonths", data.getNormalMonths());
 
-        return generate(ANNUAL_TEMPLATE, params, new JRBeanCollectionDataSource(data.getRows()));
+        List<AnnualMonthRow> translatedRows = data.getRows().stream()
+                .map(r -> AnnualMonthRow.builder()
+                        .month(r.getMonth())
+                        .totalIncome(r.getTotalIncome())
+                        .status(translateStatus(r.getStatus()))
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        return generate(ANNUAL_TEMPLATE, params, new JRBeanCollectionDataSource(translatedRows));
     }
 
     private byte[] generate(String template, Map<String, Object> params, JRBeanCollectionDataSource dataSource) {
@@ -63,7 +94,7 @@ public class JasperReportService {
             return JasperExportManager.exportReportToPdf(jasperPrint);
         } catch (Exception e) {
             log.error("Échec génération PDF template={} : {}", template, e.getMessage());
-            throw new ReportGenerationException("Échec génération PDF: " + e.getMessage(), e);
+            throw new ReportGenerationException("La génération du rapport PDF a échoué. Veuillez réessayer.", e);
         }
     }
 }
