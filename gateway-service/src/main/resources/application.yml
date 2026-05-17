@@ -53,6 +53,14 @@ spring:
           uri: lb://admin-service
           predicates:
             - Path=/api/admin/**
+        - id: support-service
+          uri: lb://support-service
+          predicates:
+            - Path=/api/support/**
+        - id: support-websocket
+          uri: lb:ws://support-service
+          predicates:
+            - Path=/ws/support/**
 
 eureka:
   client:
