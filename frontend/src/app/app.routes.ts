@@ -37,5 +37,15 @@ export const routes: Routes = [
     loadComponent: () => import('./features/subscription/subscription.component').then(m => m.SubscriptionComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'support',
+    loadComponent: () => import('./features/support/support.component').then(m => m.SupportComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'support/:id',
+    loadComponent: () => import('./features/support/support-detail.component').then(m => m.SupportDetailComponent),
+    canActivate: [authGuard]
+  },
   { path: '**', redirectTo: '' }
 ];

@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AdminAuthService } from '../../core/auth/admin-auth.service';
+import { AdminSupportService } from '../../core/services/admin-support.service';
 
 @Component({
   selector: 'admin-layout',
@@ -26,6 +27,13 @@ import { AdminAuthService } from '../../core/auth/admin-auth.service';
         </a>
         <a class="nav-link" routerLink="/promo-codes" routerLinkActive="active">
           <i class="pi pi-tag"></i> Codes promo
+        </a>
+        <a class="nav-link" routerLink="/support" routerLinkActive="active">
+          <i class="pi pi-question-circle"></i> Support
+          <span class="badge-count" *ngIf="openTickets() > 0">{{ openTickets() }}</span>
+        </a>
+        <a class="nav-link" routerLink="/knowledge-base" routerLinkActive="active">
+          <i class="pi pi-book"></i> Base de connaissances
         </a>
         <a class="nav-link" routerLink="/audit-log" routerLinkActive="active">
           <i class="pi pi-history"></i> Audit log
@@ -68,10 +76,43 @@ import { AdminAuthService } from '../../core/auth/admin-auth.service';
       padding: 0.15rem 0.5rem;
       border-radius: 1rem;
     }
+    .badge-count {
+      display: inline-block;
+      margin-left: 0.5rem;
+      background: var(--gold);
+      color: #1a1a1a;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.05rem 0.45rem;
+      border-radius: 1rem;
+      min-width: 1.3rem;
+      text-align: center;
+    }
   `]
 })
-export class AdminLayoutComponent {
+export class AdminLayoutComponent implements OnInit, OnDestroy {
   protected readonly auth = inject(AdminAuthService);
+  private readonly support = inject(AdminSupportService);
+
+  openTickets = signal(0);
+  private pollHandle: ReturnType<typeof setInterval> | null = null;
+  private static readonly POLL_INTERVAL_MS = 30_000;
+
+  ngOnInit(): void {
+    this.refreshCount();
+    this.pollHandle = setInterval(() => this.refreshCount(), AdminLayoutComponent.POLL_INTERVAL_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollHandle) clearInterval(this.pollHandle);
+  }
+
+  refreshCount(): void {
+    this.support.countOpen().subscribe({
+      next: n => this.openTickets.set(n),
+      error: () => {}
+    });
+  }
 
   logout(): void {
     this.auth.logout();

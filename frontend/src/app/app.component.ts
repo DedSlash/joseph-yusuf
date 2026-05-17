@@ -3,14 +3,16 @@ import { RouterOutlet, Router } from '@angular/router';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
+import { SupportButtonComponent } from './features/support/support-button.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavbarComponent],
+  imports: [CommonModule, RouterOutlet, NavbarComponent, SupportButtonComponent],
   template: `
     <app-navbar *ngIf="!isAuthPage()"></app-navbar>
     <router-outlet></router-outlet>
+    <app-support-button *ngIf="!isAuthPage() && authService.isLoggedIn()"></app-support-button>
   `
 })
 export class AppComponent implements OnInit, OnDestroy {
@@ -20,7 +22,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   };
 
-  constructor(private router: Router, private authService: AuthService) {}
+  constructor(private router: Router, protected authService: AuthService) {}
 
   ngOnInit(): void {
     document.addEventListener('visibilitychange', this.visibilityHandler);
