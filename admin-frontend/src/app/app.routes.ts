@@ -14,6 +14,9 @@ export const routes: Routes = [
       { path: 'transactions', loadComponent: () => import('./features/transactions/transactions.component').then(m => m.TransactionsComponent) },
       { path: 'promo-codes', loadComponent: () => import('./features/promo-codes/promo-codes.component').then(m => m.PromoCodesComponent) },
       { path: 'audit-log', loadComponent: () => import('./features/audit-log/audit-log.component').then(m => m.AuditLogComponent) },
+      { path: 'support', loadComponent: () => import('./features/support/support.component').then(m => m.SupportComponent) },
+      { path: 'support/:id', loadComponent: () => import('./features/support/support-detail.component').then(m => m.SupportDetailComponent) },
+      { path: 'knowledge-base', loadComponent: () => import('./features/knowledge-base/knowledge-base.component').then(m => m.KnowledgeBaseComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

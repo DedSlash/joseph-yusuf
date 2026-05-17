@@ -1,10 +1,12 @@
 package com.josephyusuf.income.service;
 
 import com.josephyusuf.income.dto.*;
+import com.josephyusuf.income.entity.IncomeEntry;
 import com.josephyusuf.income.entity.IncomeSource;
 import com.josephyusuf.income.exception.IncomeSourceNotFoundException;
 import com.josephyusuf.income.exception.PlanLimitExceededException;
 import com.josephyusuf.income.exception.UnauthorizedAccessException;
+import com.josephyusuf.income.repository.IncomeEntryRepository;
 import com.josephyusuf.income.repository.IncomeSourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.UUID;
 public class IncomeSourceService {
 
     private final IncomeSourceRepository sourceRepository;
+    private final IncomeEntryRepository entryRepository;
     private final IncomeMapper incomeMapper;
 
     @Transactional
@@ -63,6 +66,9 @@ public class IncomeSourceService {
     @Transactional
     public void deactivate(UUID userId, UUID sourceId) {
         IncomeSource source = getAndVerifyOwnership(userId, sourceId);
+        // Supprimer toutes les entrées liées avant le soft-delete de la source
+        List<IncomeEntry> entries = entryRepository.findByIncomeSourceIdAndUserId(sourceId, userId);
+        entryRepository.deleteAll(entries);
         source.setActive(false);
         sourceRepository.save(source);
     }

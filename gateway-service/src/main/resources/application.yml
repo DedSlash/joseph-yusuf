@@ -37,10 +37,30 @@ spring:
           uri: lb://alert-service
           predicates:
             - Path=/api/alerts/**
+        - id: report-service
+          uri: lb://report-service
+          predicates:
+            - Path=/api/reports/**
+        - id: subscription-service
+          uri: lb://subscription-service
+          predicates:
+            - Path=/api/subscriptions/**
+        - id: subscription-webhooks
+          uri: lb://subscription-service
+          predicates:
+            - Path=/api/webhooks/**
         - id: admin-service
           uri: lb://admin-service
           predicates:
             - Path=/api/admin/**
+        - id: support-service
+          uri: lb://support-service
+          predicates:
+            - Path=/api/support/**
+        - id: support-websocket
+          uri: lb:ws://support-service
+          predicates:
+            - Path=/ws/support/**
 
 eureka:
   client:

@@ -22,4 +22,7 @@ public class TransactionDto {
     private String plan;
     private String status;
     private Instant createdAt;
+    private String promoCode;
+    private Integer discountPercent;
+    private java.math.BigDecimal originalAmount;
 }

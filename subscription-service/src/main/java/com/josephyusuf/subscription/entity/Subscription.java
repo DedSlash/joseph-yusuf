@@ -49,6 +49,10 @@ public class Subscription {
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
 
+    @Column(name = "auto_renew", nullable = false)
+    @Builder.Default
+    private boolean autoRenew = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

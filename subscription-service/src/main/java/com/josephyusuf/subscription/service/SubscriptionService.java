@@ -39,7 +39,8 @@ public class SubscriptionService {
 
     @Transactional
     public Transaction recordPendingTransaction(UUID userId, PlanTier plan, PaymentProvider provider,
-                                                String externalTxId, BigDecimal amount, String currency) {
+                                                String externalTxId, BigDecimal amount, String currency,
+                                                String promoCode, Integer discountPercent, BigDecimal originalAmount) {
         if (plan == PlanTier.FREE) {
             throw new InvalidPlanException("Le plan FREE ne nécessite pas de transaction");
         }
@@ -51,6 +52,9 @@ public class SubscriptionService {
                 .amount(amount)
                 .currency(currency)
                 .status(TransactionStatus.PENDING)
+                .promoCode(promoCode)
+                .discountPercent(discountPercent)
+                .originalAmount(originalAmount)
                 .build();
         return transactionRepository.save(tx);
     }
@@ -115,6 +119,59 @@ public class SubscriptionService {
                 .orElseThrow(() -> new SubscriptionNotFoundException(
                         "Aucun abonnement trouvé pour userId=" + userId));
         return mapper.toResponse(subscription);
+    }
+
+    @Transactional
+    public SubscriptionResponse confirmStripePayment(UUID userId, String paymentIntentId) {
+        // Vérifie le statut réel du PaymentIntent directement auprès de Stripe
+        com.stripe.model.PaymentIntent intent;
+        try {
+            intent = com.stripe.model.PaymentIntent.retrieve(paymentIntentId);
+        } catch (com.stripe.exception.StripeException e) {
+            throw new com.josephyusuf.subscription.exception.PaymentException(
+                    "Impossible de vérifier le paiement : " + e.getMessage(), e);
+        }
+
+        if (!"succeeded".equals(intent.getStatus())) {
+            throw new com.josephyusuf.subscription.exception.PaymentException(
+                    "Paiement non confirmé — statut : " + intent.getStatus());
+        }
+
+        // Vérifie que ce PaymentIntent appartient bien à cet utilisateur
+        String metaUserId = intent.getMetadata().get("userId");
+        if (!userId.toString().equals(metaUserId)) {
+            throw new com.josephyusuf.subscription.exception.PaymentException(
+                    "Paiement non autorisé");
+        }
+
+        PlanTier plan = PlanTier.valueOf(intent.getMetadata().get("plan"));
+        Subscription sub = activateAfterPayment(userId, plan, PaymentProvider.STRIPE, paymentIntentId);
+        return mapper.toResponse(sub);
+    }
+
+    @Transactional
+    public SubscriptionResponse setAutoRenew(UUID userId, boolean autoRenew) {
+        Subscription sub = subscriptionRepository.findByUserId(userId)
+                .orElseThrow(() -> new SubscriptionNotFoundException("Aucun abonnement actif"));
+        sub.setAutoRenew(autoRenew);
+        Subscription saved = subscriptionRepository.save(sub);
+        log.info("autoRenew={} userId={}", autoRenew, userId);
+        return mapper.toResponse(saved);
+    }
+
+    @Transactional
+    public Subscription cancel(UUID userId) {
+        Subscription sub = subscriptionRepository.findByUserId(userId)
+                .orElseThrow(() -> new SubscriptionNotFoundException("Aucun abonnement actif"));
+        if (sub.getStatus() == SubscriptionStatus.CANCELLED) {
+            throw new InvalidPlanException("Abonnement déjà annulé");
+        }
+        sub.setStatus(SubscriptionStatus.CANCELLED);
+        sub.setCancelledAt(Instant.now());
+        Subscription saved = subscriptionRepository.save(sub);
+        syncPlanWithAuthService(userId, PlanTier.FREE);
+        log.info("Abonnement annulé userId={}", userId);
+        return saved;
     }
 
     public Page<TransactionResponse> getHistory(UUID userId, Pageable pageable) {

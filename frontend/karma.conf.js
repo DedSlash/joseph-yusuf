@@ -19,11 +19,14 @@ module.exports = function (config) {
     coverageReporter: {
       dir: require('path').join(__dirname, './coverage/joseph-yusuf'),
       subdir: '.',
+      includeAllSources: true,
       reporters: [
         { type: 'html' },
         { type: 'text-summary' },
         { type: 'lcovonly' }
-      ]
+      ],
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.spec.ts', 'src/test.ts']
     },
     reporters: ['progress', 'kjhtml'],
     browsers: ['Chrome'],

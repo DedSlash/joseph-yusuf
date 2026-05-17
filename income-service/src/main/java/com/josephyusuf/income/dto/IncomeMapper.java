@@ -12,5 +12,6 @@ public interface IncomeMapper {
 
     @Mapping(target = "incomeSourceId", source = "incomeSource.id")
     @Mapping(target = "incomeSourceName", source = "incomeSource.name")
+    @Mapping(target = "currency", source = "incomeSource.currency")
     IncomeEntryDto toEntryDto(IncomeEntry entry);
 }

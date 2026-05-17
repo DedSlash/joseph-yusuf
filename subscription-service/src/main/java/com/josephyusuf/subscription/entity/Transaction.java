@@ -53,6 +53,15 @@ public class Transaction {
     @Column(name = "failure_reason", length = 500)
     private String failureReason;
 
+    @Column(name = "promo_code", length = 50)
+    private String promoCode;
+
+    @Column(name = "discount_percent")
+    private Integer discountPercent;
+
+    @Column(name = "original_amount", precision = 15, scale = 2)
+    private BigDecimal originalAmount;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

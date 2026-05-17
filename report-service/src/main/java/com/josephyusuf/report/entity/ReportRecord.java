@@ -34,7 +34,6 @@ public class ReportRecord {
     @Column(name = "file_name", nullable = false, length = 255)
     private String fileName;
 
-    @Lob
     @Column(name = "pdf_content", nullable = false)
     private byte[] pdfContent;
 

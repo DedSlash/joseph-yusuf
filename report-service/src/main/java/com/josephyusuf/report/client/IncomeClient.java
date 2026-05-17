@@ -5,7 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "income-service")
+@FeignClient(name = "income-service", configuration = com.josephyusuf.report.config.FeignConfig.class)
 public interface IncomeClient {
 
     @GetMapping("/api/incomes/summary")

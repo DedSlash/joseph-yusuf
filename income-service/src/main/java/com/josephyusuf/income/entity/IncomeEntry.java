@@ -35,6 +35,9 @@ public class IncomeEntry {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "amount_xof", nullable = false, precision = 15, scale = 2)
+    private BigDecimal amountXof;
+
     @Column(nullable = false)
     private int month;
 

@@ -48,7 +48,7 @@ public class OrangeMoneyService {
         return switch (plan) {
             case PREMIUM -> PREMIUM_AMOUNT;
             case PREMIUM_PLUS -> PREMIUM_PLUS_AMOUNT;
-            default -> throw new InvalidPlanException("Plan non supporté : " + plan);
+            default -> throw new InvalidPlanException("Ce plan ne peut pas être souscrit via ce mode de paiement.");
         };
     }
 

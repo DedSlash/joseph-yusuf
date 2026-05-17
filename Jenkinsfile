@@ -98,7 +98,7 @@ pipeline {
 
     environment {
         VPS_SSH_KEY_ID = 'vps-ssh-key'
-        BACKEND_SERVICES = 'discovery-server,gateway-service,auth-service,income-service,rule-engine-service,alert-service,report-service,subscription-service,admin-service'
+        BACKEND_SERVICES = 'discovery-server,gateway-service,auth-service,income-service,rule-engine-service,alert-service,report-service,subscription-service,admin-service,support-service'
         MAJOR_VERSION = '1'
         MINOR_VERSION = '0'
     }
@@ -539,7 +539,8 @@ Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
                             'alert-service'       : 8084,
                             'report-service'      : 8085,
                             'subscription-service': 8086,
-                            'admin-service'       : 8087
+                            'admin-service'       : 8087,
+                            'support-service'     : 8088
                         ]
 
                         servicesToCheck.each { svc ->

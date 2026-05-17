@@ -66,6 +66,29 @@ public class RuleEngineService {
         return result;
     }
 
+    public AllocationResult getResult(UUID userId, String plan, int month, int year) {
+        UserRuleConfig config = getOrCreateConfig(userId);
+        checkPlanAccess(plan, config.getActiveRule());
+
+        MonthSummaryResponse summary;
+        try {
+            summary = incomeClient.getSummary(month, year);
+        } catch (Exception e) {
+            throw new IncomeDataNotFoundException(
+                    "Pas de données de revenus pour " + month + "/" + year);
+        }
+
+        BigDecimal total = summary.getTotalIncome() != null ? summary.getTotalIncome() : BigDecimal.ZERO;
+
+        RuleCalculator calculator = calculators.get(config.getActiveRule());
+        return calculator.calculate(
+                total,
+                summary.getStatus(),
+                config.getJosephAbundanceSavingsPercent(),
+                config.getJosephLeanSavingsPercent()
+        );
+    }
+
     public AllocationResult calculateCurrent(UUID userId, String plan) {
         UserRuleConfig config = getOrCreateConfig(userId);
         checkPlanAccess(plan, config.getActiveRule());
@@ -95,7 +118,6 @@ public class RuleEngineService {
                 config.getJosephLeanSavingsPercent()
         );
 
-        ruleEventProducer.publishRuleApplied(userId, result, month, year);
         return result;
     }
 

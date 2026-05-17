@@ -47,6 +47,15 @@ public class RuleController {
         return ResponseEntity.ok(ruleEngineService.updateConfig(userId, plan, request));
     }
 
+    @GetMapping("/result")
+    public ResponseEntity<AllocationResult> getResult(Authentication auth,
+                                                      @RequestParam int month,
+                                                      @RequestParam int year) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        String plan = (String) auth.getCredentials();
+        return ResponseEntity.ok(ruleEngineService.getResult(userId, plan, month, year));
+    }
+
     @GetMapping("/available")
     public ResponseEntity<List<RuleAvailability>> getAvailableRules(Authentication auth) {
         String plan = (String) auth.getCredentials();

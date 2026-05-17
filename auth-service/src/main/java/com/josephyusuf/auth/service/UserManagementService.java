@@ -8,15 +8,18 @@ import com.josephyusuf.auth.entity.Role;
 import com.josephyusuf.auth.entity.User;
 import com.josephyusuf.auth.exception.UserNotFoundException;
 import com.josephyusuf.auth.repository.UserRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,7 +34,25 @@ public class UserManagementService {
     @Transactional(readOnly = true)
     public PageResponse<UserDto> listUsers(int page, int size, Plan plan, Boolean enabled, String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<User> usersPage = userRepository.searchUsers(plan, enabled, search, pageable);
+        Specification<User> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (plan != null) {
+                predicates.add(cb.equal(root.get("plan"), plan));
+            }
+            if (enabled != null) {
+                predicates.add(cb.equal(root.get("enabled"), enabled));
+            }
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("email")), pattern),
+                    cb.like(cb.lower(root.get("firstName")), pattern),
+                    cb.like(cb.lower(root.get("lastName")), pattern)
+                ));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        Page<User> usersPage = userRepository.findAll(spec, pageable);
 
         List<UserDto> content = usersPage.getContent().stream()
                 .map(userMapper::toDto)

@@ -15,9 +15,35 @@ import { AuthService } from '../../core/auth/auth.service';
 import { IncomeSource, IncomeSourceRequest, IncomeSourceType, IncomeEntry, IncomeEntryRequest, MonthSummary } from '../../shared/models/income.model';
 import { Plan } from '../../shared/models/user.model';
 
+interface CurrencyOption {
+  code: string;
+  label: string;
+  rateToXOF: number; // 1 unité de cette devise = X XOF (taux indicatif)
+}
+
+const CURRENCIES: CurrencyOption[] = [
+  { code: 'XOF', label: 'XOF — Franc CFA (BCEAO)',        rateToXOF: 1       },
+  { code: 'XAF', label: 'XAF — Franc CFA (BEAC)',          rateToXOF: 1       },
+  { code: 'EUR', label: 'EUR — Euro',                       rateToXOF: 655.96  },
+  { code: 'USD', label: 'USD — Dollar américain',           rateToXOF: 600     },
+  { code: 'GBP', label: 'GBP — Livre sterling',             rateToXOF: 760     },
+  { code: 'CAD', label: 'CAD — Dollar canadien',            rateToXOF: 445     },
+  { code: 'CHF', label: 'CHF — Franc suisse',               rateToXOF: 670     },
+  { code: 'MAD', label: 'MAD — Dirham marocain',            rateToXOF: 60      },
+  { code: 'DZD', label: 'DZD — Dinar algérien',             rateToXOF: 4.5     },
+  { code: 'TND', label: 'TND — Dinar tunisien',             rateToXOF: 190     },
+  { code: 'NGN', label: 'NGN — Naira nigérian',             rateToXOF: 0.40    },
+  { code: 'GHS', label: 'GHS — Cedi ghanéen',               rateToXOF: 42      },
+  { code: 'MRU', label: 'MRU — Ouguiya mauritanien',        rateToXOF: 16      },
+  { code: 'GMD', label: 'GMD — Dalasi gambien',             rateToXOF: 9       },
+  { code: 'SLL', label: 'SLL — Leone sierra-léonais',       rateToXOF: 0.03    },
+  { code: 'LRD', label: 'LRD — Dollar libérien',            rateToXOF: 3       },
+];
+
 interface SourceEntryForm {
   sourceId: string;
   sourceName: string;
+  currency: string;
   amount: number;
 }
 
@@ -51,15 +77,26 @@ interface ImportRow {
           <div class="tab-content">
             <div class="tab-header">
               <h3 class="tab-title">Mes sources de revenus</h3>
-              <button
-                class="btn-add"
-                [disabled]="isAddSourceDisabled()"
-                [pTooltip]="getAddSourceTooltip()"
-                tooltipPosition="left"
-                (click)="openAddSourceDialog()"
-              >
-                + Ajouter une source
-              </button>
+              <div class="tab-header-actions">
+                <button
+                  class="btn-import"
+                  [disabled]="!isPremium()"
+                  [pTooltip]="!isPremium() ? 'Disponible en Premium' : ''"
+                  tooltipPosition="left"
+                  (click)="showImportDialog = true"
+                >
+                  <i class="pi pi-upload"></i> Importer
+                </button>
+                <button
+                  class="btn-add"
+                  [disabled]="isAddSourceDisabled()"
+                  [pTooltip]="getAddSourceTooltip()"
+                  tooltipPosition="left"
+                  (click)="openAddSourceDialog()"
+                >
+                  + Ajouter une source
+                </button>
+              </div>
             </div>
 
             <div class="sources-list" *ngIf="sources.length > 0">
@@ -84,8 +121,8 @@ interface ImportRow {
             </div>
 
             <div class="empty-state" *ngIf="sources.length === 0">
-              <p>Aucune source de revenu configuree.</p>
-              <p class="empty-hint">Ajoutez votre premiere source pour commencer.</p>
+              <p>Aucune source de revenu configurée.</p>
+              <p class="empty-hint">Ajoutez votre première source ou importez un fichier historique pour démarrer.</p>
             </div>
           </div>
         </p-tabPanel>
@@ -103,13 +140,13 @@ interface ImportRow {
                   tooltipPosition="left"
                   (click)="showImportDialog = true"
                 >
-                  <i class="pi pi-upload"></i> Importer des donnees
+                  <i class="pi pi-upload"></i> Importer des données
                 </button>
                 <div class="month-selector">
                   <select [(ngModel)]="selectedMonth" (ngModelChange)="loadEntries()" class="select-input">
-                    <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
+                    <option *ngFor="let m of availableMonths" [ngValue]="m.value">{{ m.label }}</option>
                   </select>
-                  <select [(ngModel)]="selectedYear" (ngModelChange)="loadEntries()" class="select-input">
+                  <select [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()" class="select-input">
                     <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
                   </select>
                 </div>
@@ -118,7 +155,12 @@ interface ImportRow {
 
             <div class="entries-form" *ngIf="sources.length > 0">
               <div class="entry-row" *ngFor="let entry of entryForms">
-                <label class="entry-label">{{ entry.sourceName }}</label>
+                <div class="entry-left">
+                  <label class="entry-label">{{ entry.sourceName }}</label>
+                  <span class="entry-converted" *ngIf="entry.currency !== 'XOF' && entry.amount > 0">
+                    ≈ {{ formatCurrency(toXOF(entry.amount, entry.currency)) }} XOF
+                  </span>
+                </div>
                 <div class="entry-input-wrapper">
                   <p-inputNumber
                     [(ngModel)]="entry.amount"
@@ -129,14 +171,14 @@ interface ImportRow {
                     placeholder="0"
                     styleClass="dark-input-number"
                   ></p-inputNumber>
-                  <span class="entry-currency">XOF</span>
+                  <span class="entry-currency">{{ entry.currency }}</span>
                 </div>
               </div>
 
               <div class="entries-footer">
                 <div class="total-display">
-                  <span class="total-label">Total:</span>
-                  <span class="total-amount">{{ formatCurrency(calculateTotal()) }}</span>
+                  <span class="total-label">Total (XOF) :</span>
+                  <span class="total-amount">{{ formatCurrency(calculateTotalXOF()) }}</span>
                   <span class="status-badge" *ngIf="currentSummary" [ngClass]="getStatusClass(currentSummary.status)">
                     {{ getStatusLabel(currentSummary.status) }}
                   </span>
@@ -187,12 +229,19 @@ interface ImportRow {
           </div>
           <div class="form-group">
             <label>Devise</label>
-            <input
-              type="text"
+            <p-dropdown
+              [options]="currencyOptions"
               [(ngModel)]="newSource.currency"
-              placeholder="XOF"
-              class="form-input"
-            />
+              optionLabel="label"
+              optionValue="code"
+              placeholder="Sélectionnez une devise"
+              styleClass="dark-dropdown"
+              [filter]="true"
+              filterPlaceholder="Rechercher…"
+            ></p-dropdown>
+            <span class="currency-hint" *ngIf="newSource.currency && newSource.currency !== 'XOF'">
+              Les montants seront convertis en XOF pour l'analyse (taux indicatif).
+            </span>
           </div>
         </div>
         <ng-template pTemplate="footer">
@@ -269,36 +318,126 @@ interface ImportRow {
         (onHide)="resetImport()"
       >
         <div class="import-content" *ngIf="!importPreviewRows.length">
+
+          <!-- Bandeau modèle -->
+          <div class="import-template-banner">
+            <div class="template-banner-left">
+              <i class="pi pi-file-excel template-icon"></i>
+              <div>
+                <span class="template-title">Utilisez notre modèle pour un import sans erreur</span>
+                <span class="template-sub">Colonnes attendues : Source · Montant · Date (AAAA-MM-JJ)</span>
+              </div>
+            </div>
+            <button class="btn-template" (click)="downloadTemplate()">
+              <i class="pi pi-download"></i> Télécharger le modèle
+            </button>
+          </div>
+
+          <!-- Aide IA — collapsible -->
+          <div class="ai-help-block">
+            <button class="ai-help-toggle" (click)="aiHelpOpen = !aiHelpOpen">
+              <span class="ai-help-toggle-left">
+                <span class="ai-icon">✦</span>
+                <span>Vous avez déjà un fichier dans un autre format ?</span>
+              </span>
+              <i class="pi" [ngClass]="aiHelpOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </button>
+
+            <div class="ai-help-body" *ngIf="aiHelpOpen">
+              <p class="ai-help-intro">
+                Laissez un assistant IA convertir votre fichier en quelques secondes —
+                sans reformater manuellement chaque colonne.
+              </p>
+
+              <ol class="ai-steps">
+                <li>
+                  <span class="ai-step-num">1</span>
+                  <div>
+                    <strong>Téléchargez le modèle</strong> ci-dessus. Il montre exactement le format attendu.
+                  </div>
+                </li>
+                <li>
+                  <span class="ai-step-num">2</span>
+                  <div>
+                    <strong>Ouvrez un assistant IA</strong> —
+                    <span class="ai-tool">ChatGPT</span>,
+                    <span class="ai-tool">Claude</span>,
+                    <span class="ai-tool">Gemini</span> ou tout autre outil similaire.
+                  </div>
+                </li>
+                <li>
+                  <span class="ai-step-num">3</span>
+                  <div>
+                    <strong>Envoyez les deux fichiers</strong> à l'IA avec ce message :
+                    <div class="ai-prompt-box">
+                      <span class="ai-prompt-text">
+                        « J'ai un fichier de revenus (joint). Convertis-le au format du modèle joint
+                        (colonnes : Source, Description, Montant, Devise, Date au format AAAA-MM-JJ).
+                        Chaque ligne doit représenter une transaction.
+                        Exporte le résultat en fichier Excel (.xlsx). »
+                      </span>
+                      <button class="btn-copy-prompt" (click)="copyPrompt($event)">
+                        <i class="pi pi-copy"></i>
+                        <span>{{ promptCopied ? 'Copié !' : 'Copier' }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+                <li>
+                  <span class="ai-step-num">4</span>
+                  <div>
+                    <strong>Téléchargez le fichier converti</strong> produit par l'IA,
+                    puis importez-le ici.
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+
           <div class="import-upload-zone" (dragover)="onDragOver($event)" (drop)="onFileDrop($event)" (click)="fileInput.click()">
             <i class="pi pi-cloud-upload import-icon"></i>
-            <p class="import-text">Glissez un fichier ici ou cliquez pour selectionner</p>
-            <p class="import-formats">Formats acceptes : .xlsx, .csv, .json</p>
+            <p class="import-text">Glissez un fichier ici ou cliquez pour sélectionner</p>
+            <p class="import-formats">Formats acceptés : .xlsx, .csv, .json</p>
             <input #fileInput type="file" accept=".xlsx,.csv,.json" (change)="onFileSelect($event)" hidden />
           </div>
 
           <div class="form-group import-source-select">
-            <label>Source de revenu cible (pour fichiers Excel/CSV)</label>
+            <label>Source de revenu par défaut <span class="label-hint">(utilisée si la colonne Source est vide)</span></label>
             <p-dropdown
               [options]="sourceOptions"
               [(ngModel)]="importTargetSourceId"
               optionLabel="label"
               optionValue="value"
-              placeholder="Selectionnez une source"
+              placeholder="Sélectionnez une source"
               styleClass="dark-dropdown"
             ></p-dropdown>
           </div>
 
           <div class="form-group import-checkbox">
-            <p-checkbox [(ngModel)]="importOverwrite" [binary]="true" label="Ecraser les entrees existantes"></p-checkbox>
+            <p-checkbox [(ngModel)]="importOverwrite" [binary]="true" label="Écraser les entrées existantes pour les mêmes mois"></p-checkbox>
           </div>
         </div>
 
         <!-- Preview Table -->
         <div class="import-preview" *ngIf="importPreviewRows.length > 0">
+
+          <!-- Résumé sources -->
+          <div class="import-sources-summary" *ngIf="importNewSources.length > 0">
+            <span class="sources-summary-icon">✦</span>
+            <div>
+              <strong>{{ importNewSources.length }} nouvelle(s) source(s) à créer :</strong>
+              <span class="new-sources-list">{{ importNewSources.join(' · ') }}</span>
+              <p class="sources-summary-hint">Elles seront créées automatiquement avant l'import des revenus.</p>
+            </div>
+          </div>
+
           <div class="import-summary">
-            <span>{{ importPreviewRows.length }} lignes detectees</span>
+            <span>{{ importValidCount() }} entrées valides</span>
             <span class="import-conflicts" *ngIf="getConflictCount() > 0">
-              ({{ getConflictCount() }} conflits)
+              · {{ getConflictCount() }} conflits (mois déjà saisis)
+            </span>
+            <span class="import-invalid" *ngIf="importInvalidCount() > 0">
+              · {{ importInvalidCount() }} invalides ignorées
             </span>
           </div>
 
@@ -306,22 +445,20 @@ interface ImportRow {
             <table class="import-table">
               <thead>
                 <tr>
-                  <th>Mois</th>
-                  <th>Annee</th>
+                  <th>Période</th>
                   <th>Source</th>
-                  <th>Montant</th>
-                  <th>Statut</th>
+                  <th>Montant cumulé</th>
+                  <th>Source</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of importPreviewRows" [ngClass]="{'row-invalid': !row.valid}">
-                  <td>{{ row.month }}</td>
-                  <td>{{ row.year }}</td>
-                  <td>{{ row.source }}</td>
-                  <td>{{ formatCurrency(row.amount) }}</td>
+                <tr *ngFor="let row of importAggregatedPreview()" [ngClass]="{'row-invalid': !row.valid}">
+                  <td>{{ formatImportDate(row.month, row.year) }}</td>
+                  <td>{{ row.source || '—' }}</td>
+                  <td>{{ row.valid ? formatCurrency(row.amount) : '—' }}</td>
                   <td>
-                    <span class="import-status" [ngClass]="'import-status-' + row.status">
-                      {{ row.statusLabel }}
+                    <span class="source-tag" [ngClass]="isNewSource(row.source) ? 'source-tag-new' : 'source-tag-exists'">
+                      {{ isNewSource(row.source) ? '+ à créer' : '✓ existante' }}
                     </span>
                   </td>
                 </tr>
@@ -332,7 +469,8 @@ interface ImportRow {
           <div class="import-actions">
             <button class="btn-cancel" (click)="resetImport()">Retour</button>
             <button class="btn-confirm" (click)="confirmImport()" [disabled]="importing">
-              {{ importing ? 'Import en cours...' : 'Confirmer l\\'import' }}
+              <ng-container *ngIf="importing">Import en cours...</ng-container>
+              <ng-container *ngIf="!importing">Confirmer l'import</ng-container>
             </button>
           </div>
         </div>
@@ -542,10 +680,29 @@ interface ImportRow {
       border-radius: 8px;
     }
 
+    .entry-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
     .entry-label {
       font-size: 0.9rem;
       color: #F0E8D0;
       font-weight: 500;
+    }
+
+    .entry-converted {
+      font-size: 0.75rem;
+      color: #C9A84C;
+      opacity: 0.8;
+    }
+
+    .currency-hint {
+      font-size: 0.75rem;
+      color: #C9A84C;
+      opacity: 0.8;
+      margin-top: 0.25rem;
     }
 
     .entry-input-wrapper {
@@ -776,6 +933,215 @@ interface ImportRow {
     }
 
     /* Import styles */
+    .import-template-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1.1rem;
+      background: rgba(92, 219, 111, 0.05);
+      border: 1px solid rgba(92, 219, 111, 0.2);
+      border-radius: 8px;
+      margin-bottom: 1.1rem;
+    }
+
+    .template-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .template-icon {
+      font-size: 1.4rem;
+      color: #5cdb6f;
+      flex-shrink: 0;
+    }
+
+    .template-title {
+      display: block;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #F0E8D0;
+    }
+
+    .template-sub {
+      display: block;
+      font-size: 0.72rem;
+      color: rgba(240, 232, 208, 0.5);
+      margin-top: 0.15rem;
+      font-family: monospace;
+    }
+
+    .btn-template {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.9rem;
+      background: rgba(92, 219, 111, 0.1);
+      border: 1px solid rgba(92, 219, 111, 0.35);
+      border-radius: 6px;
+      color: #5cdb6f;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    .btn-template:hover { background: rgba(92, 219, 111, 0.18); }
+
+    .label-hint {
+      font-size: 0.72rem;
+      color: rgba(240, 232, 208, 0.45);
+      font-weight: 400;
+    }
+
+    /* ── Bloc aide IA ── */
+    .ai-help-block {
+      border: 1px solid rgba(201, 168, 76, 0.18);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1.1rem;
+    }
+
+    .ai-help-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 1rem;
+      background: rgba(201, 168, 76, 0.05);
+      border: none;
+      cursor: pointer;
+      color: #F0E8D0;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .ai-help-toggle:hover { background: rgba(201, 168, 76, 0.1); }
+
+    .ai-help-toggle-left {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .ai-icon {
+      color: #C9A84C;
+      font-size: 0.85rem;
+    }
+
+    .ai-help-toggle .pi-chevron-up,
+    .ai-help-toggle .pi-chevron-down {
+      font-size: 0.75rem;
+      color: rgba(240, 232, 208, 0.45);
+    }
+
+    .ai-help-body {
+      padding: 1rem 1.1rem 1.1rem;
+      border-top: 1px solid rgba(201, 168, 76, 0.12);
+    }
+
+    .ai-help-intro {
+      font-size: 0.82rem;
+      color: rgba(240, 232, 208, 0.65);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .ai-steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .ai-steps li {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .ai-step-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(201, 168, 76, 0.12);
+      border: 1px solid rgba(201, 168, 76, 0.35);
+      color: #C9A84C;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .ai-steps li div {
+      font-size: 0.82rem;
+      color: rgba(240, 232, 208, 0.75);
+      line-height: 1.55;
+    }
+
+    .ai-steps li strong {
+      color: #F0E8D0;
+      font-weight: 600;
+    }
+
+    .ai-tool {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+      background: rgba(201, 168, 76, 0.1);
+      border: 1px solid rgba(201, 168, 76, 0.25);
+      color: #C9A84C;
+      margin: 0 1px;
+    }
+
+    .ai-prompt-box {
+      margin-top: 0.6rem;
+      padding: 0.75rem 1rem;
+      background: rgba(13, 11, 7, 0.6);
+      border: 1px solid rgba(201, 168, 76, 0.15);
+      border-radius: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .ai-prompt-text {
+      font-size: 0.78rem;
+      color: rgba(240, 232, 208, 0.6);
+      line-height: 1.6;
+      font-style: italic;
+      flex: 1;
+    }
+
+    .btn-copy-prompt {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.65rem;
+      background: rgba(201, 168, 76, 0.1);
+      border: 1px solid rgba(201, 168, 76, 0.3);
+      border-radius: 5px;
+      color: #C9A84C;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      align-self: flex-start;
+    }
+
+    .btn-copy-prompt:hover { background: rgba(201, 168, 76, 0.18); }
+
     .import-upload-zone {
       border: 2px dashed rgba(201, 168, 76, 0.3);
       border-radius: 10px;
@@ -823,17 +1189,75 @@ interface ImportRow {
       gap: 1rem;
     }
 
+    .import-sources-summary {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      padding: 0.85rem 1rem;
+      background: rgba(92, 219, 111, 0.06);
+      border: 1px solid rgba(92, 219, 111, 0.2);
+      border-radius: 8px;
+    }
+
+    .sources-summary-icon { color: #C9A84C; flex-shrink: 0; margin-top: 2px; }
+
+    .import-sources-summary strong {
+      display: block;
+      font-size: 0.83rem;
+      color: #F0E8D0;
+      margin-bottom: 0.2rem;
+    }
+
+    .new-sources-list {
+      font-size: 0.78rem;
+      color: #5cdb6f;
+      font-weight: 600;
+    }
+
+    .sources-summary-hint {
+      font-size: 0.73rem;
+      color: rgba(240,232,208,0.45);
+      margin: 0.2rem 0 0;
+    }
+
     .import-summary {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #F0E8D0;
+      flex-wrap: wrap;
     }
 
     .import-conflicts {
+      color: #f5b041;
+      font-size: 0.8rem;
+    }
+
+    .import-invalid {
       color: #ff6b7a;
       font-size: 0.8rem;
+    }
+
+    .source-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .source-tag-new {
+      background: rgba(92,219,111,0.12);
+      color: #5cdb6f;
+      border: 1px solid rgba(92,219,111,0.3);
+    }
+
+    .source-tag-exists {
+      background: rgba(201,168,76,0.1);
+      color: #C9A84C;
+      border: 1px solid rgba(201,168,76,0.25);
     }
 
     .import-table-wrapper {
@@ -956,6 +1380,9 @@ export class IncomesComponent implements OnInit {
   importOverwrite = false;
   importing = false;
   sourceOptions: { label: string; value: string }[] = [];
+  aiHelpOpen = false;
+  promptCopied = false;
+  importNewSources: string[] = [];
 
   selectedMonth: number;
   selectedYear: number;
@@ -965,6 +1392,8 @@ export class IncomesComponent implements OnInit {
     type: 'SALARY',
     currency: 'XOF'
   };
+
+  currencyOptions = CURRENCIES;
 
   sourceTypes: SourceTypeOption[] = [
     { label: 'Salaire', value: 'SALARY' },
@@ -997,14 +1426,31 @@ export class IncomesComponent implements OnInit {
     maximumFractionDigits: 0
   });
 
+  readonly currentMonth: number;
+  readonly currentYear: number;
+
   constructor(
     private incomeService: IncomeService,
     private authService: AuthService
   ) {
     const now = new Date();
-    this.selectedMonth = now.getMonth() + 1;
-    this.selectedYear = now.getFullYear();
-    this.years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
+    this.currentMonth = now.getMonth() + 1;
+    this.currentYear  = now.getFullYear();
+    this.selectedMonth = this.currentMonth;
+    this.selectedYear  = this.currentYear;
+    this.years = Array.from({ length: 5 }, (_, i) => this.currentYear - 4 + i);
+  }
+
+  get availableMonths(): { label: string; value: number }[] {
+    if (this.selectedYear < this.currentYear) return this.months;
+    return this.months.filter(m => m.value <= this.currentMonth);
+  }
+
+  onYearChange(): void {
+    if (this.selectedYear === this.currentYear && this.selectedMonth > this.currentMonth) {
+      this.selectedMonth = this.currentMonth;
+    }
+    this.loadEntries();
   }
 
   ngOnInit(): void {
@@ -1048,6 +1494,7 @@ export class IncomesComponent implements OnInit {
       .map(s => ({
         sourceId: s.id,
         sourceName: s.name,
+        currency: s.currency || 'XOF',
         amount: 0
       }));
   }
@@ -1145,6 +1592,10 @@ export class IncomesComponent implements OnInit {
         URL.revokeObjectURL(url);
 
         this.confirmDeleteSource();
+      },
+      error: () => {
+        this.showDeletePremiumDialog = false;
+        this.sourceToDelete = null;
       }
     });
   }
@@ -1222,66 +1673,113 @@ export class IncomesComponent implements OnInit {
     }
   }
 
+  // ── Extraction universelle depuis un objet ligne ──────────────────────────
+
+  private extractRow(raw: Record<string, any>): Omit<ImportRow, 'status' | 'statusLabel' | 'valid'> {
+    const amount = this.extractAmount(raw);
+    const source = String(raw['Source'] ?? raw['source'] ?? raw['Source de revenu'] ?? '').trim();
+    const note = String(raw['Note'] ?? raw['note'] ?? raw['Description'] ?? raw['description'] ?? '').trim();
+    const { month, year } = this.extractMonthYear(raw);
+    return { month, year, source, amount, note };
+  }
+
+  private extractAmount(raw: Record<string, any>): number {
+    const value = String(raw['Montant'] ?? raw['montant'] ?? raw['amount'] ?? raw['Amount'] ?? 0)
+      .replace(/\s/g, '').replace(',', '.');
+    return parseFloat(value) || 0;
+  }
+
+  private extractMonthYear(raw: Record<string, any>): { month: number; year: number } {
+    const dateRaw = raw['Date'] ?? raw['date'];
+    if (dateRaw) return this.parseDateValue(dateRaw);
+
+    const moisRaw = raw['Mois'] ?? raw['mois'] ?? raw['month'] ?? raw['Month'];
+    const anneeRaw = raw['Année'] ?? raw['Annee'] ?? raw['annee'] ?? raw['year'] ?? raw['Year'] ?? raw['ANNEE'];
+    if (moisRaw != null && anneeRaw != null) {
+      return { month: parseInt(String(moisRaw), 10), year: parseInt(String(anneeRaw), 10) };
+    }
+    return { month: 0, year: 0 };
+  }
+
+  private parseDateValue(dateRaw: unknown): { month: number; year: number } {
+    if (typeof dateRaw === 'number') {
+      // Serial Excel : epoch 1900
+      const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
+      return { month: d.getUTCMonth() + 1, year: d.getUTCFullYear() };
+    }
+    const str = String(dateRaw).trim();
+    const isoRegex = /^(\d{4})-(\d{2})/;
+    const frRegex = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/;
+    const isoMatch = isoRegex.exec(str);
+    if (isoMatch) {
+      return { year: parseInt(isoMatch[1], 10), month: parseInt(isoMatch[2], 10) };
+    }
+    const frMatch = frRegex.exec(str);
+    if (frMatch) {
+      return { month: parseInt(frMatch[1], 10), year: parseInt(frMatch[3], 10) };
+    }
+    return { month: 0, year: 0 };
+  }
+
+  private extractJsonEntries(data: any): any[] {
+    if (data?.entries && Array.isArray(data.entries)) return data.entries;
+    if (Array.isArray(data)) return data;
+    return [];
+  }
+
   private parseJsonImport(text: string): void {
     try {
       const data = JSON.parse(text);
       const rows: ImportRow[] = [];
 
-      if (data.entries && Array.isArray(data.entries)) {
-        const sourceName = data.source?.nom || 'Import';
-        for (const entry of data.entries) {
-          rows.push({
-            month: entry.month,
-            year: entry.year,
-            source: sourceName,
-            amount: entry.amount,
-            note: entry.note || '',
-            status: 'new',
-            statusLabel: 'Nouveau',
-            valid: true
-          });
-        }
-      } else if (Array.isArray(data)) {
-        for (const entry of data) {
-          rows.push({
-            month: entry.month || entry.Mois,
-            year: entry.year || entry.Année || entry.Annee,
-            source: entry.source || entry.Source || '',
-            amount: entry.amount || entry.Montant || 0,
-            note: entry.note || entry.Note || '',
-            status: 'new',
-            statusLabel: 'Nouveau',
-            valid: true
-          });
-        }
-      }
+      const entries: any[] = this.extractJsonEntries(data);
 
-      this.validateAndPreview(rows);
-    } catch {
-      // invalid json
-    }
-  }
+      const sourceFallback = data.source?.nom ?? '';
 
-  private parseCsvImport(text: string): void {
-    const separator = text.includes(';') ? ';' : ',';
-    const lines = text.trim().split('\n');
-    if (lines.length < 2) return;
-
-    const rows: ImportRow[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
-      if (cols.length >= 4) {
+      for (const entry of entries) {
+        const base = this.extractRow(entry);
         rows.push({
-          month: parseInt(cols[0], 10),
-          year: parseInt(cols[1], 10),
-          source: cols[2],
-          amount: parseFloat(cols[3].replace(/\s/g, '')) || 0,
-          note: cols[4] || '',
+          ...base,
+          source: base.source || sourceFallback,
           status: 'new',
           statusLabel: 'Nouveau',
           valid: true
         });
       }
+
+      this.validateAndPreview(rows);
+    } catch {
+      // json invalide
+    }
+  }
+
+  private parseCsvImport(text: string): void {
+    const sep = text.includes(';') ? ';' : ',';
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return;
+
+    // Détection de l'en-tête : on cherche la première ligne contenant
+    // au moins une clé reconnue
+    const knownKeys = ['source','montant','amount','date','mois','annee','année'];
+    let headerIdx = 0;
+    for (let i = 0; i < Math.min(lines.length, 5); i++) {
+      const lower = lines[i].toLowerCase();
+      if (knownKeys.some(k => lower.includes(k))) { headerIdx = i; break; }
+    }
+
+    const headers = lines[headerIdx]
+      .split(sep)
+      .map(h => h.trim().replace(/(^")|("$)/g, ''));
+
+    const rows: ImportRow[] = [];
+    for (let i = headerIdx + 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const cols = line.split(sep).map(c => c.trim().replace(/(^")|("$)/g, ''));
+      const obj: Record<string, any> = {};
+      headers.forEach((h, idx) => { obj[h] = cols[idx] ?? ''; });
+      const base = this.extractRow(obj);
+      rows.push({ ...base, status: 'new', statusLabel: 'Nouveau', valid: true });
     }
 
     this.validateAndPreview(rows);
@@ -1290,46 +1788,97 @@ export class IncomesComponent implements OnInit {
   private async parseXlsxImport(buffer: ArrayBuffer): Promise<void> {
     try {
       const XLSX = await import('xlsx');
-      const workbook = XLSX.read(buffer, { type: 'array' });
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data: any[] = XLSX.utils.sheet_to_json(sheet);
 
-      const rows: ImportRow[] = data.map(row => ({
-        month: row['Mois'] || row['mois'] || row['month'] || 0,
-        year: row['Année'] || row['Annee'] || row['annee'] || row['year'] || 0,
-        source: row['Source'] || row['source'] || '',
-        amount: row['Montant'] || row['montant'] || row['amount'] || 0,
-        note: row['Note'] || row['note'] || '',
-        status: 'new' as const,
-        statusLabel: 'Nouveau',
-        valid: true
-      }));
+      // Lire brut pour détecter les lignes d'en-tête multiples
+      const raw: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+      // Trouver la ligne d'en-tête : première ligne contenant une clé reconnue
+      const knownKeys = ['source','montant','amount','date','mois','annee','année','description'];
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(raw.length, 5); i++) {
+        const lower = raw[i].map((c: any) => String(c).toLowerCase());
+        if (knownKeys.some(k => lower.includes(k))) { headerIdx = i; break; }
+      }
+
+      const headers: string[] = raw[headerIdx].map((h: any) => String(h).trim());
+      const rows: ImportRow[] = [];
+
+      for (let i = headerIdx + 1; i < raw.length; i++) {
+        const cols = raw[i];
+        if (!cols || cols.every((c: any) => c === '' || c == null)) continue;
+        const obj: Record<string, any> = {};
+        headers.forEach((h, idx) => { obj[h] = cols[idx] ?? ''; });
+        const base = this.extractRow(obj);
+        rows.push({ ...base, status: 'new', statusLabel: 'Nouveau', valid: true });
+      }
 
       this.validateAndPreview(rows);
     } catch {
-      // xlsx parsing failed
+      // xlsx invalide
     }
   }
 
   private validateAndPreview(rows: ImportRow[]): void {
-    if (rows.length > 500) {
-      rows = rows.slice(0, 500);
+    const truncated = rows.length > 500 ? rows.slice(0, 500) : rows;
+    const currentYear = new Date().getFullYear();
+    for (const row of truncated) {
+      this.markRowValidity(row, currentYear);
     }
+    this.importPreviewRows = truncated;
+    this.importNewSources = this.collectNewSources(truncated);
+  }
 
+  private markRowValidity(row: ImportRow, currentYear: number): void {
+    const errors: string[] = [];
+    if (!row.amount || row.amount <= 0) errors.push('montant invalide');
+    if (!row.year || row.year < 2000 || row.year > currentYear) errors.push('année invalide');
+    if (!row.month || row.month < 1 || row.month > 12) errors.push('mois invalide');
+
+    if (errors.length > 0) {
+      row.valid = false;
+      row.status = 'invalid';
+      row.statusLabel = errors.join(', ');
+    }
+  }
+
+  private collectNewSources(rows: ImportRow[]): string[] {
+    const existingNames = new Set(this.sources.map(s => s.name.toLowerCase()));
+    const newNames = new Set<string>();
     for (const row of rows) {
-      const errors: string[] = [];
-      if (!row.amount || row.amount <= 0) errors.push('montant invalide');
-      if (!row.year || row.year < 2000 || row.year > 2030) errors.push('annee invalide');
-      if (!row.month || row.month < 1 || row.month > 12) errors.push('mois invalide');
-
-      if (errors.length > 0) {
-        row.valid = false;
-        row.status = 'invalid';
-        row.statusLabel = errors.join(', ');
+      if (row.valid && row.source && !existingNames.has(row.source.toLowerCase())) {
+        newNames.add(row.source);
       }
     }
+    return [...newNames];
+  }
 
-    this.importPreviewRows = rows;
+  isNewSource(sourceName: string): boolean {
+    if (!sourceName) return false;
+    return !this.sources.some(s => s.name.toLowerCase() === sourceName.toLowerCase());
+  }
+
+  importAggregatedPreview(): { month: number; year: number; source: string; amount: number; valid: boolean }[] {
+    const map = new Map<string, { month: number; year: number; source: string; amount: number; valid: boolean }>();
+    for (const row of this.importPreviewRows) {
+      const key = `${row.source}|${row.month}|${row.year}`;
+      const prev = map.get(key);
+      if (prev) {
+        prev.amount += row.amount;
+      } else {
+        map.set(key, { month: row.month, year: row.year, source: row.source, amount: row.amount, valid: row.valid });
+      }
+    }
+    return [...map.values()];
+  }
+
+  importValidCount(): number {
+    return this.importPreviewRows.filter(r => r.valid).length;
+  }
+
+  importInvalidCount(): number {
+    return this.importPreviewRows.filter(r => !r.valid).length;
   }
 
   getConflictCount(): number {
@@ -1341,6 +1890,18 @@ export class IncomesComponent implements OnInit {
     this.importTargetSourceId = '';
     this.importOverwrite = false;
     this.importing = false;
+    this.aiHelpOpen = false;
+    this.promptCopied = false;
+    this.importNewSources = [];
+  }
+
+  copyPrompt(event: Event): void {
+    event.stopPropagation();
+    const text = `J'ai un fichier de revenus (joint). Convertis-le au format du modèle joint (colonnes : Source, Description, Montant, Devise, Date au format AAAA-MM-JJ). Chaque ligne doit représenter une transaction. Exporte le résultat en fichier Excel (.xlsx).`;
+    navigator.clipboard.writeText(text).then(() => {
+      this.promptCopied = true;
+      setTimeout(() => this.promptCopied = false, 2000);
+    });
   }
 
   confirmImport(): void {
@@ -1348,43 +1909,138 @@ export class IncomesComponent implements OnInit {
     if (validRows.length === 0) return;
 
     this.importing = true;
-    let completed = 0;
-    let imported = 0;
-    let skipped = 0;
-    const total = validRows.length;
 
-    const targetSourceId = this.importTargetSourceId || (this.sources.length > 0 ? this.sources[0].id : '');
+    // ── Phase 1 : créer les sources manquantes ────────────────────────────
+    const sourcesToCreate = [...this.importNewSources];
+    let createdCount = 0;
 
-    for (const row of validRows) {
-      const sourceId = this.resolveSourceId(row.source) || targetSourceId;
-      if (!sourceId) {
-        completed++;
-        skipped++;
-        if (completed === total) this.finishImport(imported, skipped);
-        continue;
-      }
+    const afterSourcesReady = () => {
+      // Re-charger les sources pour avoir les IDs des nouvelles
+      this.incomeService.getSources().subscribe({
+        next: sources => {
+          this.sources = sources;
+          this.runAggregatedImport(validRows);
+        },
+        error: () => this.runAggregatedImport(validRows)
+      });
+    };
 
-      const request: IncomeEntryRequest = {
-        incomeSourceId: sourceId,
-        amount: row.amount,
-        month: row.month,
-        year: row.year,
-        note: row.note || undefined
-      };
+    if (sourcesToCreate.length === 0) {
+      this.runAggregatedImport(validRows);
+      return;
+    }
 
-      this.incomeService.createEntry(request).subscribe({
+    for (const name of sourcesToCreate) {
+      this.incomeService.createSource({ name, type: 'OTHER', currency: 'XOF' }).subscribe({
         next: () => {
-          completed++;
-          imported++;
-          if (completed === total) this.finishImport(imported, skipped);
+          createdCount++;
+          if (createdCount === sourcesToCreate.length) afterSourcesReady();
         },
         error: () => {
-          completed++;
-          skipped++;
-          if (completed === total) this.finishImport(imported, skipped);
+          createdCount++;
+          if (createdCount === sourcesToCreate.length) afterSourcesReady();
         }
       });
     }
+  }
+
+  private runAggregatedImport(validRows: ImportRow[]): void {
+    // ── Phase 2 : agréger par sourceId|month|year ─────────────────────────
+    const aggMap = new Map<string, { sourceId: string; month: number; year: number; amount: number; note: string }>();
+
+    for (const row of validRows) {
+      const sourceId = this.resolveSourceId(row.source);
+      if (!sourceId) continue;
+      const key = `${sourceId}|${row.month}|${row.year}`;
+      const prev = aggMap.get(key);
+      if (prev) {
+        prev.amount += row.amount;
+      } else {
+        aggMap.set(key, { sourceId, month: row.month, year: row.year, amount: row.amount, note: row.note || '' });
+      }
+    }
+
+    const aggregated = [...aggMap.values()];
+    if (aggregated.length === 0) { this.importing = false; return; }
+
+    // ── Phase 3 : précharger les entrées existantes ───────────────────────
+    const existingMap = new Map<string, string>();
+    const periods = [...new Set(aggregated.map(r => `${r.month}|${r.year}`))];
+    let loadedCount = 0;
+
+    const doImport = () => {
+      let done = 0;
+      let ok = 0;
+      const total = aggregated.length;
+
+      const tick = (success: boolean) => {
+        done++;
+        if (success) ok++;
+        if (done === total) this.finishImport(ok, total - ok);
+      };
+
+      for (const agg of aggregated) {
+        const req: IncomeEntryRequest = {
+          incomeSourceId: agg.sourceId,
+          amount: agg.amount,
+          month: agg.month,
+          year: agg.year,
+          note: agg.note || undefined
+        };
+
+        const existingId = existingMap.get(`${agg.sourceId}|${agg.month}|${agg.year}`);
+
+        if (existingId && !this.importOverwrite) { tick(false); continue; }
+
+        const op$ = existingId
+          ? this.incomeService.updateEntry(existingId, req)
+          : this.incomeService.createEntry(req);
+
+        op$.subscribe({ next: () => tick(true), error: () => tick(false) });
+      }
+    };
+
+    for (const period of periods) {
+      const [m, y] = period.split('|').map(Number);
+      this.incomeService.getEntries(m, y).subscribe({
+        next: entries => {
+          entries.forEach(e => existingMap.set(`${e.incomeSourceId}|${e.month}|${e.year}`, e.id));
+          loadedCount++;
+          if (loadedCount === periods.length) doImport();
+        },
+        error: () => { loadedCount++; if (loadedCount === periods.length) doImport(); }
+      });
+    }
+  }
+
+  async downloadTemplate(): Promise<void> {
+    const XLSX = await import('xlsx');
+
+    const headers = ['Source', 'Description', 'Montant', 'Devise', 'Date'];
+    const examples = [
+      ['Salaire', 'Salaire mensuel', 350000, 'XOF', '2024-01-31'],
+      ['Freelance', 'Mission développement web', 180000, 'XOF', '2024-02-15'],
+      ['Location', 'Loyer appartement', 75000, 'XOF', '2024-02-01'],
+      ['Salaire', 'Salaire mensuel', 350000, 'XOF', '2024-02-28'],
+      ['Freelance', 'Consulting UI/UX', 95000, 'XOF', '2024-03-10'],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...examples]);
+
+    // Largeurs de colonnes
+    ws['!cols'] = [
+      { wch: 18 }, { wch: 38 }, { wch: 14 }, { wch: 8 }, { wch: 14 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Revenus');
+    XLSX.writeFile(wb, 'joseph-yusuf-modele-import.xlsx');
+  }
+
+  formatImportDate(month: number, year: number): string {
+    if (!month || !year) return '—';
+    const d = new Date(year, month - 1);
+    return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
   }
 
   private resolveSourceId(sourceName: string): string | null {
@@ -1403,8 +2059,18 @@ export class IncomesComponent implements OnInit {
 
   // --- Utilities ---
 
+  toXOF(amount: number, currencyCode: string): number {
+    const c = CURRENCIES.find(c => c.code === currencyCode);
+    return Math.round(amount * (c?.rateToXOF ?? 1));
+  }
+
+  calculateTotalXOF(): number {
+    return this.entryForms.reduce((sum, entry) =>
+      sum + this.toXOF(entry.amount || 0, entry.currency), 0);
+  }
+
   calculateTotal(): number {
-    return this.entryForms.reduce((sum, entry) => sum + (entry.amount || 0), 0);
+    return this.calculateTotalXOF();
   }
 
   formatCurrency(amount: number): string {

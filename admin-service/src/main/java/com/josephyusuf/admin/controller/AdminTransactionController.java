@@ -39,6 +39,20 @@ public class AdminTransactionController {
         return ResponseEntity.ok(service.refund(id, adminId(auth), clientIp(http)));
     }
 
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<TransactionDto> cancel(@PathVariable UUID id,
+                                                 Authentication auth,
+                                                 HttpServletRequest http) {
+        return ResponseEntity.ok(service.cancel(id, adminId(auth), clientIp(http)));
+    }
+
+    @PostMapping("/{id}/force-activate")
+    public ResponseEntity<TransactionDto> forceActivate(@PathVariable UUID id,
+                                                        Authentication auth,
+                                                        HttpServletRequest http) {
+        return ResponseEntity.ok(service.forceActivate(id, adminId(auth), clientIp(http)));
+    }
+
     private UUID adminId(Authentication auth) {
         return UUID.fromString((String) auth.getPrincipal());
     }

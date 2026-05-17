@@ -11,6 +11,7 @@ interface RegisterForm {
   email: string;
   password: string;
   confirmPassword: string;
+  promoCode: string;
 }
 
 @Component({
@@ -107,6 +108,24 @@ interface RegisterForm {
                 placeholder="••••••••"
                 class="form-input"
               />
+            </div>
+
+            <div class="form-group promo-group">
+              <button type="button" class="promo-toggle-link" (click)="showPromo = !showPromo">
+                {{ showPromo ? '− Masquer' : '+ Vous avez un code promo ?' }}
+              </button>
+              <div *ngIf="showPromo" class="promo-input-wrapper">
+                <input
+                  type="text"
+                  id="promoCode"
+                  name="promoCode"
+                  [(ngModel)]="form.promoCode"
+                  placeholder="CODE-PROMO"
+                  class="form-input promo-input"
+                  style="text-transform:uppercase"
+                />
+                <p class="promo-hint">Le code sera validé après inscription et appliqué à votre premier abonnement.</p>
+              </div>
             </div>
 
             <button type="submit" class="btn-submit" [disabled]="loading">
@@ -300,6 +319,30 @@ interface RegisterForm {
       text-decoration: underline;
     }
 
+    .promo-group { margin-bottom: 1.25rem; }
+
+    .promo-toggle-link {
+      background: transparent;
+      border: none;
+      color: #C9A84C;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      opacity: 0.8;
+    }
+
+    .promo-input-wrapper { margin-top: 0.6rem; }
+
+    .promo-input { letter-spacing: 1px; }
+
+    .promo-hint {
+      font-size: 0.72rem;
+      color: #F0E8D0;
+      opacity: 0.45;
+      margin: 0.4rem 0 0;
+    }
+
     @media (max-width: 768px) {
       .auth-container {
         flex-direction: column;
@@ -327,10 +370,12 @@ export class RegisterComponent {
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    promoCode: ''
   };
   loading = false;
   errorMessage = '';
+  showPromo = false;
 
   constructor(
     private authService: AuthService,
@@ -367,12 +412,18 @@ export class RegisterComponent {
       firstName: this.form.firstName,
       lastName: this.form.lastName,
       email: this.form.email,
-      password: this.form.password
+      password: this.form.password,
+      promoCode: this.form.promoCode.trim() || undefined
     };
 
     this.authService.register(request).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        const promo = this.form.promoCode.trim();
+        if (promo) {
+          this.router.navigate(['/subscription'], { queryParams: { promo } });
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         this.loading = false;

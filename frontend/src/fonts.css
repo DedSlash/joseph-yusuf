@@ -1,0 +1,20 @@
+/*
+ * Déclaration anticipée de "Inter var" depuis les assets locaux.
+ * Ce fichier doit être chargé AVANT le thème PrimeNG lara-dark-amber
+ * pour que ses @font-face écrasent ceux du thème qui pointent vers
+ * des URLs relatives non résolues (./fonts/Inter-roman.var.woff2?v=3.19).
+ */
+@font-face {
+  font-family: "Inter var";
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('assets/fonts/Inter-roman.var.woff2') format('woff2');
+}
+@font-face {
+  font-family: "Inter var";
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+  src: url('assets/fonts/Inter-italic.var.woff2') format('woff2');
+}

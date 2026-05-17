@@ -1,5 +1,6 @@
 package com.josephyusuf.subscription.service;
 
+import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.StripeConfig;
 import com.josephyusuf.subscription.entity.ProcessedWebhookEvent;
 import com.josephyusuf.subscription.enums.PaymentProvider;
@@ -37,6 +38,7 @@ class WebhookServiceTest {
     @Mock private StripeConfig stripeConfig;
     @Mock private ProcessedWebhookEventRepository processedRepo;
     @Mock private SubscriptionService subscriptionService;
+    @Mock private AdminClient adminClient;
 
     private WebhookService webhookService;
     private MockedStatic<Webhook> webhookMock;
@@ -48,7 +50,7 @@ class WebhookServiceTest {
 
     @BeforeEach
     void setUp() {
-        webhookService = new WebhookService(stripeConfig, processedRepo, subscriptionService);
+        webhookService = new WebhookService(stripeConfig, processedRepo, subscriptionService, adminClient);
         webhookMock = mockStatic(Webhook.class);
     }
 

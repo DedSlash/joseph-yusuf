@@ -1,6 +1,6 @@
 export type Plan = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS';
 export type Role = 'USER' | 'ADMIN';
-export type TransactionStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED';
+export type TransactionStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
 
 export interface User {
   id: string;
@@ -37,6 +37,9 @@ export interface Transaction {
   plan: string;
   status: TransactionStatus;
   createdAt: string;
+  promoCode: string | null;
+  discountPercent: number | null;
+  originalAmount: number | null;
 }
 
 export interface PromoCode {
@@ -82,6 +85,12 @@ export interface KpiOverview {
   mrrXof: number;
   activePromoCodes: number;
   conversionRate: number;
+}
+
+export interface PaymentMethodConfig {
+  provider: string;
+  enabled: boolean;
+  updatedAt: string;
 }
 
 export interface PlanStats {

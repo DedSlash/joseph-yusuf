@@ -5,75 +5,186 @@
               name="annual-report" pageWidth="595" pageHeight="842" columnWidth="535"
               leftMargin="30" rightMargin="30" topMargin="30" bottomMargin="30">
 
-    <parameter name="userId" class="java.lang.String"/>
-    <parameter name="year" class="java.lang.Integer"/>
+    <style name="DefaultStyle" isDefault="true" fontName="DejaVu Sans" fontSize="10"/>
+    <style name="Title"        fontName="DejaVu Sans" fontSize="22" isBold="true"   forecolor="#C9A84C"/>
+    <style name="Subtitle"     fontName="DejaVu Sans" fontSize="11"                 forecolor="#888888"/>
+    <style name="SectionLabel" fontName="DejaVu Sans" fontSize="9"  isBold="true"   forecolor="#FFFFFF"/>
+    <style name="ColHeader"    fontName="DejaVu Sans" fontSize="9"  isBold="true"   forecolor="#C9A84C"/>
+    <style name="RowMois"      fontName="DejaVu Sans" fontSize="10"                 forecolor="#333333"/>
+    <style name="RowAmount"    fontName="DejaVu Sans" fontSize="10" isBold="true"   forecolor="#333333"/>
+    <style name="Footer"       fontName="DejaVu Sans" fontSize="9"  isItalic="true" forecolor="#999999"/>
+
+    <parameter name="userId"          class="java.lang.String"/>
+    <parameter name="year"            class="java.lang.Integer"/>
     <parameter name="totalAnnualIncome" class="java.math.BigDecimal"/>
     <parameter name="abundanceMonths" class="java.lang.Integer"/>
-    <parameter name="leanMonths" class="java.lang.Integer"/>
-    <parameter name="normalMonths" class="java.lang.Integer"/>
+    <parameter name="leanMonths"      class="java.lang.Integer"/>
+    <parameter name="normalMonths"    class="java.lang.Integer"/>
 
-    <field name="month" class="java.lang.Integer"/>
+    <field name="month"       class="java.lang.Integer"/>
     <field name="totalIncome" class="java.math.BigDecimal"/>
-    <field name="status" class="java.lang.String"/>
+    <field name="status"      class="java.lang.String"/>
 
+    <!-- ═══════════════════════════════════════════════════ TITLE ══ -->
     <title>
-        <band height="80">
+        <band height="110">
+            <rectangle>
+                <reportElement x="0" y="0" width="535" height="6" forecolor="#C9A84C" backcolor="#C9A84C"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement x="0" y="0" width="535" height="30"/>
-                <textElement textAlignment="Center">
-                    <font size="20" isBold="true"/>
-                </textElement>
-                <text><![CDATA[Joseph · Yusuf — Rapport annuel]]></text>
+                <reportElement x="0" y="14" width="535" height="32" style="Title"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[Joseph · Yusuf]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="46" width="535" height="16" style="Subtitle"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[RAPPORT ANNUEL]]></text>
             </staticText>
             <textField>
-                <reportElement x="0" y="40" width="535" height="20"/>
-                <textElement textAlignment="Center"><font size="12"/></textElement>
+                <reportElement x="0" y="66" width="535" height="16" style="Subtitle"/>
+                <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA["Année : " + $P{year}]]></textFieldExpression>
             </textField>
+            <line>
+                <reportElement x="0" y="90" width="535" height="1" forecolor="#C9A84C"/>
+            </line>
         </band>
     </title>
 
-    <pageHeader><band height="20"/></pageHeader>
-
+    <!-- ══════════════════════════════════════════════ COLUMN HEADER ══ -->
     <columnHeader>
-        <band height="60">
-            <textField>
-                <reportElement x="0" y="0" width="535" height="18"/>
-                <textElement><font size="11" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA["Revenu annuel total : " + $P{totalAnnualIncome}]]></textFieldExpression>
-            </textField>
-            <textField>
-                <reportElement x="0" y="22" width="535" height="18"/>
-                <textElement><font size="10"/></textElement>
-                <textFieldExpression><![CDATA["Abondance : " + $P{abundanceMonths} + " mois — Disette : " + $P{leanMonths} + " mois — Normal : " + $P{normalMonths} + " mois"]]></textFieldExpression>
-            </textField>
+        <band height="132">
+            <!-- Synthèse annuelle -->
+            <rectangle>
+                <reportElement x="0" y="0" width="535" height="18" forecolor="#1A1A2E" backcolor="#1A1A2E"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
             <staticText>
-                <reportElement x="0" y="44" width="535" height="14"/>
+                <reportElement x="8" y="2" width="527" height="14" style="SectionLabel"/>
+                <textElement/>
+                <text><![CDATA[SYNTHÈSE ANNUELLE]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="0" y="24" width="180" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Revenu annuel total]]></text>
+            </staticText>
+            <textField pattern="#,##0.00">
+                <reportElement x="180" y="24" width="355" height="14"/>
                 <textElement><font size="9" isBold="true"/></textElement>
-                <text><![CDATA[Mois        Revenu                     Statut]]></text>
+                <textFieldExpression><![CDATA[$P{totalAnnualIncome}]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="42" width="180" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Mois d'abondance]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="180" y="42" width="355" height="14" forecolor="#27AE60"/>
+                <textElement><font size="9" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{abundanceMonths} + " mois"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="58" width="180" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Mois de disette]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="180" y="58" width="355" height="14" forecolor="#E74C3C"/>
+                <textElement><font size="9" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{leanMonths} + " mois"]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="74" width="180" height="14" forecolor="#888888"/>
+                <textElement><font size="9"/></textElement>
+                <text><![CDATA[Mois normaux]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="180" y="74" width="355" height="14"/>
+                <textElement><font size="9" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA[$P{normalMonths} + " mois"]]></textFieldExpression>
+            </textField>
+
+            <!-- Section "Détail par mois" -->
+            <rectangle>
+                <reportElement x="0" y="96" width="535" height="18" forecolor="#1A1A2E" backcolor="#1A1A2E"/>
+                <graphicElement><pen lineWidth="0"/></graphicElement>
+            </rectangle>
+            <staticText>
+                <reportElement x="8" y="98" width="527" height="14" style="SectionLabel"/>
+                <textElement/>
+                <text><![CDATA[DÉTAIL PAR MOIS]]></text>
+            </staticText>
+
+            <!-- Column headers -->
+            <staticText>
+                <reportElement x="0" y="116" width="80" height="12" style="ColHeader"/>
+                <textElement/>
+                <text><![CDATA[Mois]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="80" y="116" width="280" height="12" style="ColHeader"/>
+                <textElement textAlignment="Right"/>
+                <text><![CDATA[Revenu]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="360" y="116" width="175" height="12" style="ColHeader"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[Statut]]></text>
             </staticText>
         </band>
     </columnHeader>
 
+    <!-- ═══════════════════════════════════════════════════ DETAIL ══ -->
     <detail>
-        <band height="20">
+        <band height="24">
+            <!-- Month number translated to name -->
             <textField>
-                <reportElement x="0" y="0" width="80" height="18"/>
-                <textElement><font size="10"/></textElement>
-                <textFieldExpression><![CDATA[$F{month}]]></textFieldExpression>
+                <reportElement x="0" y="3" width="80" height="16" style="RowMois"/>
+                <textElement/>
+                <textFieldExpression><![CDATA[
+                    new String[]{"","Janv.","Févr.","Mars","Avr.","Mai","Juin",
+                                 "Juil.","Août","Sept.","Oct.","Nov.","Déc."}[$F{month}]
+                ]]></textFieldExpression>
             </textField>
-            <textField pattern="#,##0.00">
-                <reportElement x="80" y="0" width="200" height="18"/>
-                <textElement textAlignment="Right"><font size="10"/></textElement>
+
+            <textField isBlankWhenNull="true" pattern="#,##0.00">
+                <reportElement x="80" y="3" width="280" height="16" style="RowAmount"/>
+                <textElement textAlignment="Right"/>
                 <textFieldExpression><![CDATA[$F{totalIncome}]]></textFieldExpression>
             </textField>
-            <textField>
-                <reportElement x="300" y="0" width="235" height="18"/>
-                <textElement><font size="10"/></textElement>
-                <textFieldExpression><![CDATA[$F{status}]]></textFieldExpression>
+
+            <textField isBlankWhenNull="true">
+                <reportElement x="360" y="3" width="175" height="16"/>
+                <textElement textAlignment="Center">
+                    <font size="9"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{status} != null ? $F{status} : "—"]]></textFieldExpression>
             </textField>
+
+            <line>
+                <reportElement x="0" y="23" width="535" height="1" forecolor="#EEEEEE"/>
+            </line>
         </band>
     </detail>
 
-    <summary><band height="20"/></summary>
+    <!-- ══════════════════════════════════════════════════ SUMMARY ══ -->
+    <summary>
+        <band height="50">
+            <line>
+                <reportElement x="0" y="8" width="535" height="1" forecolor="#C9A84C"/>
+            </line>
+            <staticText>
+                <reportElement x="0" y="20" width="535" height="14" style="Footer"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[Joseph · Yusuf — Plateforme de gestion des revenus selon le Principe de Joseph]]></text>
+            </staticText>
+        </band>
+    </summary>
 </jasperReport>

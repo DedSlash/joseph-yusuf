@@ -23,7 +23,8 @@ public class MonthSummaryService {
 
     public MonthSummary getSummary(UUID userId, int month, int year) {
         BigDecimal totalIncome = entryRepository.sumByUserIdAndMonthAndYear(userId, month, year);
-        BigDecimal averageLast3 = calculateAveragePreviousMonths(userId, month, year, 3);
+        int[] foundMonths = {0};
+        BigDecimal averageLast3 = calculateAveragePreviousMonths(userId, month, year, 3, foundMonths);
 
         BigDecimal abundanceThreshold = averageLast3.multiply(ABUNDANCE_FACTOR)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -50,33 +51,28 @@ public class MonthSummaryService {
                 .leanThreshold(leanThreshold)
                 .status(status)
                 .percentageVsAverage(percentageVsAverage)
+                .monthsInBaseline(foundMonths[0])
                 .build();
     }
 
     public List<MonthSummary> getHistory(UUID userId, int months) {
+        // Récupère les N derniers mois ayant réellement des entrées (pas forcément consécutifs)
+        List<String> distinctMonths = entryRepository.findDistinctMonthsByUserId(userId);
+
         List<MonthSummary> history = new ArrayList<>();
+        int limit = Math.min(months, distinctMonths.size());
 
-        int currentMonth = java.time.LocalDate.now().getMonthValue();
-        int currentYear = java.time.LocalDate.now().getYear();
-
-        for (int i = 0; i < months; i++) {
-            int m = currentMonth - i;
-            int y = currentYear;
-            while (m <= 0) {
-                m += 12;
-                y--;
-            }
-
-            BigDecimal total = entryRepository.sumByUserIdAndMonthAndYear(userId, m, y);
-            if (total.compareTo(BigDecimal.ZERO) > 0) {
-                history.add(getSummary(userId, m, y));
-            }
+        for (int i = 0; i < limit; i++) {
+            String[] parts = distinctMonths.get(i).split("-");
+            int y = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]);
+            history.add(getSummary(userId, m, y));
         }
 
         return history;
     }
 
-    private BigDecimal calculateAveragePreviousMonths(UUID userId, int month, int year, int count) {
+    private BigDecimal calculateAveragePreviousMonths(UUID userId, int month, int year, int count, int[] foundOut) {
         BigDecimal sum = BigDecimal.ZERO;
         int found = 0;
 
@@ -94,6 +90,8 @@ public class MonthSummaryService {
                 found++;
             }
         }
+
+        if (foundOut != null) foundOut[0] = found;
 
         if (found == 0) {
             return BigDecimal.ZERO;

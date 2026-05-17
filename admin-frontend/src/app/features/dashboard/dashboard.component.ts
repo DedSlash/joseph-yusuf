@@ -1,13 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule, DecimalPipe, PercentPipe } from '@angular/common';
+import { CommonModule, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../core/services/admin-api.service';
-import { KpiOverview, PlanStats } from '../../shared/models/admin.model';
+import { KpiOverview, PaymentMethodConfig, PlanStats } from '../../shared/models/admin.model';
 
 @Component({
   selector: 'admin-dashboard',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, PercentPipe],
+  imports: [CommonModule, DatePipe, DecimalPipe, PercentPipe],
   template: `
     <h1>Dashboard</h1>
     <p class="subtitle">Indicateurs clés Joseph · Yusuf</p>
@@ -92,6 +92,43 @@ import { KpiOverview, PlanStats } from '../../shared/models/admin.model';
       </div>
     </ng-container>
 
+    <!-- Section modes de paiement (indépendante des KPIs) -->
+    <div class="card payment-methods-card" style="margin-top:1rem">
+      <h3>Modes de paiement</h3>
+      <p class="section-sub">Activez ou désactivez les modes de paiement disponibles sur la page d'abonnement.</p>
+
+      <div *ngIf="paymentMethodsError()" class="alert error" style="margin-bottom:1rem">
+        {{ paymentMethodsError() }}
+      </div>
+
+      <div class="pm-list">
+        <div class="pm-row" *ngFor="let m of paymentMethods()">
+          <div class="pm-info">
+            <span class="pm-logo">{{ pmLogo(m.provider) }}</span>
+            <div>
+              <strong class="pm-name">{{ pmLabel(m.provider) }}</strong>
+              <span class="pm-updated">Modifié le {{ m.updatedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+          <div class="pm-right">
+            <span class="pm-badge" [ngClass]="m.enabled ? 'pm-on' : 'pm-off'">
+              {{ m.enabled ? 'Actif' : 'Inactif' }}
+            </span>
+            <button class="pm-toggle"
+                    [ngClass]="m.enabled ? 'pm-toggle-off' : 'pm-toggle-on'"
+                    [disabled]="togglingProvider() === m.provider"
+                    (click)="toggleMethod(m.provider)">
+              {{ togglingProvider() === m.provider ? '…' : m.enabled ? 'Désactiver' : 'Activer' }}
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="paymentMethods().length === 0 && !loading()" class="pm-empty">
+          Impossible de charger les modes de paiement.
+        </div>
+      </div>
+    </div>
+
     <div *ngIf="loading()" class="loading">Chargement…</div>
   `,
   styles: [`
@@ -149,6 +186,74 @@ import { KpiOverview, PlanStats } from '../../shared/models/admin.model';
       text-align: center;
       padding: 2rem;
     }
+
+    .section-sub {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      margin: -0.5rem 0 1.25rem;
+    }
+
+    .pm-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .pm-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 1.1rem;
+      background: var(--night-soft);
+      border: 1px solid var(--border-dim);
+      border-radius: 10px;
+    }
+
+    .pm-info { display: flex; align-items: center; gap: 0.9rem; }
+
+    .pm-logo { font-size: 1.4rem; flex-shrink: 0; }
+
+    .pm-name { display: block; font-size: 0.9rem; color: var(--text); font-weight: 600; }
+
+    .pm-updated { display: block; font-size: 0.72rem; color: var(--text-dim); margin-top: 0.15rem; }
+
+    .pm-right { display: flex; align-items: center; gap: 0.75rem; }
+
+    .pm-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .pm-on { background: rgba(92,219,111,0.15); color: #5cdb6f; border: 1px solid rgba(92,219,111,0.3); }
+    .pm-off { background: rgba(128,128,128,0.12); color: #aaa; border: 1px solid rgba(128,128,128,0.2); }
+
+    .pm-toggle {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid;
+    }
+
+    .pm-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .pm-toggle-on {
+      background: rgba(92,219,111,0.12);
+      border-color: rgba(92,219,111,0.35);
+      color: #5cdb6f;
+    }
+    .pm-toggle-on:hover:not(:disabled) { background: rgba(92,219,111,0.22); }
+
+    .pm-toggle-off {
+      background: rgba(220,53,69,0.1);
+      border-color: rgba(220,53,69,0.3);
+      color: #ff6b7a;
+    }
+    .pm-toggle-off:hover:not(:disabled) { background: rgba(220,53,69,0.18); }
+
+    .pm-empty { color: var(--text-dim); font-size: 0.85rem; padding: 1rem 0; text-align: center; }
   `]
 })
 export class DashboardComponent implements OnInit {
@@ -158,6 +263,9 @@ export class DashboardComponent implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly overview = signal<KpiOverview | null>(null);
   protected readonly plans = signal<PlanStats | null>(null);
+  protected readonly paymentMethods = signal<PaymentMethodConfig[]>([]);
+  protected readonly paymentMethodsError = signal<string | null>(null);
+  protected readonly togglingProvider = signal<string | null>(null);
 
   private static readonly PRICE_PREMIUM = 4.99;
   private static readonly PRICE_PREMIUM_PLUS = 9.99;
@@ -177,6 +285,47 @@ export class DashboardComponent implements OnInit {
         this.loading.set(false);
       }
     });
+
+    this.api.getPaymentMethods().subscribe({
+      next: methods => this.paymentMethods.set(methods),
+      error: () => this.paymentMethodsError.set('Impossible de charger les modes de paiement')
+    });
+  }
+
+  protected toggleMethod(provider: string): void {
+    this.togglingProvider.set(provider);
+    this.paymentMethodsError.set(null);
+    this.api.togglePaymentMethod(provider).subscribe({
+      next: updated => {
+        this.paymentMethods.update(list =>
+          list.map(m => m.provider === updated.provider ? updated : m)
+        );
+        this.togglingProvider.set(null);
+      },
+      error: () => {
+        this.togglingProvider.set(null);
+        this.paymentMethodsError.set(`Échec de la mise à jour de ${provider}`);
+        setTimeout(() => this.paymentMethodsError.set(null), 4000);
+      }
+    });
+  }
+
+  protected pmLabel(provider: string): string {
+    switch (provider) {
+      case 'STRIPE': return 'Carte bancaire (Stripe)';
+      case 'WAVE': return 'Wave';
+      case 'ORANGE_MONEY': return 'Orange Money';
+      default: return provider;
+    }
+  }
+
+  protected pmLogo(provider: string): string {
+    switch (provider) {
+      case 'STRIPE': return '💳';
+      case 'WAVE': return '📱';
+      case 'ORANGE_MONEY': return '🟠';
+      default: return '💰';
+    }
   }
 
   protected pct(value: number, total: number): number {

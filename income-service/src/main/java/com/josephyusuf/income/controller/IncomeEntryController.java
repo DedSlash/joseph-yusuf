@@ -30,9 +30,16 @@ public class IncomeEntryController {
 
     @GetMapping
     public ResponseEntity<List<IncomeEntryDto>> list(Authentication auth,
-                                                      @RequestParam int month,
-                                                      @RequestParam int year) {
+                                                      @RequestParam(required = false) Integer month,
+                                                      @RequestParam(required = false) Integer year,
+                                                      @RequestParam(required = false) UUID sourceId) {
         UUID userId = UUID.fromString((String) auth.getPrincipal());
+        if (sourceId != null) {
+            return ResponseEntity.ok(entryService.listBySource(userId, sourceId));
+        }
+        if (month == null || year == null) {
+            return ResponseEntity.badRequest().build();
+        }
         return ResponseEntity.ok(entryService.listByMonthYear(userId, month, year));
     }
 

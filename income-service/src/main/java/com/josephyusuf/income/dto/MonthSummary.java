@@ -22,4 +22,5 @@ public class MonthSummary {
     private BigDecimal leanThreshold;
     private MonthStatus status;
     private double percentageVsAverage;
+    private int monthsInBaseline; // 0, 1, 2 ou 3
 }

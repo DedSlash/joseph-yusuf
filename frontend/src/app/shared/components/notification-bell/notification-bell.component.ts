@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AlertService } from '../../../core/services/alert.service';
@@ -11,7 +11,11 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
   template: `
     <div class="bell-wrapper">
       <button class="bell-btn" (click)="toggleDrawer()" aria-label="Notifications">
-        <span class="bell-icon">&#128276;</span>
+        <span class="bell-icon" [class.has-unread]="unreadCount > 0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="17" height="17" aria-hidden="true">
+            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6V11c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+          </svg>
+        </span>
         <span *ngIf="unreadCount > 0" class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
       </button>
 
@@ -67,7 +71,27 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
       background: rgba(201, 168, 76, 0.1);
     }
     .bell-icon {
-      filter: grayscale(0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(201, 168, 76, 0.55);
+      transition: color 0.2s;
+    }
+    .bell-icon.has-unread {
+      color: #C9A84C;
+      animation: bell-ring 0.6s ease-in-out;
+    }
+    @keyframes bell-ring {
+      0%   { transform: rotate(0); }
+      15%  { transform: rotate(10deg); }
+      30%  { transform: rotate(-10deg); }
+      45%  { transform: rotate(6deg); }
+      60%  { transform: rotate(-6deg); }
+      75%  { transform: rotate(3deg); }
+      100% { transform: rotate(0); }
+    }
+    .bell-btn:hover .bell-icon {
+      color: #C9A84C;
     }
     .badge {
       position: absolute;
@@ -186,7 +210,14 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   private subs: Subscription[] = [];
 
-  constructor(private alertService: AlertService) {}
+  constructor(private readonly alertService: AlertService, private readonly elRef: ElementRef) {}
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.drawerOpen && !this.elRef.nativeElement.contains(event.target)) {
+      this.drawerOpen = false;
+    }
+  }
 
   ngOnInit(): void {
     this.alertService.startPolling();
@@ -255,9 +286,19 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   formatDate(iso: string): string {
     const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60_000);
+    const diffH   = Math.floor(diffMs / 3_600_000);
+
+    if (diffMin < 1)  return "À l'instant";
+    if (diffMin < 60) return `Il y a ${diffMin} min`;
+    if (diffH   < 24) return `Il y a ${diffH} h`;
+
     return d.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
+      day: 'numeric',
+      month: 'long',
+      year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
       hour: '2-digit',
       minute: '2-digit'
     });

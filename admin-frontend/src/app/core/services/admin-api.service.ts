@@ -3,8 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  AuditLog, KpiOverview, PageResponse, PlanStats, PromoCode, PromoCodeStats,
-  Role, Plan, Transaction, User
+  AuditLog, KpiOverview, PageResponse, PaymentMethodConfig, PlanStats,
+  PromoCode, PromoCodeStats, Role, Plan, Transaction, User
 } from '../../shared/models/admin.model';
 
 @Injectable({ providedIn: 'root' })
@@ -54,6 +54,14 @@ export class AdminApiService {
     return this.http.post<Transaction>(`${this.apiUrl}/transactions/${id}/refund`, {});
   }
 
+  cancelTransaction(id: string): Observable<Transaction> {
+    return this.http.post<Transaction>(`${this.apiUrl}/transactions/${id}/cancel`, {});
+  }
+
+  forceActivateTransaction(id: string): Observable<Transaction> {
+    return this.http.post<Transaction>(`${this.apiUrl}/transactions/${id}/force-activate`, {});
+  }
+
   // Promo codes
   listPromoCodes(page = 0, size = 20, active?: boolean): Observable<PageResponse<PromoCode>> {
     let params = new HttpParams().set('page', page).set('size', size);
@@ -71,6 +79,15 @@ export class AdminApiService {
 
   promoCodeStats(id: string): Observable<PromoCodeStats> {
     return this.http.get<PromoCodeStats>(`${this.apiUrl}/promo-codes/${id}/stats`);
+  }
+
+  // Payment methods
+  getPaymentMethods(): Observable<PaymentMethodConfig[]> {
+    return this.http.get<PaymentMethodConfig[]>(`${this.apiUrl}/payment-methods`);
+  }
+
+  togglePaymentMethod(provider: string): Observable<PaymentMethodConfig> {
+    return this.http.put<PaymentMethodConfig>(`${this.apiUrl}/payment-methods/${provider}/toggle`, {});
   }
 
   // KPIs

@@ -45,4 +45,5 @@ export interface MonthSummary {
   leanThreshold: number;
   status: MonthStatus;
   percentageVsAverage: number;
+  monthsInBaseline: number;
 }

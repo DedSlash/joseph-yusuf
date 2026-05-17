@@ -14,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -74,20 +77,26 @@ public class AlertService {
                 severity = AlertSeverity.SUCCESS;
                 title = "Mois d'abondance détecté";
                 message = String.format(
-                        "Votre revenu de %d/%d (%s) dépasse votre moyenne de %.1f%%. C'est le moment d'épargner davantage selon le Principe de Joseph.",
-                        event.getMonth(), event.getYear(), event.getTotalIncome(), event.getPercentageVsAverage());
+                        "Votre revenu de %s (%s) dépasse votre moyenne de %.1f%%. C'est le moment d'épargner davantage selon le Principe de Joseph.",
+                        formatMonthYear(event.getMonth(), event.getYear()), event.getTotalIncome(), event.getPercentageVsAverage());
             }
             case "LEAN" -> {
                 type = AlertType.LEAN_DETECTED;
                 severity = AlertSeverity.WARNING;
                 title = "Mois de disette détecté";
                 message = String.format(
-                        "Votre revenu de %d/%d (%s) est inférieur à votre moyenne de %.1f%%. Puisez dans votre épargne d'abondance si nécessaire.",
-                        event.getMonth(), event.getYear(), event.getTotalIncome(), Math.abs(event.getPercentageVsAverage()));
+                        "Votre revenu de %s (%s) est inférieur à votre moyenne de %.1f%%. Puisez dans votre épargne d'abondance si nécessaire.",
+                        formatMonthYear(event.getMonth(), event.getYear()), event.getTotalIncome(), Math.abs(event.getPercentageVsAverage()));
             }
             default -> {
                 return null;
             }
+        }
+
+        // Une seule alerte ABUNDANCE/LEAN par utilisateur par mois
+        if (alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                event.getUserId(), type, event.getMonth(), event.getYear()).isPresent()) {
+            return null;
         }
 
         Alert alert = Alert.builder()
@@ -106,20 +115,72 @@ public class AlertService {
 
     @Transactional
     public Alert createFromRuleApplied(RuleAppliedEvent event) {
+        // Une seule alerte RULE_APPLIED par utilisateur par mois
+        if (alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                event.getUserId(), AlertType.RULE_APPLIED, event.getMonth(), event.getYear()).isPresent()) {
+            return null;
+        }
+
+        String ruleLabel = toRuleLabel(event.getRule());
+        String ruleArticle = toRuleArticle(event.getRule());
+        String statusLabel = toStatusLabel(event.getMonthStatus());
+        String formattedAmount = formatAmount(event.getTotalIncome());
+
         Alert alert = Alert.builder()
                 .userId(event.getUserId())
                 .type(AlertType.RULE_APPLIED)
                 .severity(AlertSeverity.INFO)
-                .title("Règle appliquée : " + event.getRule())
+                .title("Répartition calculée — " + ruleLabel)
                 .message(String.format(
-                        "La règle %s a été appliquée à un revenu de %s.",
-                        event.getRule(), event.getTotalIncome()))
+                        "Votre répartition de %s a été calculée selon %s pour un revenu de %s%s.",
+                        formatMonthYear(event.getMonth(), event.getYear()),
+                        ruleArticle + ruleLabel, formattedAmount,
+                        statusLabel != null ? " (mois " + statusLabel + ")" : ""))
                 .read(false)
                 .month(event.getMonth())
                 .year(event.getYear())
                 .build();
 
         return alertRepository.save(alert);
+    }
+
+    private String toRuleLabel(String rule) {
+        if (rule == null) return "règle personnalisée";
+        return switch (rule) {
+            case "RULE_50_30_20" -> "règle 50/30/20";
+            case "RULE_80_20"    -> "règle 80/20 (Pareto)";
+            case "RULE_70_20_10" -> "règle 70/20/10";
+            case "RULE_JOSEPH"   -> "Principe de Joseph";
+            default              -> "règle personnalisée";
+        };
+    }
+
+    private String toRuleArticle(String rule) {
+        if (rule == null) return "la ";
+        return switch (rule) {
+            case "RULE_JOSEPH" -> "le ";
+            default            -> "la ";
+        };
+    }
+
+    private String toStatusLabel(String status) {
+        if (status == null) return null;
+        return switch (status) {
+            case "ABUNDANCE" -> "d'abondance";
+            case "LEAN"      -> "de disette";
+            case "NORMAL"    -> null;
+            default          -> null;
+        };
+    }
+
+    private String formatMonthYear(int month, int year) {
+        String monthName = Month.of(month).getDisplayName(TextStyle.FULL, Locale.FRENCH);
+        return monthName.substring(0, 1).toUpperCase() + monthName.substring(1) + " " + year;
+    }
+
+    private String formatAmount(java.math.BigDecimal amount) {
+        if (amount == null) return "0 XOF";
+        return String.format("%,.0f XOF", amount).replace(",", " ");
     }
 
     private Alert getAndVerifyOwnership(UUID userId, UUID alertId) {

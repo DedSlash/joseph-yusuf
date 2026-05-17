@@ -1,5 +1,6 @@
 package com.josephyusuf.report.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 @Builder
 public class AllocationLineDto {
 
+    @JsonAlias("category")
     private String label;
     private BigDecimal amount;
     private BigDecimal percentage;
