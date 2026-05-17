@@ -13,7 +13,7 @@ import {
 export class SubscriptionService {
   private readonly apiUrl = `${environment.apiUrl}/api/subscriptions`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   getCurrent(): Observable<SubscriptionInfo> {
     return this.http.get<SubscriptionInfo>(`${this.apiUrl}/current`);
@@ -23,7 +23,7 @@ export class SubscriptionService {
     return this.http.post<PaymentIntentResult>(`${this.apiUrl}/stripe/create-payment-intent`, {
       plan,
       currency,
-      promoCode: promoCode || null
+      promoCode: promoCode ?? null
     });
   }
 

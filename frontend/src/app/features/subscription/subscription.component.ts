@@ -255,7 +255,7 @@ const STRIPE_APPEARANCE = {
             <div class="modal-actions">
               <button class="btn-ghost" (click)="confirmCancel = false">Garder l'abonnement</button>
               <button class="btn-cancel-confirm" [disabled]="cancelling" (click)="doCancel()">
-                {{ cancelling ? 'Annulation…' : 'Confirmer l\'annulation' }}
+                {{ cancelling ? 'Annulation…' : "Confirmer l'annulation" }}
               </button>
             </div>
           </div>
@@ -963,10 +963,10 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   private stripeMounted = false;
 
   constructor(
-    private subscriptionService: SubscriptionService,
-    private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute
+    private readonly subscriptionService: SubscriptionService,
+    private readonly authService: AuthService,
+    private readonly router: Router,
+    private readonly route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -1105,7 +1105,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
       },
       error: err => {
         this.cancelling = false;
-        this.cancelError = err.error?.message ?? 'Échec de l\'annulation.';
+        this.cancelError = err.error?.message ?? "Échec de l'annulation.";
       }
     });
   }

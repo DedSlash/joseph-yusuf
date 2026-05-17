@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
@@ -1093,7 +1093,7 @@ const PLANS: PlanCard[] = [
     }
   `]
 })
-export class LandingComponent implements OnInit, OnDestroy {
+export class LandingComponent implements OnInit {
   scrolled = false;
   currency: 'XOF' | 'EUR' = 'XOF';
   year = new Date().getFullYear();
@@ -1164,15 +1164,13 @@ export class LandingComponent implements OnInit, OnDestroy {
     { icon: '🎯', text: 'Vous voulez épargner sans effort grâce à des règles automatiques' },
   ];
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private readonly authService: AuthService, private readonly router: Router) {}
 
   ngOnInit(): void {
     if (this.authService.isTokenValid()) {
       this.router.navigate(['/dashboard']);
     }
   }
-
-  ngOnDestroy(): void {}
 
   @HostListener('window:scroll')
   onScroll(): void {

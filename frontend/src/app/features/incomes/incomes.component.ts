@@ -1676,51 +1676,55 @@ export class IncomesComponent implements OnInit {
   // ── Extraction universelle depuis un objet ligne ──────────────────────────
 
   private extractRow(raw: Record<string, any>): Omit<ImportRow, 'status' | 'statusLabel' | 'valid'> {
-    // Montant : accepte Montant / montant / amount
-    const amount = parseFloat(
-      String(raw['Montant'] ?? raw['montant'] ?? raw['amount'] ?? raw['Amount'] ?? 0)
-        .replace(/\s/g, '').replace(',', '.')
-    ) || 0;
-
-    // Source : accepte Source / source
+    const amount = this.extractAmount(raw);
     const source = String(raw['Source'] ?? raw['source'] ?? raw['Source de revenu'] ?? '').trim();
-
-    // Note / description
     const note = String(raw['Note'] ?? raw['note'] ?? raw['Description'] ?? raw['description'] ?? '').trim();
+    const { month, year } = this.extractMonthYear(raw);
+    return { month, year, source, amount, note };
+  }
 
-    // Date : plusieurs formats possibles
-    let month = 0;
-    let year  = 0;
+  private extractAmount(raw: Record<string, any>): number {
+    const value = String(raw['Montant'] ?? raw['montant'] ?? raw['amount'] ?? raw['Amount'] ?? 0)
+      .replace(/\s/g, '').replace(',', '.');
+    return parseFloat(value) || 0;
+  }
 
+  private extractMonthYear(raw: Record<string, any>): { month: number; year: number } {
     const dateRaw = raw['Date'] ?? raw['date'];
+    if (dateRaw) return this.parseDateValue(dateRaw);
+
     const moisRaw = raw['Mois'] ?? raw['mois'] ?? raw['month'] ?? raw['Month'];
     const anneeRaw = raw['Année'] ?? raw['Annee'] ?? raw['annee'] ?? raw['year'] ?? raw['Year'] ?? raw['ANNEE'];
-
-    if (dateRaw) {
-      // Format YYYY-MM-DD ou DD/MM/YYYY ou serial Excel (nombre)
-      if (typeof dateRaw === 'number') {
-        // Serial Excel : epoch 1900
-        const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
-        month = d.getUTCMonth() + 1;
-        year  = d.getUTCFullYear();
-      } else {
-        const str = String(dateRaw).trim();
-        const isoMatch = str.match(/^(\d{4})-(\d{2})/);
-        const frMatch  = str.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-        if (isoMatch) {
-          year  = parseInt(isoMatch[1], 10);
-          month = parseInt(isoMatch[2], 10);
-        } else if (frMatch) {
-          month = parseInt(frMatch[1], 10);
-          year  = parseInt(frMatch[3], 10);
-        }
-      }
-    } else if (moisRaw != null && anneeRaw != null) {
-      month = parseInt(String(moisRaw), 10);
-      year  = parseInt(String(anneeRaw), 10);
+    if (moisRaw != null && anneeRaw != null) {
+      return { month: parseInt(String(moisRaw), 10), year: parseInt(String(anneeRaw), 10) };
     }
+    return { month: 0, year: 0 };
+  }
 
-    return { month, year, source, amount, note };
+  private parseDateValue(dateRaw: unknown): { month: number; year: number } {
+    if (typeof dateRaw === 'number') {
+      // Serial Excel : epoch 1900
+      const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
+      return { month: d.getUTCMonth() + 1, year: d.getUTCFullYear() };
+    }
+    const str = String(dateRaw).trim();
+    const isoRegex = /^(\d{4})-(\d{2})/;
+    const frRegex = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/;
+    const isoMatch = isoRegex.exec(str);
+    if (isoMatch) {
+      return { year: parseInt(isoMatch[1], 10), month: parseInt(isoMatch[2], 10) };
+    }
+    const frMatch = frRegex.exec(str);
+    if (frMatch) {
+      return { month: parseInt(frMatch[1], 10), year: parseInt(frMatch[3], 10) };
+    }
+    return { month: 0, year: 0 };
+  }
+
+  private extractJsonEntries(data: any): any[] {
+    if (data?.entries && Array.isArray(data.entries)) return data.entries;
+    if (Array.isArray(data)) return data;
+    return [];
   }
 
   private parseJsonImport(text: string): void {
@@ -1728,9 +1732,7 @@ export class IncomesComponent implements OnInit {
       const data = JSON.parse(text);
       const rows: ImportRow[] = [];
 
-      const entries: any[] = data.entries && Array.isArray(data.entries)
-        ? data.entries
-        : Array.isArray(data) ? data : [];
+      const entries: any[] = this.extractJsonEntries(data);
 
       const sourceFallback = data.source?.nom ?? '';
 
@@ -1767,13 +1769,13 @@ export class IncomesComponent implements OnInit {
 
     const headers = lines[headerIdx]
       .split(sep)
-      .map(h => h.trim().replace(/^"|"$/g, ''));
+      .map(h => h.trim().replace(/(^")|("$)/g, ''));
 
     const rows: ImportRow[] = [];
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      const cols = line.split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
+      const cols = line.split(sep).map(c => c.trim().replace(/(^")|("$)/g, ''));
       const obj: Record<string, any> = {};
       headers.forEach((h, idx) => { obj[h] = cols[idx] ?? ''; });
       const base = this.extractRow(obj);
@@ -1819,25 +1821,29 @@ export class IncomesComponent implements OnInit {
   }
 
   private validateAndPreview(rows: ImportRow[]): void {
+    const truncated = rows.length > 500 ? rows.slice(0, 500) : rows;
     const currentYear = new Date().getFullYear();
-    if (rows.length > 500) rows = rows.slice(0, 500);
-
-    for (const row of rows) {
-      const errors: string[] = [];
-      if (!row.amount || row.amount <= 0)                            errors.push('montant invalide');
-      if (!row.year  || row.year  < 2000 || row.year  > currentYear) errors.push('année invalide');
-      if (!row.month || row.month < 1    || row.month > 12)          errors.push('mois invalide');
-
-      if (errors.length > 0) {
-        row.valid = false;
-        row.status = 'invalid';
-        row.statusLabel = errors.join(', ');
-      }
+    for (const row of truncated) {
+      this.markRowValidity(row, currentYear);
     }
+    this.importPreviewRows = truncated;
+    this.importNewSources = this.collectNewSources(truncated);
+  }
 
-    this.importPreviewRows = rows;
+  private markRowValidity(row: ImportRow, currentYear: number): void {
+    const errors: string[] = [];
+    if (!row.amount || row.amount <= 0) errors.push('montant invalide');
+    if (!row.year || row.year < 2000 || row.year > currentYear) errors.push('année invalide');
+    if (!row.month || row.month < 1 || row.month > 12) errors.push('mois invalide');
 
-    // Calcul des sources nouvelles (présentes dans le fichier mais pas encore créées)
+    if (errors.length > 0) {
+      row.valid = false;
+      row.status = 'invalid';
+      row.statusLabel = errors.join(', ');
+    }
+  }
+
+  private collectNewSources(rows: ImportRow[]): string[] {
     const existingNames = new Set(this.sources.map(s => s.name.toLowerCase()));
     const newNames = new Set<string>();
     for (const row of rows) {
@@ -1845,7 +1851,7 @@ export class IncomesComponent implements OnInit {
         newNames.add(row.source);
       }
     }
-    this.importNewSources = [...newNames];
+    return [...newNames];
   }
 
   isNewSource(sourceName: string): boolean {

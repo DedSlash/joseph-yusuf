@@ -16,13 +16,13 @@ import { SupportButtonComponent } from './features/support/support-button.compon
   `
 })
 export class AppComponent implements OnInit, OnDestroy {
-  private visibilityHandler = () => {
+  private readonly visibilityHandler = () => {
     if (document.visibilityState === 'visible' && this.authService.isLoggedIn()) {
       this.authService.refreshSession().subscribe();
     }
   };
 
-  constructor(private router: Router, protected authService: AuthService) {}
+  constructor(private readonly router: Router, protected readonly authService: AuthService) {}
 
   ngOnInit(): void {
     document.addEventListener('visibilitychange', this.visibilityHandler);

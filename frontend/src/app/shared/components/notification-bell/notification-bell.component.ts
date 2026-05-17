@@ -210,7 +210,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   private subs: Subscription[] = [];
 
-  constructor(private alertService: AlertService, private elRef: ElementRef) {}
+  constructor(private readonly alertService: AlertService, private readonly elRef: ElementRef) {}
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {

@@ -16,7 +16,7 @@ export interface ReportResponse {
 export class ReportService {
   private readonly apiUrl = `${environment.apiUrl}/api/reports`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   generateMonthly(month: number, year: number): Observable<ReportResponse> {
     return this.http.post<ReportResponse>(`${this.apiUrl}/monthly`, { month, year });

@@ -1382,10 +1382,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   };
 
   constructor(
-    private incomeService: IncomeService,
-    private ruleService: RuleService,
-    private authService: AuthService,
-    private reportService: ReportService
+    private readonly incomeService: IncomeService,
+    private readonly ruleService: RuleService,
+    private readonly authService: AuthService,
+    private readonly reportService: ReportService
   ) {
     const now = new Date();
     this.pdfMonth = now.getMonth() + 1;

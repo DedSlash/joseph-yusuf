@@ -72,7 +72,7 @@ export class ForgotPasswordComponent {
   loading = false;
   submitted = false;
 
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   onSubmit(): void {
     if (!this.email) return;

@@ -15,7 +15,7 @@ import {
 export class SupportService {
   private readonly apiUrl = `${environment.apiUrl}/api/support`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   // Tickets
   createTicket(request: CreateTicketRequest): Observable<Ticket> {

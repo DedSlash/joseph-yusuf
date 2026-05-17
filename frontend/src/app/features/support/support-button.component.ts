@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -226,7 +226,7 @@ type Step = 'search' | 'article' | 'form' | 'success';
     }
   `]
 })
-export class SupportButtonComponent implements OnInit {
+export class SupportButtonComponent {
   private readonly support = inject(SupportService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
@@ -250,8 +250,6 @@ export class SupportButtonComponent implements OnInit {
   });
 
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
-
-  ngOnInit(): void {}
 
   open(): void {
     this.isOpen.set(true);
