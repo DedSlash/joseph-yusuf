@@ -2,7 +2,6 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { SupportService } from '../../core/services/support.service';
-import { AuthService } from '../../core/auth/auth.service';
 import {
   Ticket,
   TICKET_CATEGORY_LABELS,

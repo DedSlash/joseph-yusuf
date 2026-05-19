@@ -402,7 +402,7 @@ export class NavbarComponent implements OnInit {
   dropdownOpen = false;
   showHelp = false;
 
-  constructor(private authService: AuthService, private elRef: ElementRef) {
+  constructor(private readonly authService: AuthService, private readonly elRef: ElementRef) {
     this.currentUser$ = this.authService.currentUser$;
   }
 
