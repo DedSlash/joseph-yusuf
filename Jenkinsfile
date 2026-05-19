@@ -390,7 +390,15 @@ Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
             }
             post {
                 always {
-                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                    script {
+                        try {
+                            junit testResults: '**/target/surefire-reports/*.xml',
+                                 allowEmptyResults: true,
+                                 skipPublishingChecks: true
+                        } catch (Exception e) {
+                            echo "JUnit report collection warning: ${e.getMessage()}"
+                        }
+                    }
                 }
             }
         }
