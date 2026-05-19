@@ -21,5 +21,7 @@ public class UserDto {
     private Plan plan;
     private Role role;
     private boolean enabled;
+    private String country;
+    private String currency;
     private Instant createdAt;
 }

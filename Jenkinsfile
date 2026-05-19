@@ -390,7 +390,17 @@ Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
             }
             post {
                 always {
-                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                    script {
+                        def xmlFiles = findFiles(glob: '**/target/surefire-reports/*.xml')
+                        if (xmlFiles.length > 0) {
+                            junit testResults: '**/target/surefire-reports/*.xml',
+                                 allowEmptyResults: true,
+                                 skipPublishingChecks: true
+                        } else {
+                            echo "No surefire reports found — skipping junit publish"
+                        }
+                        currentBuild.result = currentBuild.result ?: 'SUCCESS'
+                    }
                 }
             }
         }

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TabViewModule } from 'primeng/tabview';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
@@ -12,8 +13,9 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { IncomeService } from '../../core/services/income.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { IncomeSource, IncomeSourceRequest, IncomeSourceType, IncomeEntry, IncomeEntryRequest, MonthSummary } from '../../shared/models/income.model';
+import { IncomeSource, IncomeSourceRequest, IncomeSourceType, IncomeEntry, IncomeEntryRequest, MonthSummary, MoneyTips } from '../../shared/models/income.model';
 import { Plan } from '../../shared/models/user.model';
+import { MoneyTipsModalComponent } from './money-tips-modal/money-tips-modal.component';
 
 interface CurrencyOption {
   code: string;
@@ -66,7 +68,7 @@ interface ImportRow {
 @Component({
   selector: 'app-incomes',
   standalone: true,
-  imports: [CommonModule, FormsModule, TabViewModule, DialogModule, DropdownModule, InputNumberModule, TooltipModule, FileUploadModule, TableModule, CheckboxModule, ProgressBarModule],
+  imports: [CommonModule, FormsModule, TabViewModule, DialogModule, DropdownModule, InputNumberModule, TooltipModule, FileUploadModule, TableModule, CheckboxModule, ProgressBarModule, MoneyTipsModalComponent],
   template: `
     <div class="incomes-page">
       <h2 class="page-title">Mes Revenus</h2>
@@ -195,6 +197,16 @@ interface ImportRow {
           </div>
         </p-tabPanel>
       </p-tabView>
+
+      <!-- Money Tips Modal (affiché après enregistrement d'un revenu) -->
+      <app-money-tips-modal
+        [(visible)]="showTipsModal"
+        [tips]="moneyTips"
+        [monthLabel]="tipsMonthLabel"
+        (savingsGoalRequested)="onSavingsGoalRequested()"
+        (unlockRequested)="onUnlockRequested()"
+        (dismissedForMonth)="onDismissTipsForMonth()"
+      ></app-money-tips-modal>
 
       <!-- Add/Edit Source Dialog -->
       <p-dialog
@@ -1429,9 +1441,17 @@ export class IncomesComponent implements OnInit {
   readonly currentMonth: number;
   readonly currentYear: number;
 
+  // Money tips modal
+  showTipsModal = false;
+  moneyTips: MoneyTips | null = null;
+  tipsMonthLabel = '';
+  private tipsMonth = 0;
+  private tipsYear = 0;
+
   constructor(
     private incomeService: IncomeService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {
     const now = new Date();
     this.currentMonth = now.getMonth() + 1;
@@ -1605,23 +1625,30 @@ export class IncomesComponent implements OnInit {
   saveEntries(): void {
     this.saving = true;
     let completed = 0;
+    let succeeded = 0;
     const total = this.entryForms.length;
+    const savedMonth = this.selectedMonth;
+    const savedYear = this.selectedYear;
 
     this.entryForms.forEach(entry => {
       const request: IncomeEntryRequest = {
         incomeSourceId: entry.sourceId,
         amount: entry.amount,
-        month: this.selectedMonth,
-        year: this.selectedYear
+        month: savedMonth,
+        year: savedYear
       };
 
       this.incomeService.createEntry(request).subscribe({
         next: () => {
           completed++;
+          succeeded++;
           if (completed === total) {
             this.saving = false;
             this.loadEntries();
             this.incomeService.notifyIncomeUpdated();
+            if (succeeded > 0) {
+              this.maybeShowMoneyTips(savedMonth, savedYear);
+            }
           }
         },
         error: () => {
@@ -1629,10 +1656,67 @@ export class IncomesComponent implements OnInit {
           if (completed === total) {
             this.saving = false;
             this.incomeService.notifyIncomeUpdated();
+            if (succeeded > 0) {
+              this.maybeShowMoneyTips(savedMonth, savedYear);
+            }
           }
         }
       });
     });
+  }
+
+  // --- Money Tips Modal ---
+
+  private maybeShowMoneyTips(month: number, year: number): void {
+    const userId = this.authService.getCurrentUser()?.id;
+    if (!userId) return;
+    if (this.isTipsDismissed(userId, month, year)) return;
+
+    this.incomeService.getMoneyTips(month, year).subscribe({
+      next: (tips) => {
+        if (!tips || !tips.tips || tips.tips.length === 0) return;
+        this.moneyTips = tips;
+        this.tipsMonth = month;
+        this.tipsYear = year;
+        this.tipsMonthLabel = this.monthLabel(month);
+        this.showTipsModal = true;
+      }
+    });
+  }
+
+  private monthLabel(month: number): string {
+    return this.months.find(m => m.value === month)?.label ?? '';
+  }
+
+  private tipsDismissKey(userId: string, month: number, year: number): string {
+    const mm = String(month).padStart(2, '0');
+    return `tips_dismissed_${userId}_${year}-${mm}`;
+  }
+
+  private isTipsDismissed(userId: string, month: number, year: number): boolean {
+    try {
+      return localStorage.getItem(this.tipsDismissKey(userId, month, year)) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  onDismissTipsForMonth(): void {
+    const userId = this.authService.getCurrentUser()?.id;
+    if (!userId) return;
+    try {
+      localStorage.setItem(this.tipsDismissKey(userId, this.tipsMonth, this.tipsYear), '1');
+    } catch {
+      // localStorage indisponible — silencieux
+    }
+  }
+
+  onSavingsGoalRequested(): void {
+    this.router.navigate(['/savings']);
+  }
+
+  onUnlockRequested(): void {
+    this.router.navigate(['/subscription']);
   }
 
   // --- Import (Fix 3) ---

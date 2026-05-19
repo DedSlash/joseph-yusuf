@@ -47,6 +47,14 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private String country = "SN";
+
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private String currency = "XOF";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
