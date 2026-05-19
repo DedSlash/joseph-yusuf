@@ -42,6 +42,9 @@ app:
   reset-url: ${RESET_URL:http://localhost:4200/reset-password}
   super-admin-emails: ${SUPER_ADMIN_EMAILS:admin@josephyusuf.com}
   super-admin-default-password: ${SUPER_ADMIN_DEFAULT_PASSWORD:}
+  frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  conversion-emails:
+    enabled: ${CONVERSION_EMAILS_ENABLED:false}
 
 jwt:
   secret: ${JWT_SECRET:am9zZXBoeXVzdWYtand0LXNlY3JldC1rZXktMjAyNi1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}

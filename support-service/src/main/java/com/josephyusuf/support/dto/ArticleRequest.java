@@ -26,5 +26,10 @@ public class ArticleRequest {
     @Size(max = 500)
     private String tags;
 
+    @Size(max = 20)
+    private String requiredPlan;
+
+    private String previewContent;
+
     private Boolean active;
 }

@@ -58,8 +58,8 @@ class KnowledgeServiceTest {
 
     @Test
     void search_returnsEmpty_whenQueryBlank() {
-        assertThat(knowledgeService.search(null)).isEmpty();
-        assertThat(knowledgeService.search("  ")).isEmpty();
+        assertThat(knowledgeService.search(null, "FREE")).isEmpty();
+        assertThat(knowledgeService.search("  ", "FREE")).isEmpty();
         verify(articleRepository, never()).search(any());
     }
 
@@ -67,7 +67,7 @@ class KnowledgeServiceTest {
     void search_delegatesToRepository() {
         when(articleRepository.search("mot")).thenReturn(List.of(article));
 
-        List<ArticleDto> result = knowledgeService.search("mot");
+        List<ArticleDto> result = knowledgeService.search("mot", "FREE");
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getTitle()).contains("mot de passe");
@@ -78,7 +78,7 @@ class KnowledgeServiceTest {
         when(articleRepository.findByCategoryAndActiveTrueOrderByViewsDesc(TicketCategory.ACCOUNT))
                 .thenReturn(List.of(article));
 
-        List<ArticleDto> result = knowledgeService.listByCategory(TicketCategory.ACCOUNT);
+        List<ArticleDto> result = knowledgeService.listByCategory(TicketCategory.ACCOUNT, "FREE");
 
         assertThat(result).hasSize(1);
     }
@@ -88,7 +88,7 @@ class KnowledgeServiceTest {
         Page<KnowledgeArticle> page = new PageImpl<>(List.of(article));
         when(articleRepository.findByActiveTrueOrderByViewsDesc(any())).thenReturn(page);
 
-        List<ArticleDto> result = knowledgeService.listPublic(0, 20);
+        List<ArticleDto> result = knowledgeService.listPublic(0, 20, "FREE");
 
         assertThat(result).hasSize(1);
     }
@@ -97,7 +97,7 @@ class KnowledgeServiceTest {
     void getAndIncrement_incrementsViews_whenActive() {
         when(articleRepository.findById(articleId)).thenReturn(Optional.of(article));
 
-        ArticleDto dto = knowledgeService.getAndIncrement(articleId);
+        ArticleDto dto = knowledgeService.getAndIncrement(articleId, "PREMIUM");
 
         verify(articleRepository).incrementViews(articleId);
         assertThat(dto.getViews()).isEqualTo(4);
@@ -108,7 +108,7 @@ class KnowledgeServiceTest {
         article.setActive(false);
         when(articleRepository.findById(articleId)).thenReturn(Optional.of(article));
 
-        knowledgeService.getAndIncrement(articleId);
+        knowledgeService.getAndIncrement(articleId, "FREE");
 
         verify(articleRepository, never()).incrementViews(any());
     }
@@ -117,8 +117,43 @@ class KnowledgeServiceTest {
     void getAndIncrement_throwsNotFound_whenMissing() {
         when(articleRepository.findById(articleId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> knowledgeService.getAndIncrement(articleId))
+        assertThatThrownBy(() -> knowledgeService.getAndIncrement(articleId, "FREE"))
                 .isInstanceOf(ArticleNotFoundException.class);
+    }
+
+    @Test
+    void search_locksArticle_whenFreeUserAndPremiumRequired() {
+        article.setRequiredPlan("PREMIUM");
+        article.setPreviewContent("Extrait...");
+        when(articleRepository.search("mot")).thenReturn(List.of(article));
+
+        List<ArticleDto> result = knowledgeService.search("mot", "FREE");
+
+        assertThat(result.get(0).isLocked()).isTrue();
+        assertThat(result.get(0).getContent()).isNull();
+        assertThat(result.get(0).getPreviewContent()).isEqualTo("Extrait...");
+    }
+
+    @Test
+    void search_unlocksArticle_whenPremiumUserAndPremiumRequired() {
+        article.setRequiredPlan("PREMIUM");
+        article.setPreviewContent("Extrait...");
+        when(articleRepository.search("mot")).thenReturn(List.of(article));
+
+        List<ArticleDto> result = knowledgeService.search("mot", "PREMIUM");
+
+        assertThat(result.get(0).isLocked()).isFalse();
+        assertThat(result.get(0).getContent()).isNotNull();
+    }
+
+    @Test
+    void search_premiumPlusUnlocksAll() {
+        article.setRequiredPlan("PREMIUM");
+        when(articleRepository.search("mot")).thenReturn(List.of(article));
+
+        List<ArticleDto> result = knowledgeService.search("mot", "PREMIUM_PLUS");
+
+        assertThat(result.get(0).isLocked()).isFalse();
     }
 
     @Test

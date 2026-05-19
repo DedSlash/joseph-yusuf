@@ -18,6 +18,10 @@ public class ArticleDto {
     private String content;
     private TicketCategory category;
     private String tags;
+    private String language;
+    private String requiredPlan;
+    private String previewContent;
+    private boolean locked;
     private int views;
     private boolean active;
     private Instant createdAt;

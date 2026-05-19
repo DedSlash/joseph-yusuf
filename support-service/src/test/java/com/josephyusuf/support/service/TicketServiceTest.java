@@ -10,6 +10,7 @@ import com.josephyusuf.support.enums.TicketCategory;
 import com.josephyusuf.support.enums.TicketPriority;
 import com.josephyusuf.support.enums.TicketStatus;
 import com.josephyusuf.support.exception.TicketAccessDeniedException;
+import com.josephyusuf.support.exception.TicketLimitExceededException;
 import com.josephyusuf.support.exception.TicketNotFoundException;
 import com.josephyusuf.support.mapper.TicketMapper;
 import com.josephyusuf.support.mapper.TicketMapperImpl;
@@ -84,8 +85,8 @@ class TicketServiceTest {
                 .subject("Sujet")
                 .message("Message")
                 .category(TicketCategory.ACCOUNT)
-                .priority(TicketPriority.HIGH)
                 .build();
+        when(ticketRepository.countByUserIdAndStatusIn(eq(userId), any())).thenReturn(0L);
         when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> {
             Ticket t = inv.getArgument(0);
             t.setId(ticketId);
@@ -93,7 +94,7 @@ class TicketServiceTest {
         });
         when(responseRepository.findByTicketIdOrderByCreatedAtAsc(ticketId)).thenReturn(List.of());
 
-        TicketDto dto = ticketService.createTicket(userId, "user@example.com", req);
+        TicketDto dto = ticketService.createTicket(userId, "user@example.com", "PREMIUM", req);
 
         assertThat(dto.getSubject()).isEqualTo("Sujet");
         assertThat(dto.getPriority()).isEqualTo(TicketPriority.HIGH);
@@ -103,18 +104,77 @@ class TicketServiceTest {
     }
 
     @Test
-    void createTicket_defaultsPriority_toNormal_whenNull() {
+    void createTicket_freeUserGetsPriorityNormal() {
         CreateTicketRequest req = CreateTicketRequest.builder()
                 .subject("S")
                 .message("M")
                 .category(TicketCategory.INCOME)
                 .build();
+        when(ticketRepository.countByUserIdAndStatusIn(eq(userId), any())).thenReturn(0L);
         when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
         when(responseRepository.findByTicketIdOrderByCreatedAtAsc(any())).thenReturn(List.of());
 
-        TicketDto dto = ticketService.createTicket(userId, "u@x.com", req);
+        TicketDto dto = ticketService.createTicket(userId, "u@x.com", "FREE", req);
 
         assertThat(dto.getPriority()).isEqualTo(TicketPriority.NORMAL);
+    }
+
+    @Test
+    void createTicket_premiumPlusGetsPriorityUrgent() {
+        CreateTicketRequest req = CreateTicketRequest.builder()
+                .subject("S")
+                .message("M")
+                .category(TicketCategory.INCOME)
+                .build();
+        when(ticketRepository.countByUserIdAndStatusIn(eq(userId), any())).thenReturn(0L);
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(responseRepository.findByTicketIdOrderByCreatedAtAsc(any())).thenReturn(List.of());
+
+        TicketDto dto = ticketService.createTicket(userId, "u@x.com", "PREMIUM_PLUS", req);
+
+        assertThat(dto.getPriority()).isEqualTo(TicketPriority.URGENT);
+    }
+
+    @Test
+    void createTicket_throwsLimit_whenFreeUserHas2OpenTickets() {
+        CreateTicketRequest req = CreateTicketRequest.builder()
+                .subject("S")
+                .message("M")
+                .category(TicketCategory.INCOME)
+                .build();
+        when(ticketRepository.countByUserIdAndStatusIn(eq(userId), any())).thenReturn(2L);
+
+        assertThatThrownBy(() -> ticketService.createTicket(userId, "u@x.com", "FREE", req))
+                .isInstanceOf(TicketLimitExceededException.class);
+    }
+
+    @Test
+    void createTicket_throwsLimit_whenPremiumUserHas5OpenTickets() {
+        CreateTicketRequest req = CreateTicketRequest.builder()
+                .subject("S")
+                .message("M")
+                .category(TicketCategory.INCOME)
+                .build();
+        when(ticketRepository.countByUserIdAndStatusIn(eq(userId), any())).thenReturn(5L);
+
+        assertThatThrownBy(() -> ticketService.createTicket(userId, "u@x.com", "PREMIUM", req))
+                .isInstanceOf(TicketLimitExceededException.class);
+    }
+
+    @Test
+    void createTicket_premiumPlusHasNoLimit() {
+        CreateTicketRequest req = CreateTicketRequest.builder()
+                .subject("S")
+                .message("M")
+                .category(TicketCategory.INCOME)
+                .build();
+        when(ticketRepository.countByUserIdAndStatusIn(eq(userId), any())).thenReturn(100L);
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(responseRepository.findByTicketIdOrderByCreatedAtAsc(any())).thenReturn(List.of());
+
+        TicketDto dto = ticketService.createTicket(userId, "u@x.com", "PREMIUM_PLUS", req);
+
+        assertThat(dto).isNotNull();
     }
 
     @Test

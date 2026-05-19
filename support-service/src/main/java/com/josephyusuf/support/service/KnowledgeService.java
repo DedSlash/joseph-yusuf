@@ -25,40 +25,40 @@ public class KnowledgeService {
     private final ArticleMapper articleMapper;
 
     @Transactional(readOnly = true)
-    public List<ArticleDto> search(String query) {
+    public List<ArticleDto> search(String query, String userPlan) {
         if (query == null || query.isBlank()) {
             return List.of();
         }
         return articleRepository.search(query.trim()).stream()
-                .map(articleMapper::toDto)
+                .map(a -> toLockedDto(a, userPlan))
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleDto> listByCategory(TicketCategory category) {
+    public List<ArticleDto> listByCategory(TicketCategory category, String userPlan) {
         return articleRepository.findByCategoryAndActiveTrueOrderByViewsDesc(category).stream()
-                .map(articleMapper::toDto)
+                .map(a -> toLockedDto(a, userPlan))
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleDto> listPublic(int page, int size) {
+    public List<ArticleDto> listPublic(int page, int size, String userPlan) {
         Pageable pageable = PageRequest.of(page, size);
         Page<KnowledgeArticle> result = articleRepository.findByActiveTrueOrderByViewsDesc(pageable);
         return result.getContent().stream()
-                .map(articleMapper::toDto)
+                .map(a -> toLockedDto(a, userPlan))
                 .toList();
     }
 
     @Transactional
-    public ArticleDto getAndIncrement(UUID id) {
+    public ArticleDto getAndIncrement(UUID id, String userPlan) {
         KnowledgeArticle article = articleRepository.findById(id)
                 .orElseThrow(() -> new ArticleNotFoundException("Article introuvable : " + id));
         if (article.isActive()) {
             articleRepository.incrementViews(id);
             article.setViews(article.getViews() + 1);
         }
-        return articleMapper.toDto(article);
+        return toLockedDto(article, userPlan);
     }
 
     @Transactional
@@ -68,6 +68,8 @@ public class KnowledgeService {
                 .content(request.getContent())
                 .category(request.getCategory())
                 .tags(request.getTags())
+                .requiredPlan(request.getRequiredPlan())
+                .previewContent(request.getPreviewContent())
                 .active(request.getActive() == null || request.getActive())
                 .createdBy(adminId)
                 .build();
@@ -82,6 +84,8 @@ public class KnowledgeService {
         article.setContent(request.getContent());
         article.setCategory(request.getCategory());
         article.setTags(request.getTags());
+        article.setRequiredPlan(request.getRequiredPlan());
+        article.setPreviewContent(request.getPreviewContent());
         if (request.getActive() != null) {
             article.setActive(request.getActive());
         }
@@ -94,5 +98,28 @@ public class KnowledgeService {
             throw new ArticleNotFoundException("Article introuvable : " + id);
         }
         articleRepository.deleteById(id);
+    }
+
+    private ArticleDto toLockedDto(KnowledgeArticle article, String userPlan) {
+        ArticleDto dto = articleMapper.toDto(article);
+        dto.setLanguage(article.getLanguage());
+        dto.setRequiredPlan(article.getRequiredPlan());
+        dto.setPreviewContent(article.getPreviewContent());
+
+        if (article.getRequiredPlan() != null && !"FREE".equals(article.getRequiredPlan())) {
+            boolean hasAccess = planHasAccess(userPlan, article.getRequiredPlan());
+            dto.setLocked(!hasAccess);
+            if (!hasAccess) {
+                dto.setContent(null);
+            }
+        }
+        return dto;
+    }
+
+    private boolean planHasAccess(String userPlan, String requiredPlan) {
+        if (requiredPlan == null || "FREE".equals(requiredPlan)) return true;
+        if ("PREMIUM_PLUS".equals(userPlan)) return true;
+        if ("PREMIUM".equals(userPlan)) return "PREMIUM".equals(requiredPlan);
+        return false;
     }
 }

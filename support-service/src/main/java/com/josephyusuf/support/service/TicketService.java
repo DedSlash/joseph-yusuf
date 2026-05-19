@@ -8,10 +8,12 @@ import com.josephyusuf.support.enums.TicketCategory;
 import com.josephyusuf.support.enums.TicketPriority;
 import com.josephyusuf.support.enums.TicketStatus;
 import com.josephyusuf.support.exception.TicketAccessDeniedException;
+import com.josephyusuf.support.exception.TicketLimitExceededException;
 import com.josephyusuf.support.exception.TicketNotFoundException;
 import com.josephyusuf.support.mapper.TicketMapper;
 import com.josephyusuf.support.repository.TicketRepository;
 import com.josephyusuf.support.repository.TicketResponseRepository;
+import com.josephyusuf.support.util.PlanRestrictions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,13 +39,34 @@ public class TicketService {
     private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
-    public TicketDto createTicket(UUID userId, String userEmail, CreateTicketRequest request) {
+    public TicketDto createTicket(UUID userId, String userEmail, String plan, CreateTicketRequest request) {
+        List<TicketStatus> openStatuses = List.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS);
+        long openCount = ticketRepository.countByUserIdAndStatusIn(userId, openStatuses);
+
+        int maxTickets = switch (plan) {
+            case "PREMIUM_PLUS" -> Integer.MAX_VALUE;
+            case "PREMIUM" -> PlanRestrictions.PREMIUM_MAX_OPEN_TICKETS;
+            default -> PlanRestrictions.FREE_MAX_OPEN_TICKETS;
+        };
+
+        if (openCount >= maxTickets) {
+            throw new TicketLimitExceededException(
+                    "Limite de tickets atteinte pour votre plan (" + maxTickets + " max). "
+                            + "Passez au plan supérieur pour ouvrir plus de tickets.");
+        }
+
+        TicketPriority priority = switch (plan) {
+            case "PREMIUM_PLUS" -> TicketPriority.URGENT;
+            case "PREMIUM" -> TicketPriority.HIGH;
+            default -> TicketPriority.NORMAL;
+        };
+
         Ticket ticket = Ticket.builder()
                 .userId(userId)
                 .subject(request.getSubject())
                 .message(request.getMessage())
                 .category(request.getCategory())
-                .priority(request.getPriority() != null ? request.getPriority() : TicketPriority.NORMAL)
+                .priority(priority)
                 .status(TicketStatus.OPEN)
                 .aiHandled(false)
                 .build();
