@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { IncomeSource, IncomeSourceRequest, IncomeEntry, IncomeEntryRequest, MonthSummary } from '../../shared/models/income.model';
+import { IncomeSource, IncomeSourceRequest, IncomeEntry, IncomeEntryRequest, MonthSummary, MoneyTips } from '../../shared/models/income.model';
 
 @Injectable({ providedIn: 'root' })
 export class IncomeService {
@@ -58,5 +58,11 @@ export class IncomeService {
   getHistory(months: number = 6): Observable<MonthSummary[]> {
     const params = new HttpParams().set('months', months);
     return this.http.get<MonthSummary[]>(`${this.apiUrl}/history`, { params });
+  }
+
+  getMoneyTips(month: number, year: number): Observable<MoneyTips> {
+    const lang = (navigator.language || 'fr').split('-')[0];
+    const headers = new HttpHeaders({ 'Accept-Language': lang });
+    return this.http.get<MoneyTips>(`${this.apiUrl}/tips/${month}/${year}`, { headers });
   }
 }

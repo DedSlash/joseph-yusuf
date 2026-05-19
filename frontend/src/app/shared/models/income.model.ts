@@ -47,3 +47,32 @@ export interface MonthSummary {
   percentageVsAverage: number;
   monthsInBaseline: number;
 }
+
+export interface MoneyTip {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  method: string;
+  countries: string[];
+  requiredPlan: 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS';
+  locked: boolean;
+  actionUrl: string | null;
+  actionLabel: string | null;
+}
+
+export interface RecommendedSplit {
+  needs: number;
+  wants: number;
+  savings: number;
+}
+
+export interface MoneyTips {
+  josephStatus: MonthStatus;
+  totalAmount: number;
+  currency: string;
+  country: string;
+  recommendedSavings: number;
+  recommendedSplit: RecommendedSplit;
+  tips: MoneyTip[];
+}
