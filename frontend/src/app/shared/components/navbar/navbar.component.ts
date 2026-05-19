@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -41,9 +41,15 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
         <div class="avatar-container" (click)="toggleDropdown()">
           <div class="avatar">{{ getInitials(user) }}</div>
           <div class="dropdown" *ngIf="dropdownOpen">
-            <a class="dropdown-item" routerLink="/account">Mon compte</a>
-            <a class="dropdown-item" routerLink="/subscription">Mon abonnement</a>
-            <button class="dropdown-item" (click)="logout()">Deconnexion</button>
+            <a class="dropdown-item" routerLink="/account" (click)="dropdownOpen = false">Mon compte</a>
+            <a class="dropdown-item" routerLink="/subscription" (click)="dropdownOpen = false">Mon abonnement</a>
+            <a class="dropdown-item" routerLink="/support" (click)="dropdownOpen = false">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; opacity: 0.7">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+              </svg>Support
+            </a>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" (click)="logout()">Déconnexion</button>
           </div>
         </div>
       </div>
@@ -277,6 +283,12 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       background: rgba(201, 168, 76, 0.1);
     }
 
+    .dropdown-divider {
+      height: 1px;
+      background: rgba(201, 168, 76, 0.12);
+      margin: 0.3rem 0;
+    }
+
     /* ── Modale d'aide ── */
     .help-body {
       text-align: center;
@@ -390,8 +402,18 @@ export class NavbarComponent implements OnInit {
   dropdownOpen = false;
   showHelp = false;
 
-  constructor(private authService: AuthService) {
+  constructor(private authService: AuthService, private elRef: ElementRef) {
     this.currentUser$ = this.authService.currentUser$;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.dropdownOpen) {
+      const avatarContainer = this.elRef.nativeElement.querySelector('.avatar-container');
+      if (avatarContainer && !avatarContainer.contains(event.target)) {
+        this.dropdownOpen = false;
+      }
+    }
   }
 
   ngOnInit(): void {}
