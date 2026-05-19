@@ -36,6 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (jwtService.isTokenValid(token)) {
             String userId = jwtService.extractUserId(token);
             String plan = jwtService.extractPlan(token);
+            String country = jwtService.extractCountry(token);
+            String currency = jwtService.extractCurrency(token);
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -45,6 +47,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            request.setAttribute("country", country);
+            request.setAttribute("currency", currency);
         }
 
         filterChain.doFilter(request, response);

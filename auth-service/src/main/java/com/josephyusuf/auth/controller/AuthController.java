@@ -47,6 +47,13 @@ public class AuthController {
         return ResponseEntity.ok(authService.getCurrentUser(userId));
     }
 
+    @PatchMapping("/me")
+    public ResponseEntity<UserDto> updateProfile(Authentication authentication,
+                                                  @Valid @RequestBody UpdateProfileRequest request) {
+        UUID userId = UUID.fromString((String) authentication.getPrincipal());
+        return ResponseEntity.ok(authService.updateProfile(userId, request));
+    }
+
     @PostMapping("/password/forgot")
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         passwordResetService.requestReset(request);

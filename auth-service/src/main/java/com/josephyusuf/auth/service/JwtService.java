@@ -23,12 +23,15 @@ public class JwtService {
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpiration;
 
-    public String generateAccessToken(UUID userId, String email, Plan plan, Role role) {
+    public String generateAccessToken(UUID userId, String email, Plan plan, Role role,
+                                       String country, String currency) {
         return Jwts.builder()
                 .subject(email)
                 .claim("userId", userId.toString())
                 .claim("plan", plan.name())
                 .claim("role", role.name())
+                .claim("country", country != null ? country : "SN")
+                .claim("currency", currency != null ? currency : "XOF")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(getSigningKey())
@@ -49,6 +52,14 @@ public class JwtService {
 
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    public String extractCountry(String token) {
+        return extractClaim(token, claims -> claims.get("country", String.class));
+    }
+
+    public String extractCurrency(String token) {
+        return extractClaim(token, claims -> claims.get("currency", String.class));
     }
 
     public boolean isTokenValid(String token) {

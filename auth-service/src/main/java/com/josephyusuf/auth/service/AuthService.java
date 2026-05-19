@@ -39,11 +39,13 @@ public class AuthService {
                 .plan(Plan.FREE)
                 .role(Role.USER)
                 .enabled(true)
+                .country(request.getCountry() != null && !request.getCountry().isBlank() ? request.getCountry() : "SN")
+                .currency(request.getCurrency() != null && !request.getCurrency().isBlank() ? request.getCurrency() : "XOF")
                 .build();
 
         user = userRepository.save(user);
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -66,7 +68,7 @@ public class AuthService {
             throw new BadCredentialsException("Identifiants invalides");
         }
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -80,7 +82,7 @@ public class AuthService {
         RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
         User user = refreshToken.getUser();
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency());
 
         return TokenResponse.builder()
                 .accessToken(accessToken)
@@ -95,6 +97,28 @@ public class AuthService {
     public UserDto getCurrentUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BadCredentialsException("Utilisateur non trouvé"));
+        return userMapper.toDto(user);
+    }
+
+    @Transactional
+    public UserDto updateProfile(UUID userId, UpdateProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BadCredentialsException("Utilisateur non trouvé"));
+
+        if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
+            user.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null && !request.getLastName().isBlank()) {
+            user.setLastName(request.getLastName());
+        }
+        if (request.getCountry() != null && !request.getCountry().isBlank()) {
+            user.setCountry(request.getCountry().toUpperCase());
+        }
+        if (request.getCurrency() != null && !request.getCurrency().isBlank()) {
+            user.setCurrency(request.getCurrency().toUpperCase());
+        }
+
+        user = userRepository.save(user);
         return userMapper.toDto(user);
     }
 }

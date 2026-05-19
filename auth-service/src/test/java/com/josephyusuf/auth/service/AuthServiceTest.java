@@ -64,6 +64,8 @@ class AuthServiceTest {
                 .plan(Plan.FREE)
                 .role(Role.USER)
                 .enabled(true)
+                .country("SN")
+                .currency("XOF")
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
@@ -99,7 +101,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER)).thenReturn("access-token-value");
+        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF")).thenReturn("access-token-value");
         when(refreshTokenService.createRefreshToken(testUser)).thenReturn(refreshToken);
         when(userMapper.toDto(testUser)).thenReturn(testUserDto);
 
@@ -112,7 +114,7 @@ class AuthServiceTest {
 
         verify(userRepository).existsByEmail("test@example.com");
         verify(userRepository).save(any(User.class));
-        verify(jwtService).generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER);
+        verify(jwtService).generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF");
         verify(refreshTokenService).createRefreshToken(testUser);
     }
 
@@ -151,7 +153,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER)).thenReturn("access-token-value");
+        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF")).thenReturn("access-token-value");
         when(refreshTokenService.createRefreshToken(testUser)).thenReturn(refreshToken);
         when(userMapper.toDto(testUser)).thenReturn(testUserDto);
 
@@ -225,7 +227,7 @@ class AuthServiceTest {
                 .build();
 
         when(refreshTokenService.verifyRefreshToken("valid-refresh-token")).thenReturn(refreshToken);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER)).thenReturn("new-access-token");
+        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF")).thenReturn("new-access-token");
 
         TokenResponse response = authService.refresh(request);
 
