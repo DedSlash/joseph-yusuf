@@ -390,7 +390,9 @@ Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
             }
             post {
                 always {
-                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                    junit testResults: '**/target/surefire-reports/*.xml',
+                         allowEmptyResults: true,
+                         skipPublishingChecks: true
                 }
             }
         }
