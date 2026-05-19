@@ -391,13 +391,15 @@ Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
             post {
                 always {
                     script {
-                        try {
+                        def xmlFiles = findFiles(glob: '**/target/surefire-reports/*.xml')
+                        if (xmlFiles.length > 0) {
                             junit testResults: '**/target/surefire-reports/*.xml',
                                  allowEmptyResults: true,
                                  skipPublishingChecks: true
-                        } catch (Exception e) {
-                            echo "JUnit report collection warning: ${e.getMessage()}"
+                        } else {
+                            echo "No surefire reports found — skipping junit publish"
                         }
+                        currentBuild.result = currentBuild.result ?: 'SUCCESS'
                     }
                 }
             }
