@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -18,6 +19,8 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     Page<Ticket> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     long countByStatus(TicketStatus status);
+
+    long countByUserIdAndStatusIn(UUID userId, List<TicketStatus> statuses);
 
     @Query("""
             SELECT t FROM Ticket t

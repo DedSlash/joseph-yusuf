@@ -26,7 +26,8 @@ public class UserSupportController {
     public ResponseEntity<TicketDto> createTicket(@AuthenticationPrincipal String userId,
                                                    @Valid @RequestBody CreateTicketRequest request) {
         String email = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
-        TicketDto created = ticketService.createTicket(UUID.fromString(userId), email, request);
+        String plan = extractPlan();
+        TicketDto created = ticketService.createTicket(UUID.fromString(userId), email, plan, request);
         return ResponseEntity.ok(created);
     }
 
@@ -52,22 +53,33 @@ public class UserSupportController {
 
     @GetMapping("/knowledge/search")
     public ResponseEntity<List<ArticleDto>> searchKnowledge(@RequestParam String q) {
-        return ResponseEntity.ok(knowledgeService.search(q));
+        return ResponseEntity.ok(knowledgeService.search(q, extractPlan()));
     }
 
     @GetMapping("/knowledge/category/{category}")
     public ResponseEntity<List<ArticleDto>> listByCategory(@PathVariable TicketCategory category) {
-        return ResponseEntity.ok(knowledgeService.listByCategory(category));
+        return ResponseEntity.ok(knowledgeService.listByCategory(category, extractPlan()));
     }
 
     @GetMapping("/knowledge/public/list")
     public ResponseEntity<List<ArticleDto>> listPublic(@RequestParam(defaultValue = "0") int page,
                                                        @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(knowledgeService.listPublic(page, size));
+        return ResponseEntity.ok(knowledgeService.listPublic(page, size, extractPlan()));
     }
 
     @GetMapping("/knowledge/public/{id}")
     public ResponseEntity<ArticleDto> getArticle(@PathVariable UUID id) {
-        return ResponseEntity.ok(knowledgeService.getAndIncrement(id));
+        return ResponseEntity.ok(knowledgeService.getAndIncrement(id, extractPlan()));
+    }
+
+    private String extractPlan() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getAuthorities() == null) return "FREE";
+        return auth.getAuthorities().stream()
+                .map(Object::toString)
+                .filter(a -> a.startsWith("PLAN_"))
+                .map(a -> a.substring(5))
+                .findFirst()
+                .orElse("FREE");
     }
 }

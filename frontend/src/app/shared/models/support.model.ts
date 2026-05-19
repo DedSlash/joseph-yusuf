@@ -44,6 +44,10 @@ export interface KnowledgeArticle {
   content: string;
   category: TicketCategory;
   tags?: string;
+  language?: string;
+  requiredPlan?: string;
+  previewContent?: string;
+  locked?: boolean;
   views: number;
   active: boolean;
   createdAt: string;

@@ -39,6 +39,12 @@ public class KnowledgeArticle {
     @Builder.Default
     private String language = "fr";
 
+    @Column(name = "required_plan", length = 20)
+    private String requiredPlan;
+
+    @Column(name = "preview_content", columnDefinition = "TEXT")
+    private String previewContent;
+
     @Column(nullable = false)
     @Builder.Default
     private int views = 0;

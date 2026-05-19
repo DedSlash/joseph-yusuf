@@ -46,9 +46,10 @@ type Step = 'search' | 'article' | 'form' | 'success';
               <button *ngFor="let a of results()"
                       type="button"
                       class="support-result"
+                      [class.support-result-locked]="a.locked"
                       (click)="openArticle(a)">
-                <strong>{{ a.title }}</strong>
-                <small>{{ categoryLabel(a.category) }} · {{ a.views }} vues</small>
+                <strong>{{ a.locked ? '&#x1f512; ' : '' }}{{ a.title }}</strong>
+                <small>{{ categoryLabel(a.category) }} · {{ a.views }} vues{{ a.locked ? ' · PREMIUM' : '' }}</small>
               </button>
             </div>
 
@@ -72,7 +73,19 @@ type Step = 'search' | 'article' | 'form' | 'success';
             <div class="support-article-meta">
               {{ categoryLabel(selectedArticle()?.category) }}
             </div>
-            <article class="support-article">{{ selectedArticle()?.content }}</article>
+            <ng-container *ngIf="!selectedArticle()?.locked; else lockedContent">
+              <article class="support-article">{{ selectedArticle()?.content }}</article>
+            </ng-container>
+            <ng-template #lockedContent>
+              <article class="support-article support-article-preview">{{ selectedArticle()?.previewContent }}</article>
+              <div class="support-locked-banner">
+                <span class="locked-icon">&#x1f512;</span>
+                <span>Contenu complet disponible en {{ selectedArticle()?.requiredPlan === 'PREMIUM_PLUS' ? 'PREMIUM PLUS' : 'PREMIUM' }}</span>
+                <button class="support-btn support-btn-primary" type="button" (click)="goToSubscription()">
+                  Débloquer avec PREMIUM
+                </button>
+              </div>
+            </ng-template>
             <div class="support-actions">
               <button class="support-btn support-btn-ghost" type="button" (click)="back()">Retour aux résultats</button>
               <button class="support-btn support-btn-primary" type="button" (click)="goToForm()">
@@ -224,6 +237,22 @@ type Step = 'search' | 'article' | 'form' | 'success';
       font-size: 2rem; display: inline-flex; align-items: center; justify-content: center;
       margin-bottom: 0.8rem;
     }
+    .support-result-locked { border-color: rgba(201, 168, 76, 0.4); }
+    .support-article-preview { opacity: 0.7; }
+    .support-locked-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      margin-top: 0.75rem;
+      background: rgba(201, 168, 76, 0.1);
+      border: 1px solid rgba(201, 168, 76, 0.3);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: var(--gold, #C9A84C);
+      flex-wrap: wrap;
+    }
+    .locked-icon { font-size: 1.1rem; }
   `]
 })
 export class SupportButtonComponent {
@@ -317,6 +346,11 @@ export class SupportButtonComponent {
   viewMyTickets(): void {
     this.close();
     this.router.navigate(['/support']);
+  }
+
+  goToSubscription(): void {
+    this.close();
+    this.router.navigate(['/subscription']);
   }
 
   categoryLabel(c: TicketCategory | undefined): string {

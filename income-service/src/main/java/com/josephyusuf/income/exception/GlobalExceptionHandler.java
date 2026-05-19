@@ -1,5 +1,8 @@
 package com.josephyusuf.income.exception;
 
+import com.josephyusuf.income.savings.exception.InvalidSavingsGoalException;
+import com.josephyusuf.income.savings.exception.SavingsGoalLimitExceededException;
+import com.josephyusuf.income.savings.exception.SavingsGoalNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -31,6 +34,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateEntryException.class)
     public ResponseEntity<ApiErrorResponse> handleDuplicate(DuplicateEntryException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(SavingsGoalNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleSavingsNotFound(SavingsGoalNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidSavingsGoalException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidSavings(InvalidSavingsGoalException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(SavingsGoalLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleSavingsGoalLimit(SavingsGoalLimitExceededException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
