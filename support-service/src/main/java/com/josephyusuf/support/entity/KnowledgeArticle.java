@@ -35,6 +35,10 @@ public class KnowledgeArticle {
     @Column(length = 500)
     private String tags;
 
+    @Column(nullable = false, length = 5)
+    @Builder.Default
+    private String language = "fr";
+
     @Column(nullable = false)
     @Builder.Default
     private int views = 0;
