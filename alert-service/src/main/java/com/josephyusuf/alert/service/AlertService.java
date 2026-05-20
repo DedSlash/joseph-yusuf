@@ -70,6 +70,11 @@ public class AlertService {
     }
 
     @Transactional
+    public void deleteAll(UUID userId) {
+        alertRepository.deleteAllByUserId(userId);
+    }
+
+    @Transactional
     public Alert createFromIncomeClassified(IncomeClassifiedEvent event) {
         AlertType type;
         AlertSeverity severity;
