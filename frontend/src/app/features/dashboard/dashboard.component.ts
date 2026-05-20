@@ -8,15 +8,17 @@ import { IncomeService } from '../../core/services/income.service';
 import { RuleService } from '../../core/services/rule.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ReportService } from '../../core/services/report.service';
-import { MonthSummary, MonthStatus } from '../../shared/models/income.model';
+import { MonthSummary, MonthStatus, MoneyTips } from '../../shared/models/income.model';
 import { AllocationResult, AllocationLine, RuleAvailability, RuleType, UserRuleConfigRequest } from '../../shared/models/rule.model';
 import { Plan } from '../../shared/models/user.model';
 import { SavingsWidgetComponent } from '../savings/savings-widget.component';
+import { MoneyTipsModalComponent } from '../incomes/money-tips-modal/money-tips-modal.component';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, DialogModule, SavingsWidgetComponent],
+  imports: [CommonModule, RouterModule, FormsModule, DialogModule, SavingsWidgetComponent, MoneyTipsModalComponent],
   template: `
     <div class="dashboard">
 
@@ -178,7 +180,10 @@ import { SavingsWidgetComponent } from '../savings/savings-widget.component';
             <h3 class="section-title">Répartition du mois</h3>
             <span class="active-rule-badge">{{ getRuleLabel(allocations.rule) }}</span>
           </div>
-          <button class="btn-change-rule" (click)="showRuleDialog = true">Changer de règle</button>
+          <div class="section-header-right">
+            <button *ngIf="hasTipsAvailable" class="tips-button" (click)="openMoneyTips()">💡 Astuces répartition</button>
+            <button class="btn-change-rule" (click)="showRuleDialog = true">Changer de règle</button>
+          </div>
         </div>
 
         <div class="allocation-grid">
@@ -367,6 +372,16 @@ import { SavingsWidgetComponent } from '../savings/savings-widget.component';
           </div>
         </div>
       </p-dialog>
+
+      <!-- Money Tips Modal -->
+      <app-money-tips-modal
+        [(visible)]="showTipsModal"
+        [tips]="dashboardTips"
+        [monthLabel]="dashboardTipsMonthLabel"
+        (unlockRequested)="goToSubscription()"
+        (dismissedForMonth)="onDashboardTipsDismiss()"
+        (langChanged)="onDashboardTipsLangChanged($event)"
+      ></app-money-tips-modal>
     </div>
   `,
   styles: [`
@@ -987,6 +1002,34 @@ import { SavingsWidgetComponent } from '../savings/savings-widget.component';
       margin: 0;
     }
 
+    .section-header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .tips-button {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.35rem 0.8rem;
+      background: rgba(201,168,76,0.12);
+      border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 20px;
+      color: #C9A84C;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      animation: tipsPulse 2s ease-in-out infinite;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .tips-button:hover { background: rgba(201,168,76,0.22); }
+    @keyframes tipsPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.3); }
+      50% { box-shadow: 0 0 0 4px rgba(201,168,76,0); }
+    }
+
     .btn-change-rule {
       padding: 0.5rem 1rem;
       background: rgba(201, 168, 76, 0.1);
@@ -1351,6 +1394,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   generatingPdf = false;
   pdfError = '';
 
+  // Money Tips
+  hasTipsAvailable = false;
+  showTipsModal = false;
+  dashboardTips: MoneyTips | null = null;
+  dashboardTipsMonthLabel = '';
+  private dashboardTipsMonth = 0;
+  private dashboardTipsYear = 0;
+
   // Sélecteurs PDF
   pdfMonth: number;
   pdfYear: number;
@@ -1393,7 +1444,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly incomeService: IncomeService,
     private readonly ruleService: RuleService,
     private readonly authService: AuthService,
-    private readonly reportService: ReportService
+    private readonly reportService: ReportService,
+    private readonly router: Router
   ) {
     const now = new Date();
     this.pdfMonth = now.getMonth() + 1;
@@ -1439,6 +1491,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.summary = summary;
             this.loadAllocations(summary, refMonth, refYear);
             this.loadJosephComparison(summary, refMonth, refYear);
+            if (summary.totalIncome > 0) {
+              this.checkDashboardTips(refMonth, refYear);
+            }
           },
           error: () => {
             this.summary = null;
@@ -1729,5 +1784,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  // --- Money Tips ---
+
+  private checkDashboardTips(month: number, year: number): void {
+    const lang = this.getDashboardTipsLang();
+    this.incomeService.getMoneyTips(month, year, lang).subscribe({
+      next: (tips) => {
+        this.hasTipsAvailable = !!(tips && tips.tips && tips.tips.length > 0);
+        if (this.hasTipsAvailable) {
+          this.dashboardTips = tips;
+          this.dashboardTipsMonth = month;
+          this.dashboardTipsYear = year;
+          this.dashboardTipsMonthLabel = this.pdfMonths.find(m => m.value === month)?.label ?? '';
+        }
+      },
+      error: () => this.hasTipsAvailable = false
+    });
+  }
+
+  openMoneyTips(): void {
+    this.showTipsModal = true;
+  }
+
+  goToSubscription(): void {
+    this.router.navigate(['/subscription']);
+  }
+
+  onDashboardTipsDismiss(): void {}
+
+  onDashboardTipsLangChanged(lang: string): void {
+    this.incomeService.getMoneyTips(this.dashboardTipsMonth, this.dashboardTipsYear, lang).subscribe({
+      next: (tips) => {
+        if (tips && tips.tips && tips.tips.length > 0) {
+          this.dashboardTips = tips;
+        }
+      }
+    });
+  }
+
+  private getDashboardTipsLang(): string {
+    try { return localStorage.getItem('joseph_tips_lang') || 'fr'; } catch { return 'fr'; }
   }
 }

@@ -212,9 +212,9 @@ interface ImportRow {
         [(visible)]="showTipsModal"
         [tips]="moneyTips"
         [monthLabel]="tipsMonthLabel"
-        (savingsGoalRequested)="onSavingsGoalRequested()"
         (unlockRequested)="onUnlockRequested()"
         (dismissedForMonth)="onDismissTipsForMonth()"
+        (langChanged)="onTipsLangChanged($event)"
       ></app-money-tips-modal>
 
       <!-- Add/Edit Source Dialog -->
@@ -1725,7 +1725,7 @@ export class IncomesComponent implements OnInit {
     if (!userId) return;
     if (this.isTipsDismissed(userId, month, year)) return;
 
-    this.incomeService.getMoneyTips(month, year).subscribe({
+    this.incomeService.getMoneyTips(month, year, this.getTipsLang()).subscribe({
       next: (tips) => {
         if (!tips || !tips.tips || tips.tips.length === 0) return;
         this.moneyTips = tips;
@@ -1735,6 +1735,10 @@ export class IncomesComponent implements OnInit {
         this.showTipsModal = true;
       }
     });
+  }
+
+  private getTipsLang(): string {
+    try { return localStorage.getItem('joseph_tips_lang') || 'fr'; } catch { return 'fr'; }
   }
 
   private monthLabel(month: number): string {
@@ -1764,12 +1768,18 @@ export class IncomesComponent implements OnInit {
     }
   }
 
-  onSavingsGoalRequested(): void {
-    this.router.navigate(['/savings']);
-  }
-
   onUnlockRequested(): void {
     this.router.navigate(['/subscription']);
+  }
+
+  onTipsLangChanged(lang: string): void {
+    this.incomeService.getMoneyTips(this.tipsMonth, this.tipsYear, lang).subscribe({
+      next: (tips) => {
+        if (tips && tips.tips && tips.tips.length > 0) {
+          this.moneyTips = tips;
+        }
+      }
+    });
   }
 
   private checkTipsAvailability(): void {
@@ -1778,7 +1788,7 @@ export class IncomesComponent implements OnInit {
       this.hasTipsForCurrentMonth = false;
       return;
     }
-    this.incomeService.getMoneyTips(this.selectedMonth, this.selectedYear).subscribe({
+    this.incomeService.getMoneyTips(this.selectedMonth, this.selectedYear, this.getTipsLang()).subscribe({
       next: (tips) => {
         this.hasTipsForCurrentMonth = !!(tips && tips.tips && tips.tips.length > 0);
         if (this.hasTipsForCurrentMonth) {
