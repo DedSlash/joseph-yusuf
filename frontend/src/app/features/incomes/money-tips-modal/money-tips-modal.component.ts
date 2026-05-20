@@ -48,12 +48,11 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
             </div>
           </div>
 
-          <!-- Body : liste des tips -->
+          <!-- Body : liste des tips accessibles -->
           <div class="tips-list">
             <div
-              *ngFor="let tip of tips.tips"
+              *ngFor="let tip of accessibleTips()"
               class="tip-card"
-              [class.tip-locked]="tip.locked"
             >
               <div class="tip-head">
                 <span class="tip-icon">{{ tip.icon }}</span>
@@ -61,20 +60,29 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
               </div>
               <p class="tip-description">{{ tip.description }}</p>
 
-              <div class="tip-actions" *ngIf="!tip.locked && tip.actionUrl">
+              <div class="tip-actions" *ngIf="tip.actionUrl">
                 <button class="btn-outline" (click)="openExternal(tip.actionUrl!)">
                   {{ tip.actionLabel || 'Ouvrir' }}
                 </button>
               </div>
+            </div>
 
-              <div class="tip-locked-row" *ngIf="tip.locked">
-                <span class="lock-hint">
-                  🔒 Disponible en {{ planLabel(tip.requiredPlan) }}
-                </span>
-                <button class="btn-unlock" (click)="onUnlock()">
-                  Débloquer
-                </button>
-              </div>
+            <!-- Bloc conversion si tips verrouillés -->
+            <div class="upgrade-block" *ngIf="lockedCount() > 0">
+              <div class="upgrade-icon">{{ isPremiumUser() ? '📈' : '🌟' }}</div>
+              <strong class="upgrade-title">
+                {{ isPremiumUser() ? 'Débloquez les conseils investissement avec PREMIUM+' : 'Débloquez plus de conseils avec PREMIUM' }}
+              </strong>
+              <ul class="upgrade-features">
+                <li>{{ lockedCount() }} conseil{{ lockedCount() > 1 ? 's' : '' }} supplémentaire{{ lockedCount() > 1 ? 's' : '' }} disponible{{ lockedCount() > 1 ? 's' : '' }}</li>
+                <li *ngIf="!isPremiumUser()">Stratégie multi-comptes</li>
+                <li *ngIf="!isPremiumUser()">Épargne automatique programmée</li>
+                <li *ngIf="isPremiumUser()">Investissement progressif BRVM</li>
+                <li *ngIf="isPremiumUser()">Stratégies patrimoine avancées</li>
+              </ul>
+              <button class="btn-upgrade" (click)="onUnlock()">
+                {{ isPremiumUser() ? 'Passer à PREMIUM+ — 9,99€/mois' : 'Passer à PREMIUM — 4,99€/mois' }}
+              </button>
             </div>
           </div>
 
@@ -230,16 +238,12 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       border: 1px solid rgba(201, 168, 76, 0.12);
       border-radius: 8px;
     }
-    .tip-card.tip-locked { opacity: 0.55; }
-
     .tip-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
     .tip-icon { font-size: 1.3rem; line-height: 1; }
     .tip-title { font-size: 0.95rem; font-weight: 700; color: #F0E8D0; }
     .tip-description { margin: 0; font-size: 0.85rem; line-height: 1.5; color: rgba(240, 232, 208, 0.85); }
 
     .tip-actions { margin-top: 0.7rem; }
-    .tip-locked-row { margin-top: 0.7rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
-    .lock-hint { font-size: 0.78rem; color: rgba(240, 232, 208, 0.7); }
 
     .btn-outline {
       padding: 0.4rem 0.9rem;
@@ -265,6 +269,47 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       cursor: pointer;
     }
     .btn-unlock:hover { background: #DAC372; }
+
+    .upgrade-block {
+      padding: 1.2rem;
+      background: linear-gradient(135deg, rgba(201, 168, 76, 0.08), rgba(201, 168, 76, 0.02));
+      border: 1px dashed rgba(201, 168, 76, 0.35);
+      border-radius: 10px;
+      text-align: center;
+    }
+    .upgrade-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .upgrade-title {
+      display: block;
+      font-size: 0.9rem;
+      color: #F0E8D0;
+      margin-bottom: 0.7rem;
+    }
+    .upgrade-features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1rem;
+      font-size: 0.8rem;
+      color: rgba(240, 232, 208, 0.7);
+    }
+    .upgrade-features li::before {
+      content: '• ';
+      color: #C9A84C;
+    }
+    .upgrade-features li {
+      margin-bottom: 0.25rem;
+    }
+    .btn-upgrade {
+      padding: 0.55rem 1.3rem;
+      background: #C9A84C;
+      color: #0D0B07;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-upgrade:hover { background: #DAC372; }
 
     .modal-footer {
       display: flex;
@@ -306,6 +351,7 @@ export class MoneyTipsModalComponent implements OnChanges {
   @Input() visible = false;
   @Input() tips: MoneyTips | null = null;
   @Input() monthLabel = '';
+  @Input() userPlan: 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' = 'FREE';
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() unlockRequested = new EventEmitter<void>();
@@ -388,5 +434,19 @@ export class MoneyTipsModalComponent implements OnChanges {
     }
     this.visible = false;
     this.visibleChange.emit(false);
+  }
+
+  accessibleTips(): any[] {
+    if (!this.tips) return [];
+    return this.tips.tips.filter(t => !t.locked);
+  }
+
+  lockedCount(): number {
+    if (!this.tips) return 0;
+    return this.tips.tips.filter(t => t.locked).length;
+  }
+
+  isPremiumUser(): boolean {
+    return this.userPlan === 'PREMIUM';
   }
 }

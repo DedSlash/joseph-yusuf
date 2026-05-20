@@ -212,6 +212,7 @@ interface ImportRow {
         [(visible)]="showTipsModal"
         [tips]="moneyTips"
         [monthLabel]="tipsMonthLabel"
+        [userPlan]="getUserPlan()"
         (unlockRequested)="onUnlockRequested()"
         (dismissedForMonth)="onDismissTipsForMonth()"
         (langChanged)="onTipsLangChanged($event)"
@@ -2251,6 +2252,10 @@ export class IncomesComponent implements OnInit {
   isPremium(): boolean {
     const plan = this.authService.getPlan();
     return plan === 'PREMIUM' || plan === 'PREMIUM_PLUS';
+  }
+
+  getUserPlan(): 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' {
+    return this.authService.getPlan();
   }
 
   isAddSourceDisabled(): boolean {

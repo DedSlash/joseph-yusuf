@@ -233,7 +233,10 @@ import { Router } from '@angular/router';
         </div>
       </section>
 
-      <!-- Section 3: History -->
+      <!-- Section Objectifs d'Épargne -->
+      <app-savings-widget></app-savings-widget>
+
+      <!-- Section 4: History -->
       <section class="history-section" *ngIf="history.length > 0">
         <div class="section-header">
           <h3 class="section-title">Historique ({{ history.length }} derniers mois saisis)</h3>
@@ -310,9 +313,6 @@ import { Router } from '@angular/router';
         </div>
       </section>
 
-      <!-- Section Objectifs d'Épargne -->
-      <app-savings-widget></app-savings-widget>
-
       <!-- Bannière upgrade plan FREE -->
       <section class="upgrade-section" *ngIf="!isPremium()">
         <div class="upgrade-card">
@@ -378,6 +378,7 @@ import { Router } from '@angular/router';
         [(visible)]="showTipsModal"
         [tips]="dashboardTips"
         [monthLabel]="dashboardTipsMonthLabel"
+        [userPlan]="getDashboardPlan()"
         (unlockRequested)="goToSubscription()"
         (dismissedForMonth)="onDashboardTipsDismiss()"
         (langChanged)="onDashboardTipsLangChanged($event)"
@@ -1826,5 +1827,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private getDashboardTipsLang(): string {
     try { return localStorage.getItem('joseph_tips_lang') || 'fr'; } catch { return 'fr'; }
+  }
+
+  getDashboardPlan(): 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' {
+    return this.authService.getPlan();
   }
 }
