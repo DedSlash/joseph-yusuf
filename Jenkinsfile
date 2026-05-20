@@ -576,7 +576,7 @@ Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
     // ============================================================
     post {
         failure {
-            node('master') {
+            node('') {
                 script {
                     if (env.BRANCH_NAME == 'main') {
                         rollbackRequired = true
@@ -605,7 +605,7 @@ Admin frontend deploy: ${env.ADMIN_FRONTEND_TO_DEPLOY}
             echo "Pipeline SUCCESS — v${env.VERSION} on ${env.BRANCH_NAME}"
         }
         always {
-            node('master') {
+            node('') {
                 cleanWs()
             }
         }
