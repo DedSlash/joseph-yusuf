@@ -11,11 +11,12 @@ import { ReportService } from '../../core/services/report.service';
 import { MonthSummary, MonthStatus } from '../../shared/models/income.model';
 import { AllocationResult, AllocationLine, RuleAvailability, RuleType, UserRuleConfigRequest } from '../../shared/models/rule.model';
 import { Plan } from '../../shared/models/user.model';
+import { SavingsWidgetComponent } from '../savings/savings-widget.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, DialogModule],
+  imports: [CommonModule, RouterModule, FormsModule, DialogModule, SavingsWidgetComponent],
   template: `
     <div class="dashboard">
 
@@ -303,6 +304,9 @@ import { Plan } from '../../shared/models/user.model';
           </table>
         </div>
       </section>
+
+      <!-- Section Objectifs d'Épargne -->
+      <app-savings-widget></app-savings-widget>
 
       <!-- Bannière upgrade plan FREE -->
       <section class="upgrade-section" *ngIf="!isPremium()">
@@ -729,6 +733,10 @@ import { Plan } from '../../shared/models/user.model';
       padding: 1.25rem 1.5rem;
       position: relative;
       overflow: hidden;
+    }
+
+    .reserve-card.reserve-blurred {
+      min-height: 280px;
     }
 
     .reserve-card.reserve-blurred .reserve-header,

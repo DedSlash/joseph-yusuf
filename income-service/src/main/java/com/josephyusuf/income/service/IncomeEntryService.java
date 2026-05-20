@@ -8,7 +8,11 @@ import com.josephyusuf.income.exception.IncomeSourceNotFoundException;
 import com.josephyusuf.income.exception.UnauthorizedAccessException;
 import com.josephyusuf.income.producer.IncomeEventProducer;
 import com.josephyusuf.income.repository.IncomeEntryRepository;
+import com.josephyusuf.income.savings.dto.SavingsRecommendationDto;
+import com.josephyusuf.income.savings.producer.SavingsEventProducer;
+import com.josephyusuf.income.savings.service.SavingsRecommendationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IncomeEntryService {
@@ -26,6 +31,8 @@ public class IncomeEntryService {
     private final IncomeEventProducer eventProducer;
     private final IncomeMapper incomeMapper;
     private final CurrencyConverter currencyConverter;
+    private final SavingsRecommendationService savingsRecommendationService;
+    private final SavingsEventProducer savingsEventProducer;
 
     @Transactional
     public IncomeEntryDto create(UUID userId, IncomeEntryRequest request) {
@@ -53,6 +60,14 @@ public class IncomeEntryService {
 
         MonthSummary summary = monthSummaryService.getSummary(userId, request.getMonth(), request.getYear());
         eventProducer.publishIncomeClassified(summary);
+
+        try {
+            List<SavingsRecommendationDto> recommendations =
+                    savingsRecommendationService.calculateRecommendations(userId, summary);
+            savingsEventProducer.publishRecommendations(userId, recommendations);
+        } catch (Exception e) {
+            log.error("Échec calcul/publication recommandation épargne userId={} : {}", userId, e.getMessage());
+        }
 
         return incomeMapper.toEntryDto(entry);
     }

@@ -5,5 +5,6 @@ public enum AlertType {
     LEAN_DETECTED,
     RULE_APPLIED,
     SAVINGS_TARGET_REACHED,
+    SAVINGS_RECOMMENDATION,
     INFO
 }

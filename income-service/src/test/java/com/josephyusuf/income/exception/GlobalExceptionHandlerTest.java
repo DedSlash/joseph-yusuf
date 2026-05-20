@@ -1,5 +1,7 @@
 package com.josephyusuf.income.exception;
 
+import com.josephyusuf.income.savings.exception.InvalidSavingsGoalException;
+import com.josephyusuf.income.savings.exception.SavingsGoalNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -53,6 +55,26 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody().getMessage()).isEqualTo("Duplicate");
+    }
+
+    @Test
+    @DisplayName("handleSavingsNotFound - returns 404")
+    void handleSavingsNotFound() {
+        ResponseEntity<ApiErrorResponse> response =
+                handler.handleSavingsNotFound(new SavingsGoalNotFoundException("Goal not found"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().getMessage()).isEqualTo("Goal not found");
+    }
+
+    @Test
+    @DisplayName("handleInvalidSavings - returns 400")
+    void handleInvalidSavings() {
+        ResponseEntity<ApiErrorResponse> response =
+                handler.handleInvalidSavings(new InvalidSavingsGoalException("Invalid"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().getMessage()).isEqualTo("Invalid");
     }
 
     @Test
