@@ -3,6 +3,7 @@ package com.josephyusuf.alert.service;
 import com.josephyusuf.alert.dto.AlertDto;
 import com.josephyusuf.alert.dto.IncomeClassifiedEvent;
 import com.josephyusuf.alert.dto.RuleAppliedEvent;
+import com.josephyusuf.alert.dto.SavingsRecommendationEvent;
 import com.josephyusuf.alert.entity.Alert;
 import com.josephyusuf.alert.entity.AlertSeverity;
 import com.josephyusuf.alert.entity.AlertType;
@@ -338,6 +339,115 @@ class AlertServiceTest {
             assertThat(saved.getYear()).isEqualTo(2026);
             assertThat(saved.getTitle()).contains("50/30/20");
             assertThat(saved.getMessage()).contains("2 500");
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteAll")
+    class DeleteAllTests {
+
+        @Test
+        @DisplayName("supprime toutes les alertes de l'utilisateur")
+        void deletesAllForUser() {
+            alertService.deleteAll(USER_ID);
+            verify(alertRepository).deleteAllByUserId(USER_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("createFromSavingsRecommendation")
+    class CreateFromSavingsRecommendationTests {
+
+        private SavingsRecommendationEvent buildEvent(String status, String message, String goalName) {
+            return SavingsRecommendationEvent.builder()
+                    .userId(USER_ID)
+                    .goalId(UUID.randomUUID())
+                    .goalName(goalName)
+                    .recommendedAmount(new BigDecimal("50000"))
+                    .josephStatus(status)
+                    .message(message)
+                    .month(8)
+                    .year(2026)
+                    .occurredAt(Instant.now())
+                    .build();
+        }
+
+        @Test
+        @DisplayName("statut ABUNDANCE → severity SUCCESS")
+        void abundanceMapsToSuccess() {
+            SavingsRecommendationEvent event = buildEvent("ABUNDANCE", "msg perso", "Voyage");
+            when(alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                    USER_ID, AlertType.SAVINGS_RECOMMENDATION, 8, 2026)).thenReturn(Optional.empty());
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            Alert created = alertService.createFromSavingsRecommendation(event);
+
+            assertThat(created).isNotNull();
+            Alert saved = captor.getValue();
+            assertThat(saved.getType()).isEqualTo(AlertType.SAVINGS_RECOMMENDATION);
+            assertThat(saved.getSeverity()).isEqualTo(AlertSeverity.SUCCESS);
+            assertThat(saved.getTitle()).contains("Voyage");
+            assertThat(saved.getMessage()).isEqualTo("msg perso");
+        }
+
+        @Test
+        @DisplayName("statut LEAN → severity WARNING")
+        void leanMapsToWarning() {
+            SavingsRecommendationEvent event = buildEvent("LEAN", "x", "Maison");
+            when(alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                    USER_ID, AlertType.SAVINGS_RECOMMENDATION, 8, 2026)).thenReturn(Optional.empty());
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromSavingsRecommendation(event);
+
+            assertThat(captor.getValue().getSeverity()).isEqualTo(AlertSeverity.WARNING);
+        }
+
+        @Test
+        @DisplayName("statut NORMAL/null → severity INFO")
+        void normalMapsToInfo() {
+            SavingsRecommendationEvent event = buildEvent(null, "x", "G");
+            when(alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                    any(), any(), anyInt(), anyInt())).thenReturn(Optional.empty());
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromSavingsRecommendation(event);
+
+            assertThat(captor.getValue().getSeverity()).isEqualTo(AlertSeverity.INFO);
+        }
+
+        @Test
+        @DisplayName("message vide → message par défaut formatté")
+        void blankMessageFallbackToDefault() {
+            SavingsRecommendationEvent event = buildEvent("NORMAL", "", null);
+            when(alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                    any(), any(), anyInt(), anyInt())).thenReturn(Optional.empty());
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromSavingsRecommendation(event);
+
+            Alert saved = captor.getValue();
+            assertThat(saved.getMessage()).contains("50 000");
+            assertThat(saved.getMessage()).contains("votre objectif");
+            assertThat(saved.getTitle()).contains("objectif");
+        }
+
+        @Test
+        @DisplayName("alerte du mois déjà créée → idempotent (null)")
+        void alreadyExistsReturnsNull() {
+            SavingsRecommendationEvent event = buildEvent("ABUNDANCE", "x", "G");
+            when(alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                    USER_ID, AlertType.SAVINGS_RECOMMENDATION, 8, 2026))
+                    .thenReturn(Optional.of(alert));
+
+            Alert created = alertService.createFromSavingsRecommendation(event);
+
+            assertThat(created).isNull();
+            verify(alertRepository, never()).save(any());
         }
     }
 }
