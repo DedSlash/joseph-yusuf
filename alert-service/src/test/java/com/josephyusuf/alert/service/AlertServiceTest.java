@@ -336,8 +336,8 @@ class AlertServiceTest {
             assertThat(saved.getUserId()).isEqualTo(USER_ID);
             assertThat(saved.getMonth()).isEqualTo(8);
             assertThat(saved.getYear()).isEqualTo(2026);
-            assertThat(saved.getTitle()).contains("RULE_50_30_20");
-            assertThat(saved.getMessage()).contains("2500");
+            assertThat(saved.getTitle()).contains("50/30/20");
+            assertThat(saved.getMessage()).contains("2 500");
         }
     }
 }
