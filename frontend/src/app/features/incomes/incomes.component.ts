@@ -47,6 +47,7 @@ interface SourceEntryForm {
   sourceName: string;
   currency: string;
   amount: number;
+  entryId: string | null;
 }
 
 interface SourceTypeOption {
@@ -136,6 +137,12 @@ interface ImportRow {
               <h3 class="tab-title">Saisie du mois</h3>
               <div class="tab-header-actions">
                 <button
+                  *ngIf="hasTipsForCurrentMonth"
+                  class="tips-button"
+                  (click)="showMoneyTipsModal()"
+                  title="Voir les astuces de répartition"
+                >💡 Astuces répartition</button>
+                <button
                   class="btn-import"
                   [disabled]="!isPremium()"
                   [pTooltip]="!isPremium() ? 'Disponible en Premium' : ''"
@@ -159,6 +166,8 @@ interface ImportRow {
               <div class="entry-row" *ngFor="let entry of entryForms">
                 <div class="entry-left">
                   <label class="entry-label">{{ entry.sourceName }}</label>
+                  <span class="entry-badge entry-badge-update" *ngIf="entry.entryId">Modifier</span>
+                  <span class="entry-badge entry-badge-new" *ngIf="!entry.entryId">Nouveau</span>
                   <span class="entry-converted" *ngIf="entry.currency !== 'XOF' && entry.amount > 0">
                     ≈ {{ formatCurrency(toXOF(entry.amount, entry.currency)) }} XOF
                   </span>
@@ -727,6 +736,39 @@ interface ImportRow {
       font-size: 0.8rem;
       color: #C9A84C;
       font-weight: 500;
+    }
+
+    .entry-badge {
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .entry-badge-update { background: rgba(201,168,76,0.15); color: #C9A84C; }
+    .entry-badge-new { background: rgba(100,200,100,0.15); color: #7ec77e; }
+
+    .tips-button {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.35rem 0.8rem;
+      background: rgba(201,168,76,0.12);
+      border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 20px;
+      color: #C9A84C;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      animation: tipsPulse 2s ease-in-out infinite;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .tips-button:hover { background: rgba(201,168,76,0.22); }
+    @keyframes tipsPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.3); }
+      50% { box-shadow: 0 0 0 4px rgba(201,168,76,0); }
     }
 
     .entries-footer {
@@ -1445,6 +1487,7 @@ export class IncomesComponent implements OnInit {
   showTipsModal = false;
   moneyTips: MoneyTips | null = null;
   tipsMonthLabel = '';
+  hasTipsForCurrentMonth = false;
   private tipsMonth = 0;
   private tipsYear = 0;
 
@@ -1498,7 +1541,9 @@ export class IncomesComponent implements OnInit {
         this.entryForms.forEach(form => {
           const existing = entries.find(e => e.incomeSourceId === form.sourceId);
           form.amount = existing ? existing.amount : 0;
+          form.entryId = existing ? existing.id : null;
         });
+        this.checkTipsAvailability();
       }
     });
 
@@ -1515,7 +1560,8 @@ export class IncomesComponent implements OnInit {
         sourceId: s.id,
         sourceName: s.name,
         currency: s.currency || 'XOF',
-        amount: 0
+        amount: 0,
+        entryId: null
       }));
   }
 
@@ -1620,7 +1666,7 @@ export class IncomesComponent implements OnInit {
     });
   }
 
-  // --- Save Entries (Fix 1) ---
+  // --- Save Entries ---
 
   saveEntries(): void {
     this.saving = true;
@@ -1631,6 +1677,12 @@ export class IncomesComponent implements OnInit {
     const savedYear = this.selectedYear;
 
     this.entryForms.forEach(entry => {
+      if (entry.amount <= 0 && !entry.entryId) {
+        completed++;
+        if (completed === total) this.finishSave(succeeded, savedMonth, savedYear);
+        return;
+      }
+
       const request: IncomeEntryRequest = {
         incomeSourceId: entry.sourceId,
         amount: entry.amount,
@@ -1638,31 +1690,32 @@ export class IncomesComponent implements OnInit {
         year: savedYear
       };
 
-      this.incomeService.createEntry(request).subscribe({
-        next: () => {
+      const obs$ = entry.entryId
+        ? this.incomeService.updateEntry(entry.entryId, request)
+        : this.incomeService.createEntry(request);
+
+      obs$.subscribe({
+        next: (saved) => {
+          entry.entryId = saved.id;
           completed++;
           succeeded++;
-          if (completed === total) {
-            this.saving = false;
-            this.loadEntries();
-            this.incomeService.notifyIncomeUpdated();
-            if (succeeded > 0) {
-              this.maybeShowMoneyTips(savedMonth, savedYear);
-            }
-          }
+          if (completed === total) this.finishSave(succeeded, savedMonth, savedYear);
         },
         error: () => {
           completed++;
-          if (completed === total) {
-            this.saving = false;
-            this.incomeService.notifyIncomeUpdated();
-            if (succeeded > 0) {
-              this.maybeShowMoneyTips(savedMonth, savedYear);
-            }
-          }
+          if (completed === total) this.finishSave(succeeded, savedMonth, savedYear);
         }
       });
     });
+  }
+
+  private finishSave(succeeded: number, month: number, year: number): void {
+    this.saving = false;
+    this.loadEntries();
+    this.incomeService.notifyIncomeUpdated();
+    if (succeeded > 0) {
+      this.maybeShowMoneyTips(month, year);
+    }
   }
 
   // --- Money Tips Modal ---
@@ -1717,6 +1770,30 @@ export class IncomesComponent implements OnInit {
 
   onUnlockRequested(): void {
     this.router.navigate(['/subscription']);
+  }
+
+  private checkTipsAvailability(): void {
+    const hasEntries = this.entryForms.some(f => f.entryId !== null);
+    if (!hasEntries) {
+      this.hasTipsForCurrentMonth = false;
+      return;
+    }
+    this.incomeService.getMoneyTips(this.selectedMonth, this.selectedYear).subscribe({
+      next: (tips) => {
+        this.hasTipsForCurrentMonth = !!(tips && tips.tips && tips.tips.length > 0);
+        if (this.hasTipsForCurrentMonth) {
+          this.moneyTips = tips;
+          this.tipsMonthLabel = this.monthLabel(this.selectedMonth);
+        }
+      },
+      error: () => this.hasTipsForCurrentMonth = false
+    });
+  }
+
+  showMoneyTipsModal(): void {
+    this.tipsMonth = this.selectedMonth;
+    this.tipsYear = this.selectedYear;
+    this.showTipsModal = true;
   }
 
   // --- Import (Fix 3) ---
