@@ -306,6 +306,24 @@ class AlertServiceTest {
             assertThat(created).isNull();
             verify(alertRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("alerte du mois déjà créée → idempotent (null)")
+        void alreadyExistsReturnsNull() {
+            IncomeClassifiedEvent event = IncomeClassifiedEvent.builder()
+                    .userId(USER_ID).month(5).year(2026)
+                    .totalIncome(new BigDecimal("3000"))
+                    .averageLast3Months(new BigDecimal("2000"))
+                    .status("ABUNDANCE").percentageVsAverage(50.0)
+                    .occurredAt(Instant.now()).build();
+            when(alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                    USER_ID, AlertType.ABUNDANCE_DETECTED, 5, 2026)).thenReturn(Optional.of(alert));
+
+            Alert created = alertService.createFromIncomeClassified(event);
+
+            assertThat(created).isNull();
+            verify(alertRepository, never()).save(any());
+        }
     }
 
     @Nested
@@ -339,6 +357,95 @@ class AlertServiceTest {
             assertThat(saved.getYear()).isEqualTo(2026);
             assertThat(saved.getTitle()).contains("50/30/20");
             assertThat(saved.getMessage()).contains("2 500");
+        }
+
+        @Test
+        @DisplayName("RULE_JOSEPH utilise l'article 'le' + 'Principe de Joseph'")
+        void josephRuleUsesMasculineArticle() {
+            RuleAppliedEvent event = ruleEvent("RULE_JOSEPH", "ABUNDANCE");
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromRuleApplied(event);
+
+            Alert saved = captor.getValue();
+            assertThat(saved.getTitle()).contains("Principe de Joseph");
+            assertThat(saved.getMessage()).contains("selon le Principe de Joseph");
+            assertThat(saved.getMessage()).contains("(mois d'abondance)");
+        }
+
+        @Test
+        @DisplayName("RULE_80_20 (Pareto)")
+        void pareto80_20() {
+            RuleAppliedEvent event = ruleEvent("RULE_80_20", "LEAN");
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromRuleApplied(event);
+
+            Alert saved = captor.getValue();
+            assertThat(saved.getTitle()).contains("80/20");
+            assertThat(saved.getMessage()).contains("(mois de disette)");
+        }
+
+        @Test
+        @DisplayName("RULE_70_20_10")
+        void rule_70_20_10() {
+            RuleAppliedEvent event = ruleEvent("RULE_70_20_10", null);
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromRuleApplied(event);
+
+            Alert saved = captor.getValue();
+            assertThat(saved.getTitle()).contains("70/20/10");
+            // status null → pas de suffixe "(mois ...)"
+            assertThat(saved.getMessage()).doesNotContain("(mois");
+        }
+
+        @Test
+        @DisplayName("règle inconnue → libellé 'règle personnalisée'")
+        void unknownRuleFallsBackToCustom() {
+            RuleAppliedEvent event = ruleEvent("RULE_CUSTOM_XYZ", "NORMAL");
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromRuleApplied(event);
+
+            assertThat(captor.getValue().getTitle()).contains("règle personnalisée");
+        }
+
+        @Test
+        @DisplayName("rule null → libellé 'règle personnalisée'")
+        void nullRuleFallsBackToCustom() {
+            RuleAppliedEvent event = ruleEvent(null, "NORMAL");
+            ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+            when(alertRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            alertService.createFromRuleApplied(event);
+
+            assertThat(captor.getValue().getTitle()).contains("règle personnalisée");
+        }
+
+        @Test
+        @DisplayName("alerte du mois déjà créée → idempotent (null)")
+        void alreadyExistsReturnsNull() {
+            RuleAppliedEvent event = ruleEvent("RULE_50_30_20", "NORMAL");
+            when(alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                    USER_ID, AlertType.RULE_APPLIED, 8, 2026)).thenReturn(Optional.of(alert));
+
+            Alert created = alertService.createFromRuleApplied(event);
+
+            assertThat(created).isNull();
+            verify(alertRepository, never()).save(any());
+        }
+
+        private RuleAppliedEvent ruleEvent(String rule, String status) {
+            return RuleAppliedEvent.builder()
+                    .userId(USER_ID).rule(rule)
+                    .totalIncome(new BigDecimal("2500"))
+                    .monthStatus(status).month(8).year(2026)
+                    .occurredAt(Instant.now()).build();
         }
     }
 

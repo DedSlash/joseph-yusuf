@@ -108,4 +108,12 @@ class AlertControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(alertService).delete(USER_ID, ALERT_ID);
     }
+
+    @Test
+    void deleteAll_returnsNoContent() {
+        ResponseEntity<Void> response = alertController.deleteAll(auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(alertService).deleteAll(USER_ID);
+    }
 }
