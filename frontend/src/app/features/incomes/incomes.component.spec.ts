@@ -17,12 +17,13 @@ describe('IncomesComponent', () => {
       'getSources', 'getEntries', 'getSummary', 'getHistory',
       'createSource', 'updateSource', 'deleteSource',
       'createEntry', 'updateEntry', 'getAllEntriesForSource',
-      'notifyIncomeUpdated'
+      'getMoneyTips', 'notifyIncomeUpdated'
     ]) as any;
     incomeSpy.getSources.and.returnValue(EMPTY);
     incomeSpy.getEntries.and.returnValue(of([]));
     incomeSpy.getSummary.and.returnValue(EMPTY);
     incomeSpy.getHistory.and.returnValue(of([]));
+    incomeSpy.getMoneyTips.and.returnValue(EMPTY);
     incomeSpy.incomeUpdated$ = new Subject<void>().asObservable();
 
     authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'isLoggedIn', 'getCurrentUser']);
@@ -201,6 +202,40 @@ describe('IncomesComponent', () => {
       c.parseCsvImport(text);
       expect(component.importPreviewRows.length).toBe(1);
       expect(component.importPreviewRows[0].source).toBe('Salaire');
+    });
+  });
+
+  describe('checkTipsAvailability', () => {
+    it('met hasTipsForCurrentMonth à false sans entries saisies', () => {
+      component.entryForms = [
+        { sourceId: 's1', sourceName: 'A', currency: 'XOF', amount: 0, entryId: null }
+      ];
+      (component as any).checkTipsAvailability();
+      expect(component.hasTipsForCurrentMonth).toBe(false);
+      expect(incomeSpy.getMoneyTips).not.toHaveBeenCalled();
+    });
+
+    it('met hasTipsForCurrentMonth à true si des tips sont retournés', () => {
+      component.entryForms = [
+        { sourceId: 's1', sourceName: 'A', currency: 'XOF', amount: 500, entryId: 'e1' }
+      ];
+      incomeSpy.getMoneyTips.and.returnValue(of({
+        month: 5, year: 2026, currency: 'XOF', totalAmount: 500,
+        josephStatus: 'NORMAL', tips: [{ id: 't1', title: 'x', description: 'y', icon: '', locked: false }],
+        recommendedSplit: { needs: 250, wants: 150, savings: 100 }
+      } as any));
+
+      (component as any).checkTipsAvailability();
+
+      expect(incomeSpy.getMoneyTips).toHaveBeenCalled();
+      expect(component.hasTipsForCurrentMonth).toBe(true);
+      expect(component.moneyTips).toBeTruthy();
+    });
+
+    it('showMoneyTipsModal() ouvre la modale tips', () => {
+      expect(component.showTipsModal).toBe(false);
+      component.showMoneyTipsModal();
+      expect(component.showTipsModal).toBe(true);
     });
   });
 });
