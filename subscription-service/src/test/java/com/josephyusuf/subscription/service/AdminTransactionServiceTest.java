@@ -172,7 +172,7 @@ class AdminTransactionServiceTest {
 
         assertThatThrownBy(() -> service.refund(tx.getId()))
                 .isInstanceOf(PaymentException.class)
-                .hasMessageContaining("Échec remboursement Stripe");
+                .hasMessageContaining("Le remboursement n'a pas pu être effectué");
 
         assertThat(tx.getStatus()).isEqualTo(TransactionStatus.SUCCEEDED);
         verify(transactionRepository, never()).save(any());
