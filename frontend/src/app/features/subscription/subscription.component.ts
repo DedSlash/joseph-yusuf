@@ -977,9 +977,13 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
         this.subscriptionService.confirmStripePayment(params['payment_intent']).subscribe({
           next: () => {
             this.authService.refreshSession().subscribe();
+            localStorage.removeItem('joseph_promo_code');
             this.step = 'success';
           },
-          error: () => { this.step = 'success'; }
+          error: () => {
+            localStorage.removeItem('joseph_promo_code');
+            this.step = 'success';
+          }
         });
         return;
       }
@@ -999,7 +1003,35 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
       ]
     });
 
+    this.applyStoredPromoCode();
     this.loadSubscription();
+  }
+
+  private applyStoredPromoCode(): void {
+    const stored = localStorage.getItem('joseph_promo_code');
+    const fromUrl = this.route.snapshot.queryParams['promo'];
+    const code = (fromUrl || stored || '').trim().toUpperCase();
+    if (!code) return;
+
+    this.promoCode = code;
+    this.showPromo = true;
+    this.promoValidating = true;
+    this.subscriptionService.validatePromoCode(code).subscribe({
+      next: res => {
+        this.promoValidating = false;
+        if (res.valid && res.discountPercent) {
+          this.promoApplied = true;
+          this.promoDiscount = res.discountPercent;
+        } else {
+          localStorage.removeItem('joseph_promo_code');
+          this.promoError = 'Votre code promo ' + code + ' n\'est plus valide.';
+        }
+      },
+      error: () => {
+        this.promoValidating = false;
+        localStorage.removeItem('joseph_promo_code');
+      }
+    });
   }
 
   ngAfterViewChecked(): void {
@@ -1306,12 +1338,12 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
         next: () => {
           this.stripeConfirming = false;
           this.authService.refreshSession().subscribe();
+          localStorage.removeItem('joseph_promo_code');
           this.step = 'success';
         },
         error: () => {
-          // Le paiement est passé mais la confirmation a échoué — on passe quand même en succès
-          // Le webhook finira le travail ou l'admin peut forcer manuellement
           this.stripeConfirming = false;
+          localStorage.removeItem('joseph_promo_code');
           this.step = 'success';
         }
       });

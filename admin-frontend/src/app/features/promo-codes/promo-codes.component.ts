@@ -3,6 +3,7 @@ import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminApiService } from '../../core/services/admin-api.service';
 import { PromoCode, PromoCodeStats } from '../../shared/models/admin.model';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'admin-promo-codes',
@@ -54,6 +55,7 @@ import { PromoCode, PromoCodeStats } from '../../shared/models/admin.model';
               </span>
             </td>
             <td style="text-align: right;">
+              <button class="btn btn-ghost mini" (click)="copyPromoLink(p)" title="Copier le lien d'inscription">Lien</button>
               <button class="btn btn-ghost mini" (click)="showStats(p)">Stats</button>
               <button class="btn btn-ghost mini" (click)="toggle(p)" [disabled]="busyId() === p.id">
                 {{ p.active ? 'Désactiver' : 'Activer' }}
@@ -321,6 +323,13 @@ export class PromoCodesComponent implements OnInit {
 
   closeStats(): void {
     this.statsView.set(null);
+  }
+
+  copyPromoLink(p: PromoCode): void {
+    const link = `${environment.appUrl}/register?promo=${p.code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      this.flash('Lien copie : ' + link);
+    });
   }
 
   trackById(_: number, p: PromoCode): string { return p.id; }

@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 import { RegisterRequest } from '../../../shared/models/user.model';
 
 interface RegisterForm {
@@ -36,6 +37,14 @@ interface RegisterForm {
         <div class="form-wrapper">
           <h2 class="form-title">Creer un compte</h2>
           <p class="form-subtitle">Commencez a gerer vos revenus intelligemment</p>
+
+          <div class="promo-banner promo-valid" *ngIf="urlPromoValid">
+            Code promo {{ urlPromoCode }} detecte — la reduction sera appliquee
+            automatiquement lors de votre abonnement !
+          </div>
+          <div class="promo-banner promo-invalid" *ngIf="urlPromoInvalid">
+            Le code promo {{ urlPromoCode }} n'est plus valide ou a expire.
+          </div>
 
           <div class="error-message" *ngIf="errorMessage">
             {{ errorMessage }}
@@ -319,6 +328,26 @@ interface RegisterForm {
       text-decoration: underline;
     }
 
+    .promo-banner {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.4;
+    }
+
+    .promo-valid {
+      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      color: #81c784;
+    }
+
+    .promo-invalid {
+      background: rgba(255, 152, 0, 0.1);
+      border: 1px solid rgba(255, 152, 0, 0.3);
+      color: #ffb74d;
+    }
+
     .promo-group { margin-bottom: 1.25rem; }
 
     .promo-toggle-link {
@@ -364,7 +393,7 @@ interface RegisterForm {
     }
   `]
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   form: RegisterForm = {
     firstName: '',
     lastName: '',
@@ -376,11 +405,36 @@ export class RegisterComponent {
   loading = false;
   errorMessage = '';
   showPromo = false;
+  urlPromoCode = '';
+  urlPromoValid = false;
+  urlPromoInvalid = false;
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    private subscriptionService: SubscriptionService
   ) {}
+
+  ngOnInit(): void {
+    const promo = this.route.snapshot.queryParams['promo'];
+    if (promo) {
+      this.urlPromoCode = promo.trim().toUpperCase();
+      this.form.promoCode = this.urlPromoCode;
+      this.showPromo = true;
+      this.subscriptionService.validatePromoCodePublic(this.urlPromoCode).subscribe({
+        next: res => {
+          if (res.valid) {
+            this.urlPromoValid = true;
+            localStorage.setItem('joseph_promo_code', this.urlPromoCode);
+          } else {
+            this.urlPromoInvalid = true;
+          }
+        },
+        error: () => { /* Network error — silent, don't block registration */ }
+      });
+    }
+  }
 
   onSubmit(): void {
     this.errorMessage = '';
@@ -420,6 +474,7 @@ export class RegisterComponent {
       next: () => {
         const promo = this.form.promoCode.trim();
         if (promo) {
+          localStorage.setItem('joseph_promo_code', promo.toUpperCase());
           this.router.navigate(['/subscription'], { queryParams: { promo } });
         } else {
           this.router.navigate(['/dashboard']);

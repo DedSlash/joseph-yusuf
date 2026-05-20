@@ -109,6 +109,14 @@ public class PromoCodeService {
                 .orElse(invalid("Code promo inconnu"));
     }
 
+    @Transactional(readOnly = true)
+    public PromoCodeValidation validatePublic(String code) {
+        String normalizedCode = code == null ? "" : code.trim().toUpperCase();
+        return promoCodeRepository.findByCode(normalizedCode)
+                .map(this::validatePublicUsage)
+                .orElse(PromoCodeValidation.builder().valid(false).reason("NOT_FOUND").build());
+    }
+
     @Transactional
     public PromoCodeValidation apply(PromoCodeApplyRequest request) {
         String normalizedCode = request.getCode().trim().toUpperCase();
@@ -152,6 +160,24 @@ public class PromoCodeService {
         }
         if (promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)) {
             return invalid("Code promo déjà utilisé par cet utilisateur");
+        }
+        return PromoCodeValidation.builder()
+                .id(promo.getId())
+                .code(promo.getCode())
+                .discountPercent(promo.getDiscountPercent())
+                .valid(true)
+                .build();
+    }
+
+    private PromoCodeValidation validatePublicUsage(PromoCode promo) {
+        if (!promo.isActive()) {
+            return PromoCodeValidation.builder().valid(false).reason("NOT_FOUND").build();
+        }
+        if (promo.getExpiresAt() != null && promo.getExpiresAt().isBefore(Instant.now())) {
+            return PromoCodeValidation.builder().valid(false).reason("EXPIRED").build();
+        }
+        if (promo.getMaxUses() != null && promo.getUsedCount() >= promo.getMaxUses()) {
+            return PromoCodeValidation.builder().valid(false).reason("MAX_USES_REACHED").build();
         }
         return PromoCodeValidation.builder()
                 .id(promo.getId())

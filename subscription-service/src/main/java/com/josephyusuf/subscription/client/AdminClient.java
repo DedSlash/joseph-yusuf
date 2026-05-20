@@ -19,4 +19,7 @@ public interface AdminClient {
 
     @PostMapping("/api/internal/promo-codes/apply")
     PromoCodeValidation apply(@RequestBody PromoCodeApplyRequest request);
+
+    @GetMapping("/api/internal/promo-codes/validate-public")
+    PromoCodeValidation validatePublic(@RequestParam("code") String code);
 }
