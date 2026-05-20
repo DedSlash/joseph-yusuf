@@ -28,6 +28,20 @@ services:
       SONAR_JDBC_URL: jdbc:postgresql://sonar_db:5432/sonar_db
       SONAR_JDBC_USERNAME: sonar
       SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:-sonar_secret}
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      SONAR_SEARCH_JAVAOPTS: "-Xms512m -Xmx512m"
+      SONAR_SEARCH_JAVAADDITIONALOPTS: "-Dnode.store.allow_mmap=false"
+      # Watermarks ES (low=97%/high=98%/flood_stage=99%) appliqués en `persistent`
+      # via l'API _cluster/settings — pas configurable en JVM -D (ignoré par ES
+      # pour raisons de sécurité). Settings stockés dans le volume sonarqube_data,
+      # survivent aux restarts. Pour les (ré)appliquer manuellement :
+      #   docker exec joseph_sonarqube curl -s -X PUT \
+      #     "http://localhost:9001/_cluster/settings" \
+      #     -H "Content-Type: application/json" -d '{"persistent":{ \
+      #       "cluster.routing.allocation.disk.watermark.low":"97%", \
+      #       "cluster.routing.allocation.disk.watermark.high":"98%", \
+      #       "cluster.routing.allocation.disk.watermark.flood_stage":"99%", \
+      #       "cluster.routing.allocation.disk.watermark.flood_stage.frozen":"99%"}}'
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_logs:/opt/sonarqube/logs
@@ -47,7 +61,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 3g
+          memory: 2g
 
 volumes:
   sonar_postgres_data:

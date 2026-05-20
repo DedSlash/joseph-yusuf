@@ -11,6 +11,8 @@ import com.josephyusuf.income.exception.IncomeSourceNotFoundException;
 import com.josephyusuf.income.exception.UnauthorizedAccessException;
 import com.josephyusuf.income.producer.IncomeEventProducer;
 import com.josephyusuf.income.repository.IncomeEntryRepository;
+import com.josephyusuf.income.savings.producer.SavingsEventProducer;
+import com.josephyusuf.income.savings.service.SavingsRecommendationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,6 +51,12 @@ class IncomeEntryServiceTest {
 
     @Mock
     private CurrencyConverter currencyConverter;
+
+    @Mock
+    private SavingsRecommendationService savingsRecommendationService;
+
+    @Mock
+    private SavingsEventProducer savingsEventProducer;
 
     @InjectMocks
     private IncomeEntryService entryService;

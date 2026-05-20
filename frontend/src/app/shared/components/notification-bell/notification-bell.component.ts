@@ -22,9 +22,23 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
       <div *ngIf="drawerOpen" class="drawer">
         <div class="drawer-header">
           <h3>Notifications</h3>
-          <button *ngIf="alerts.length > 0 && hasUnread()" class="link-btn" (click)="markAllAsRead()">
-            Tout marquer comme lu
-          </button>
+          <div class="header-actions">
+            <button *ngIf="alerts.length > 0 && hasUnread()" class="link-btn" (click)="markAllAsRead()">
+              Tout marquer comme lu
+            </button>
+            <button *ngIf="alerts.length > 0" class="link-btn delete-all-btn" (click)="confirmDeleteAll()">
+              🗑️ Tout supprimer
+            </button>
+          </div>
+        </div>
+
+        <!-- Confirmation suppression -->
+        <div *ngIf="showDeleteConfirm" class="confirm-bar">
+          <span>Supprimer toutes les notifications ?</span>
+          <div class="confirm-actions">
+            <button class="confirm-yes" (click)="deleteAll()">Oui</button>
+            <button class="confirm-no" (click)="showDeleteConfirm = false">Non</button>
+          </div>
         </div>
 
         <div class="drawer-body">
@@ -39,7 +53,7 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
           >
             <div class="alert-content" (click)="onAlertClick(alert)">
               <div class="alert-title">{{ alert.title }}</div>
-              <div class="alert-message">{{ alert.message }}</div>
+              <div class="alert-message">{{ formatAlertMessage(alert.message) }}</div>
               <div class="alert-date">{{ formatDate(alert.createdAt) }}</div>
             </div>
             <button class="delete-btn" (click)="onDelete($event, alert)" aria-label="Supprimer">&times;</button>
@@ -136,12 +150,56 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
       font-size: 0.95rem;
       color: #F0E8D0;
     }
+    .header-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
     .link-btn {
       background: none;
       border: none;
       color: #C9A84C;
       cursor: pointer;
       font-size: 0.75rem;
+    }
+    .delete-all-btn {
+      color: #f87171;
+    }
+    .delete-all-btn:hover {
+      color: #fca5a5;
+    }
+    .confirm-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background: rgba(248, 113, 113, 0.08);
+      border-bottom: 1px solid rgba(248, 113, 113, 0.2);
+      font-size: 0.78rem;
+      color: #fca5a5;
+    }
+    .confirm-actions {
+      display: flex;
+      gap: 0.4rem;
+    }
+    .confirm-yes {
+      padding: 0.2rem 0.6rem;
+      background: #f87171;
+      color: #0D0B07;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .confirm-no {
+      padding: 0.2rem 0.6rem;
+      background: transparent;
+      color: rgba(240, 232, 208, 0.6);
+      border: 1px solid rgba(240, 232, 208, 0.2);
+      border-radius: 4px;
+      font-size: 0.72rem;
+      cursor: pointer;
     }
     .drawer-body {
       overflow-y: auto;
@@ -207,8 +265,16 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   alerts: AlertDto[] = [];
   drawerOpen = false;
   loading = false;
+  showDeleteConfirm = false;
 
   private subs: Subscription[] = [];
+
+  private static readonly RULE_MAP: Record<string, string> = {
+    'RULE_50_30_20': '50/30/20',
+    'RULE_70_20_10': '70/20/10',
+    'RULE_80_20': '80/20',
+    'RULE_JOSEPH': 'Joseph'
+  };
 
   constructor(private readonly alertService: AlertService, private readonly elRef: ElementRef) {}
 
@@ -216,6 +282,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   onDocumentClick(event: MouseEvent): void {
     if (this.drawerOpen && !this.elRef.nativeElement.contains(event.target)) {
       this.drawerOpen = false;
+      this.showDeleteConfirm = false;
     }
   }
 
@@ -233,6 +300,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   toggleDrawer(): void {
     this.drawerOpen = !this.drawerOpen;
+    this.showDeleteConfirm = false;
     if (this.drawerOpen) {
       this.fetchAlerts();
     }
@@ -273,10 +341,28 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     });
   }
 
+  confirmDeleteAll(): void {
+    this.showDeleteConfirm = true;
+  }
+
+  deleteAll(): void {
+    this.alertService.deleteAll().subscribe(() => {
+      this.alerts = [];
+      this.showDeleteConfirm = false;
+    });
+  }
+
   onDelete(event: Event, alert: AlertDto): void {
     event.stopPropagation();
     this.alertService.delete(alert.id).subscribe(() => {
       this.alerts = this.alerts.filter(a => a.id !== alert.id);
+    });
+  }
+
+  formatAlertMessage(message: string): string {
+    if (!message) return '';
+    return message.replace(/RULE_(\w+)/g, (match) => {
+      return NotificationBellComponent.RULE_MAP[match] || match.replace('RULE_', '').replace(/_/g, '/');
     });
   }
 

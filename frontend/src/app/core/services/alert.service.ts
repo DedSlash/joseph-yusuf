@@ -43,6 +43,12 @@ export class AlertService {
     );
   }
 
+  deleteAll(): Observable<void> {
+    return this.http.delete<void>(this.apiUrl).pipe(
+      tap(() => this._unreadCount$.next(0))
+    );
+  }
+
   startPolling(): void {
     if (this.pollSubscription) {
       return;

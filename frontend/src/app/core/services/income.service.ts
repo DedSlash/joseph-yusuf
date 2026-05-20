@@ -60,8 +60,7 @@ export class IncomeService {
     return this.http.get<MonthSummary[]>(`${this.apiUrl}/history`, { params });
   }
 
-  getMoneyTips(month: number, year: number): Observable<MoneyTips> {
-    const lang = (navigator.language || 'fr').split('-')[0];
+  getMoneyTips(month: number, year: number, lang: string = 'fr'): Observable<MoneyTips> {
     const headers = new HttpHeaders({ 'Accept-Language': lang });
     return this.http.get<MoneyTips>(`${this.apiUrl}/tips/${month}/${year}`, { headers });
   }

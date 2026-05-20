@@ -50,4 +50,11 @@ public class AlertController {
         alertService.delete(userId, id);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAll(Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        alertService.deleteAll(userId);
+        return ResponseEntity.noContent().build();
+    }
 }

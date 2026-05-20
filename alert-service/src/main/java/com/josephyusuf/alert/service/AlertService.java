@@ -3,6 +3,7 @@ package com.josephyusuf.alert.service;
 import com.josephyusuf.alert.dto.AlertDto;
 import com.josephyusuf.alert.dto.IncomeClassifiedEvent;
 import com.josephyusuf.alert.dto.RuleAppliedEvent;
+import com.josephyusuf.alert.dto.SavingsRecommendationEvent;
 import com.josephyusuf.alert.entity.Alert;
 import com.josephyusuf.alert.entity.AlertSeverity;
 import com.josephyusuf.alert.entity.AlertType;
@@ -23,6 +24,10 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AlertService {
+
+    private static final String STATUS_ABUNDANCE = "ABUNDANCE";
+    private static final String STATUS_LEAN = "LEAN";
+    private static final String STATUS_NORMAL = "NORMAL";
 
     private final AlertRepository alertRepository;
     private final AlertMapper alertMapper;
@@ -65,6 +70,11 @@ public class AlertService {
     }
 
     @Transactional
+    public void deleteAll(UUID userId) {
+        alertRepository.deleteAllByUserId(userId);
+    }
+
+    @Transactional
     public Alert createFromIncomeClassified(IncomeClassifiedEvent event) {
         AlertType type;
         AlertSeverity severity;
@@ -72,7 +82,7 @@ public class AlertService {
         String message;
 
         switch (event.getStatus()) {
-            case "ABUNDANCE" -> {
+            case STATUS_ABUNDANCE -> {
                 type = AlertType.ABUNDANCE_DETECTED;
                 severity = AlertSeverity.SUCCESS;
                 title = "Mois d'abondance détecté";
@@ -80,7 +90,7 @@ public class AlertService {
                         "Votre revenu de %s (%s) dépasse votre moyenne de %.1f%%. C'est le moment d'épargner davantage selon le Principe de Joseph.",
                         formatMonthYear(event.getMonth(), event.getYear()), event.getTotalIncome(), event.getPercentageVsAverage());
             }
-            case "LEAN" -> {
+            case STATUS_LEAN -> {
                 type = AlertType.LEAN_DETECTED;
                 severity = AlertSeverity.WARNING;
                 title = "Mois de disette détecté";
@@ -111,6 +121,48 @@ public class AlertService {
                 .build();
 
         return alertRepository.save(alert);
+    }
+
+    @Transactional
+    public Alert createFromSavingsRecommendation(SavingsRecommendationEvent event) {
+        if (alertRepository.findByUserIdAndTypeAndMonthAndYear(
+                event.getUserId(), AlertType.SAVINGS_RECOMMENDATION, event.getMonth(), event.getYear()).isPresent()) {
+            return null;
+        }
+
+        AlertSeverity severity = switch (event.getJosephStatus() == null ? "" : event.getJosephStatus()) {
+            case STATUS_ABUNDANCE -> AlertSeverity.SUCCESS;
+            case STATUS_LEAN      -> AlertSeverity.WARNING;
+            default               -> AlertSeverity.INFO;
+        };
+
+        String title = String.format("Recommandation d'épargne — %s",
+                event.getGoalName() != null ? event.getGoalName() : "objectif");
+        String message = event.getMessage();
+        if (message == null || message.isBlank()) {
+            message = String.format("Versement recommandé : %s sur %s pour %s.",
+                    formatAmount(event.getRecommendedAmount()),
+                    event.getGoalName() != null ? event.getGoalName() : "votre objectif",
+                    formatMonthYear(event.getMonth(), event.getYear()));
+        }
+
+        Alert alert = Alert.builder()
+                .userId(event.getUserId())
+                .type(AlertType.SAVINGS_RECOMMENDATION)
+                .severity(severity)
+                .title(title)
+                .message(truncate(message, 500))
+                .read(false)
+                .month(event.getMonth())
+                .year(event.getYear())
+                .build();
+
+        return alertRepository.save(alert);
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) return "";
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
     }
 
     @Transactional
@@ -166,10 +218,10 @@ public class AlertService {
     private String toStatusLabel(String status) {
         if (status == null) return null;
         return switch (status) {
-            case "ABUNDANCE" -> "d'abondance";
-            case "LEAN"      -> "de disette";
-            case "NORMAL"    -> null;
-            default          -> null;
+            case STATUS_ABUNDANCE -> "d'abondance";
+            case STATUS_LEAN      -> "de disette";
+            case STATUS_NORMAL    -> null;
+            default               -> null;
         };
     }
 

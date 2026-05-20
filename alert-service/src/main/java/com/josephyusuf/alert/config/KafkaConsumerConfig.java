@@ -2,6 +2,7 @@ package com.josephyusuf.alert.config;
 
 import com.josephyusuf.alert.dto.IncomeClassifiedEvent;
 import com.josephyusuf.alert.dto.RuleAppliedEvent;
+import com.josephyusuf.alert.dto.SavingsRecommendationEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,6 +64,19 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, RuleAppliedEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(ruleAppliedConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, SavingsRecommendationEvent> savingsRecommendationConsumerFactory() {
+        return buildConsumerFactory(SavingsRecommendationEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, SavingsRecommendationEvent> savingsRecommendationListenerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, SavingsRecommendationEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(savingsRecommendationConsumerFactory());
         return factory;
     }
 }

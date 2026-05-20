@@ -2,6 +2,7 @@ package com.josephyusuf.alert.consumer;
 
 import com.josephyusuf.alert.dto.IncomeClassifiedEvent;
 import com.josephyusuf.alert.dto.RuleAppliedEvent;
+import com.josephyusuf.alert.dto.SavingsRecommendationEvent;
 import com.josephyusuf.alert.service.AlertService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,9 @@ class KafkaConsumersTest {
 
     @InjectMocks
     private RuleAppliedConsumer ruleAppliedConsumer;
+
+    @InjectMocks
+    private SavingsRecommendationConsumer savingsRecommendationConsumer;
 
     @Test
     void incomeClassifiedConsumer_delegatesToService() {
@@ -60,5 +64,24 @@ class KafkaConsumersTest {
         ruleAppliedConsumer.onRuleApplied(event);
 
         verify(alertService).createFromRuleApplied(event);
+    }
+
+    @Test
+    void savingsRecommendationConsumer_delegatesToService() {
+        SavingsRecommendationEvent event = SavingsRecommendationEvent.builder()
+                .userId(UUID.randomUUID())
+                .goalId(UUID.randomUUID())
+                .goalName("Voyage")
+                .recommendedAmount(new BigDecimal("50000"))
+                .josephStatus("ABUNDANCE")
+                .message("Versement recommandé")
+                .month(5)
+                .year(2026)
+                .occurredAt(Instant.now())
+                .build();
+
+        savingsRecommendationConsumer.onSavingsRecommendation(event);
+
+        verify(alertService).createFromSavingsRecommendation(event);
     }
 }
