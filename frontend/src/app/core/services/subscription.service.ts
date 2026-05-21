@@ -4,9 +4,10 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   SubscriptionInfo,
-  PaymentIntentResult,
   PaymentProviderResult,
-  PaymentMethodConfig
+  PaymentMethodConfig,
+  CreateSubscriptionRequest,
+  CreateSubscriptionResponse
 } from '../../shared/models/subscription.model';
 
 @Injectable({ providedIn: 'root' })
@@ -19,11 +20,17 @@ export class SubscriptionService {
     return this.http.get<SubscriptionInfo>(`${this.apiUrl}/current`);
   }
 
-  createStripeIntent(plan: string, currency: string, promoCode?: string): Observable<PaymentIntentResult> {
-    return this.http.post<PaymentIntentResult>(`${this.apiUrl}/stripe/create-payment-intent`, {
-      plan,
-      currency,
-      promoCode: promoCode ?? null
+  createSubscription(request: CreateSubscriptionRequest): Observable<CreateSubscriptionResponse> {
+    return this.http.post<CreateSubscriptionResponse>(`${this.apiUrl}/stripe/create`, request);
+  }
+
+  confirmSubscription(subscriptionId: string): Observable<SubscriptionInfo> {
+    return this.http.post<SubscriptionInfo>(`${this.apiUrl}/stripe/confirm/${subscriptionId}`, {});
+  }
+
+  cancelSubscription(immediately = false): Observable<SubscriptionInfo> {
+    return this.http.request<SubscriptionInfo>('DELETE', `${this.apiUrl}/stripe/cancel`, {
+      body: { immediately }
     });
   }
 
@@ -33,14 +40,6 @@ export class SubscriptionService {
 
   initiateOrange(plan: string, phoneNumber: string): Observable<PaymentProviderResult> {
     return this.http.post<PaymentProviderResult>(`${this.apiUrl}/orange/initiate`, { plan, phoneNumber });
-  }
-
-  confirmStripePayment(paymentIntentId: string): Observable<SubscriptionInfo> {
-    return this.http.post<SubscriptionInfo>(`${this.apiUrl}/confirm`, { paymentIntentId });
-  }
-
-  cancelSubscription(): Observable<SubscriptionInfo> {
-    return this.http.post<SubscriptionInfo>(`${this.apiUrl}/cancel`, {});
   }
 
   setAutoRenew(enabled: boolean): Observable<SubscriptionInfo> {

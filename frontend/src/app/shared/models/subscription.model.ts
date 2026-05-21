@@ -1,3 +1,5 @@
+export type CouponDuration = 'ONCE' | 'FOREVER' | 'MONTHS';
+
 export interface SubscriptionInfo {
   id: string;
   userId: string;
@@ -8,17 +10,31 @@ export interface SubscriptionInfo {
   expiresAt: string | null;
   cancelledAt: string | null;
   autoRenew: boolean;
+
+  // Stripe Subscriptions (V7 backend)
+  stripeSubscriptionId: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+
+  // Coupon
+  couponApplied: string | null;
+  couponDuration: CouponDuration | null;
+  nextInvoiceAmount: number | null;
+  currency: string | null;
 }
 
-export interface PaymentIntentResult {
-  paymentIntentId: string;
-  clientSecret: string;
-  amount: number;
-  currency: string;
+export interface CreateSubscriptionRequest {
+  planTier: 'PREMIUM' | 'PREMIUM_PLUS';
+  currency: 'EUR' | 'XOF';
+  paymentMethodId: string;
+  couponCode?: string | null;
+}
+
+export interface CreateSubscriptionResponse {
+  subscriptionId: string;
+  clientSecret: string | null;
   status: string;
-  promoCode: string | null;
-  discountPercent: number | null;
-  originalAmount: number | null;
 }
 
 export interface PaymentProviderResult {

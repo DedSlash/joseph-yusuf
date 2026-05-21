@@ -38,6 +38,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'subscription/success',
+    loadComponent: () => import('./features/subscription/success/success.component').then(m => m.SuccessComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'support',
     loadComponent: () => import('./features/support/support.component').then(m => m.SupportComponent),
     canActivate: [authGuard]
