@@ -208,11 +208,12 @@ export class SuccessComponent implements OnInit {
   subscription: SubscriptionInfo | null = null;
   confirming = false;
   error = '';
-  confettiPieces = Array.from({ length: 30 }, () => ({
-    left: Math.random() * 100,
-    color: ['#C9A84C', '#DAC372', '#F0E8D0', '#5cdb6f'][Math.floor(Math.random() * 4)],
-    delay: Math.random() * 1.5,
-    duration: 3 + Math.random() * 2
+  // Confetti purement décoratifs : valeurs déterministes (pas de PRNG).
+  confettiPieces = Array.from({ length: 30 }, (_, i) => ({
+    left: (i * 17 + 7) % 100,
+    color: ['#C9A84C', '#DAC372', '#F0E8D0', '#5cdb6f'][i % 4],
+    delay: (i * 0.13) % 1.5,
+    duration: 3 + (i * 0.19) % 2
   }));
 
   constructor(
