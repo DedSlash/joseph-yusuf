@@ -15,7 +15,7 @@ describe('SubscriptionComponent', () => {
   beforeEach(async () => {
     subscriptionSpy = jasmine.createSpyObj<SubscriptionService>('SubscriptionService', [
       'getCurrent', 'cancelSubscription', 'setAutoRenew',
-      'createStripeIntent', 'confirmStripePayment',
+      'createSubscription', 'confirmSubscription',
       'initiateWave', 'initiateOrange',
       'validatePromoCode', 'getPaymentMethods'
     ]);
@@ -53,7 +53,7 @@ describe('SubscriptionComponent', () => {
 
       component.doCancel();
 
-      expect(subscriptionSpy.cancelSubscription).toHaveBeenCalled();
+      expect(subscriptionSpy.cancelSubscription).toHaveBeenCalledWith(false);
       expect(component.sub).toBe(updated);
       expect(component.cancelling).toBe(false);
       expect(component.confirmCancel).toBe(false);
@@ -87,6 +87,79 @@ describe('SubscriptionComponent', () => {
       component.doCancel();
 
       expect(component.cancelError).toBe("Échec de l'annulation.");
+    });
+  });
+
+  describe('validatePromo', () => {
+    it('marque promoApplied=true quand le code est valide avec une réduction', () => {
+      component.promoCode = 'EARLY50';
+      subscriptionSpy.validatePromoCode.and.returnValue(of({
+        valid: true, discountPercent: 50, reason: null
+      }));
+
+      component.validatePromo();
+
+      expect(component.promoApplied).toBe(true);
+      expect(component.promoDiscount).toBe(50);
+      expect(component.promoError).toBe('');
+    });
+
+    it('marque promoError avec la raison si invalide', () => {
+      component.promoCode = 'EXPIRED';
+      subscriptionSpy.validatePromoCode.and.returnValue(of({
+        valid: false, discountPercent: null, reason: 'Code expiré'
+      }));
+
+      component.validatePromo();
+
+      expect(component.promoApplied).toBe(false);
+      expect(component.promoError).toBe('Code expiré');
+    });
+  });
+
+  describe('initiatePayment - flow Stripe PM-first', () => {
+    it('Stripe : transition directe vers step "confirm" sans appel backend', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentMethod = 'stripe';
+
+      component.initiatePayment();
+
+      expect(component.step).toBe('confirm');
+      expect(subscriptionSpy.createSubscription).not.toHaveBeenCalled();
+      expect(component.paying).toBe(false);
+    });
+
+    it('Wave : appel backend et passage à step "confirm"', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentMethod = 'wave';
+      component.phoneNumber = '+221770000000';
+      subscriptionSpy.initiateWave.and.returnValue(of({
+        provider: 'WAVE', transactionId: 'w_1', status: 'PENDING',
+        amount: 3000, currency: 'XOF', redirectUrl: null, message: 'Confirmez'
+      }));
+
+      component.initiatePayment();
+
+      expect(subscriptionSpy.initiateWave).toHaveBeenCalledWith('PREMIUM', '+221770000000');
+      expect(component.step).toBe('confirm');
+      expect(component.mobileResult?.transactionId).toBe('w_1');
+    });
+  });
+
+  describe('getPriceDisplay', () => {
+    it('affiche le prix de base sans coupon', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.currencyMode = 'EUR';
+
+      expect(component.getPriceDisplay()).toBe('4.99 €');
+    });
+
+    it('applique le pourcentage de réduction quand promoDiscount défini', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.currencyMode = 'EUR';
+      component.promoDiscount = 50;
+
+      expect(component.getPriceDisplay()).toBe('2.50 €');
     });
   });
 });

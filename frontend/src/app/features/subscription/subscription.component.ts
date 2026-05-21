@@ -3,15 +3,18 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
+import { firstValueFrom } from 'rxjs';
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   SubscriptionInfo,
-  PaymentIntentResult,
+  CreateSubscriptionResponse,
   PaymentProviderResult,
   PaymentMethodConfig
 } from '../../shared/models/subscription.model';
 import { environment } from '../../../environments/environment';
+
+const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type View   = 'loading' | 'manage' | 'upgrade';   // manage = client existant
@@ -424,15 +427,15 @@ const STRIPE_APPEARANCE = {
         </div>
 
         <!-- ── Étape 3 : formulaire Stripe ── -->
-        <div class="step-content" *ngIf="step === 'confirm' && stripeResult">
+        <div class="step-content" *ngIf="step === 'confirm' && paymentMethod === 'stripe'">
           <div class="stripe-card">
             <div class="stripe-header">
               <span class="lock-icon">🔒</span>
               <div>
                 <h3>Paiement sécurisé</h3>
                 <p class="stripe-amount">
-                  {{ stripeResult.currency === 'EUR' ? stripeResult.amount + ' €' : formatXof(+stripeResult.amount) }}
-                  <span class="promo-badge" *ngIf="stripeResult.discountPercent">-{{ stripeResult.discountPercent }}%</span>
+                  {{ getPriceDisplay() }} / mois
+                  <span class="promo-badge" *ngIf="promoApplied && promoDiscount">-{{ promoDiscount }}%</span>
                 </p>
               </div>
             </div>
@@ -445,7 +448,7 @@ const STRIPE_APPEARANCE = {
             <div class="step-actions">
               <button class="btn-ghost" (click)="step = 'payment'" [disabled]="stripeConfirming">← Retour</button>
               <button class="btn-next" [disabled]="stripeLoading || stripeConfirming" (click)="confirmStripe()">
-                {{ stripeConfirming ? 'Traitement…' : 'Payer ' + (stripeResult.currency === 'EUR' ? stripeResult.amount + ' €' : formatXof(+stripeResult.amount)) }}
+                {{ stripeConfirming ? 'Traitement…' : 'Payer ' + getPriceDisplay() + ' / mois' }}
               </button>
             </div>
             <p class="stripe-note">Vos coordonnées bancaires sont traitées directement par Stripe (PCI-DSS niveau 1).</p>
@@ -953,7 +956,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   promoValidating = false;
 
   // Stripe
-  stripeResult: PaymentIntentResult | null = null;
+  stripeSubResult: CreateSubscriptionResponse | null = null;
   mobileResult: PaymentProviderResult | null = null;
   stripeLoading = false;
   stripeConfirming = false;
@@ -970,30 +973,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   ) {}
 
   ngOnInit(): void {
-    // Retour Stripe après redirect 3DS
-    this.route.queryParams.subscribe(params => {
-      if (params['redirect_status'] === 'succeeded' && params['payment_intent']) {
-        this.view = 'upgrade';
-        this.subscriptionService.confirmStripePayment(params['payment_intent']).subscribe({
-          next: () => {
-            this.authService.refreshSession().subscribe();
-            localStorage.removeItem('joseph_promo_code');
-            this.step = 'success';
-          },
-          error: () => {
-            localStorage.removeItem('joseph_promo_code');
-            this.step = 'success';
-          }
-        });
-        return;
-      }
-      if (params['redirect_status'] && params['redirect_status'] !== 'succeeded') {
-        this.view = 'upgrade';
-        this.step = 'payment';
-        this.paymentError = 'Paiement non abouti. Veuillez réessayer.';
-      }
-    });
-
+    // Les retours Stripe 3DS atterrissent sur /subscription/success (géré par SuccessComponent)
     this.subscriptionService.getPaymentMethods().subscribe({
       next: m => this.paymentMethods = m,
       error: () => this.paymentMethods = [
@@ -1035,7 +1015,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   }
 
   ngAfterViewChecked(): void {
-    if (this.step === 'confirm' && this.stripeResult && !this.stripeMounted) {
+    if (this.step === 'confirm' && this.paymentMethod === 'stripe' && this.selectedPlan && !this.stripeMounted) {
       const container = document.getElementById('stripe-payment-element');
       if (container && container.childElementCount === 0) {
         this.stripeMounted = true;
@@ -1098,8 +1078,9 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     }
     this.step = 'plan';
     this.paymentError = '';
-    this.stripeResult = null;
+    this.stripeSubResult = null;
     this.mobileResult = null;
+    this.stripeMounted = false;
   }
 
   askDisableRenew(): void { this.confirmDisableRenew = true; }
@@ -1127,12 +1108,13 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   doCancel(): void {
     this.cancelling = true;
     this.cancelError = '';
-    this.subscriptionService.cancelSubscription().subscribe({
+    // Par défaut : cancel_at_period_end = true (accès maintenu jusqu'à fin de période)
+    this.subscriptionService.cancelSubscription(false).subscribe({
       next: updated => {
         this.sub = updated;
         this.cancelling = false;
         this.confirmCancel = false;
-        // Rafraîchir le JWT pour que getPlan() retourne FREE
+        // Rafraîchir le JWT pour que getPlan() retourne FREE quand la période expire
         this.authService.refreshSession().subscribe();
       },
       error: err => {
@@ -1278,17 +1260,13 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     this.paymentError = '';
 
     if (this.paymentMethod === 'stripe') {
-      this.subscriptionService.createStripeIntent(this.selectedPlan, this.currencyMode, this.promoCode.trim() || undefined).subscribe({
-        next: res => {
-          this.stripeResult = res;
-          if (res.discountPercent) this.promoApplied = true;
-          this.paying = false;
-          this.stripeMounted = false;
-          this.stripeElements = null;
-          this.step = 'confirm';
-        },
-        error: err => { this.paying = false; this.paymentError = err.error?.message ?? 'Erreur initialisation paiement.'; }
-      });
+      // Pattern PM-first : on monte Elements en mode 'subscription' et on appellera
+      // le backend uniquement lors du clic sur "Payer" (createPaymentMethod → /stripe/create).
+      this.stripeSubResult = null;
+      this.stripeMounted = false;
+      this.stripeElements = null;
+      this.paying = false;
+      this.step = 'confirm';
     } else if (this.paymentMethod === 'wave') {
       this.subscriptionService.initiateWave(this.selectedPlan, this.phoneNumber.trim()).subscribe({
         next: res => { this.mobileResult = res; this.paying = false; this.step = 'confirm'; },
@@ -1302,14 +1280,27 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     }
   }
 
+  /** Montant en plus petite unité monétaire (centimes EUR, unités XOF) — pour Elements. */
+  private getStripeAmount(): number {
+    const plan = PLANS.find(p => p.id === this.selectedPlan);
+    if (!plan) return 0;
+    return this.currencyMode === 'EUR' ? Math.round(plan.priceEur * 100) : plan.priceXof;
+  }
+
   private async mountStripe(): Promise<void> {
-    if (!this.stripeResult?.clientSecret) return;
+    if (!this.selectedPlan) return;
     this.stripeLoading = true;
     this.stripeError = '';
     try {
       this.stripe = await loadStripe(environment.stripePublicKey);
       if (!this.stripe) throw new Error();
-      this.stripeElements = this.stripe.elements({ clientSecret: this.stripeResult.clientSecret, appearance: STRIPE_APPEARANCE });
+      this.stripeElements = this.stripe.elements({
+        mode: 'subscription',
+        amount: this.getStripeAmount(),
+        currency: this.currencyMode.toLowerCase(),
+        paymentMethodCreation: 'manual',
+        appearance: STRIPE_APPEARANCE
+      });
       const el = this.stripeElements.create('payment', { layout: 'tabs' });
       const container = document.getElementById('stripe-payment-element');
       if (container) { container.innerHTML = ''; el.mount(container); }
@@ -1321,33 +1312,68 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   }
 
   async confirmStripe(): Promise<void> {
-    if (!this.stripe || !this.stripeElements) return;
+    if (!this.stripe || !this.stripeElements || !this.selectedPlan) return;
     this.stripeConfirming = true;
     this.stripeError = '';
-    const { error } = await this.stripe.confirmPayment({
-      elements: this.stripeElements,
-      confirmParams: { return_url: `${window.location.origin}/subscription?payment_return=true` },
-      redirect: 'if_required'
-    });
-    if (error) {
-      this.stripeConfirming = false;
-      this.stripeError = error.message ?? 'Paiement refusé.';
-    } else {
-      // Confirme et active l'abonnement côté backend sans attendre le webhook
-      this.subscriptionService.confirmStripePayment(this.stripeResult!.paymentIntentId).subscribe({
-        next: () => {
+
+    try {
+      // 1. Valider les Elements (champ requis manquant, etc.)
+      const submitResult = await this.stripeElements.submit();
+      if (submitResult.error) {
+        this.stripeError = submitResult.error.message ?? 'Champs incomplets.';
+        this.stripeConfirming = false;
+        return;
+      }
+
+      // 2. Créer un PaymentMethod côté Stripe
+      const pmResult = await this.stripe.createPaymentMethod({ elements: this.stripeElements });
+      if (pmResult.error || !pmResult.paymentMethod) {
+        this.stripeError = pmResult.error?.message ?? 'Impossible de créer le moyen de paiement.';
+        this.stripeConfirming = false;
+        return;
+      }
+
+      // 3. Créer la Subscription côté backend (PM attaché + Subscription créée + clientSecret retourné)
+      const subRes = await firstValueFrom(this.subscriptionService.createSubscription({
+        planTier: this.selectedPlan as 'PREMIUM' | 'PREMIUM_PLUS',
+        currency: this.currencyMode,
+        paymentMethodId: pmResult.paymentMethod.id,
+        couponCode: this.promoCode.trim() || null
+      }));
+      this.stripeSubResult = subRes;
+      // Persister pour la redirection 3DS
+      localStorage.setItem(PENDING_SUB_KEY, subRes.subscriptionId);
+
+      // 4. Si Stripe demande une action supplémentaire (3DS), confirmer le PaymentIntent
+      if (subRes.clientSecret && subRes.status !== 'active') {
+        const confirmResult = await this.stripe.confirmCardPayment(subRes.clientSecret, {
+          payment_method: pmResult.paymentMethod.id,
+          return_url: `${window.location.origin}/subscription/success`
+        });
+        if (confirmResult.error) {
+          this.stripeError = confirmResult.error.message ?? 'Paiement refusé.';
           this.stripeConfirming = false;
-          this.authService.refreshSession().subscribe();
-          localStorage.removeItem('joseph_promo_code');
-          this.step = 'success';
-        },
-        error: () => {
-          this.stripeConfirming = false;
-          localStorage.removeItem('joseph_promo_code');
-          this.step = 'success';
+          return;
         }
+      }
+
+      // 5. Synchroniser l'état côté backend (idempotent avec le webhook invoice.payment_succeeded)
+      this.subscriptionService.confirmSubscription(subRes.subscriptionId).subscribe({
+        next: () => this.onPaymentSuccess(),
+        error: () => this.onPaymentSuccess() // le webhook finira par activer ; on optimise l'UX
       });
+    } catch (err: any) {
+      this.stripeError = err?.error?.message ?? err?.message ?? 'Erreur inattendue lors du paiement.';
+      this.stripeConfirming = false;
     }
+  }
+
+  private onPaymentSuccess(): void {
+    this.stripeConfirming = false;
+    localStorage.removeItem('joseph_promo_code');
+    localStorage.removeItem(PENDING_SUB_KEY);
+    this.authService.refreshSession().subscribe();
+    this.router.navigate(['/subscription/success']);
   }
 
   finish(): void { this.router.navigate(['/dashboard']); }
