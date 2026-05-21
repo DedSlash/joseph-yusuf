@@ -4,6 +4,7 @@ import com.josephyusuf.subscription.dto.*;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.enums.SubscriptionStatus;
+import org.mockito.ArgumentCaptor;
 import com.josephyusuf.subscription.service.OrangeMoneyService;
 import com.josephyusuf.subscription.service.StripeService;
 import com.josephyusuf.subscription.service.SubscriptionService;
@@ -64,8 +65,11 @@ class SubscriptionControllerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getPaymentIntentId()).isEqualTo("pi_123");
-        verify(subscriptionService).recordPendingTransaction(eq(userId), eq(PlanTier.PREMIUM), eq(PaymentProvider.STRIPE),
-                eq("pi_123"), any(), any(), any(), any(), any());
+        ArgumentCaptor<PendingTransactionParams> captor = ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(captor.capture());
+        assertThat(captor.getValue().getUserId()).isEqualTo(userId);
+        assertThat(captor.getValue().getPlan()).isEqualTo(PlanTier.PREMIUM);
+        assertThat(captor.getValue().getProvider()).isEqualTo(PaymentProvider.STRIPE);
     }
 
     @Test

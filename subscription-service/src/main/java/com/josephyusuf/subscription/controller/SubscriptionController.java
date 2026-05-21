@@ -5,6 +5,7 @@ import com.josephyusuf.subscription.dto.OrangeMoneyRequest;
 import com.josephyusuf.subscription.dto.PaymentIntentRequest;
 import com.josephyusuf.subscription.dto.PaymentIntentResponse;
 import com.josephyusuf.subscription.dto.PaymentProviderResponse;
+import com.josephyusuf.subscription.dto.PendingTransactionParams;
 import com.josephyusuf.subscription.dto.SubscriptionResponse;
 import com.josephyusuf.subscription.dto.TransactionResponse;
 import com.josephyusuf.subscription.dto.WavePaymentRequest;
@@ -45,9 +46,17 @@ public class SubscriptionController {
         UUID userId = userIdOf(auth);
         PaymentIntentResponse response = stripeService.createPaymentIntent(userId, request.getPlan(),
                 request.getCurrency(), request.getPromoCode());
-        subscriptionService.recordPendingTransaction(userId, request.getPlan(), PaymentProvider.STRIPE,
-                response.getPaymentIntentId(), response.getAmount(), response.getCurrency(),
-                response.getPromoCode(), response.getDiscountPercent(), response.getOriginalAmount());
+        subscriptionService.recordPendingTransaction(PendingTransactionParams.builder()
+                .userId(userId)
+                .plan(request.getPlan())
+                .provider(PaymentProvider.STRIPE)
+                .externalTxId(response.getPaymentIntentId())
+                .amount(response.getAmount())
+                .currency(response.getCurrency())
+                .promoCode(response.getPromoCode())
+                .discountPercent(response.getDiscountPercent())
+                .originalAmount(response.getOriginalAmount())
+                .build());
         return ResponseEntity.ok(response);
     }
 
@@ -56,9 +65,14 @@ public class SubscriptionController {
                                                                 @Valid @RequestBody WavePaymentRequest request) {
         UUID userId = userIdOf(auth);
         PaymentProviderResponse response = waveService.initiate(userId, request);
-        subscriptionService.recordPendingTransaction(userId, request.getPlan(), PaymentProvider.WAVE,
-                response.getTransactionId(), response.getAmount(), response.getCurrency(),
-                null, null, null);
+        subscriptionService.recordPendingTransaction(PendingTransactionParams.builder()
+                .userId(userId)
+                .plan(request.getPlan())
+                .provider(PaymentProvider.WAVE)
+                .externalTxId(response.getTransactionId())
+                .amount(response.getAmount())
+                .currency(response.getCurrency())
+                .build());
         return ResponseEntity.ok(response);
     }
 
@@ -67,9 +81,14 @@ public class SubscriptionController {
                                                                   @Valid @RequestBody OrangeMoneyRequest request) {
         UUID userId = userIdOf(auth);
         PaymentProviderResponse response = orangeMoneyService.initiate(userId, request);
-        subscriptionService.recordPendingTransaction(userId, request.getPlan(), PaymentProvider.ORANGE_MONEY,
-                response.getTransactionId(), response.getAmount(), response.getCurrency(),
-                null, null, null);
+        subscriptionService.recordPendingTransaction(PendingTransactionParams.builder()
+                .userId(userId)
+                .plan(request.getPlan())
+                .provider(PaymentProvider.ORANGE_MONEY)
+                .externalTxId(response.getTransactionId())
+                .amount(response.getAmount())
+                .currency(response.getCurrency())
+                .build());
         return ResponseEntity.ok(response);
     }
 

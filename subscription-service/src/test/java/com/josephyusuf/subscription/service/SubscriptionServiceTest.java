@@ -1,6 +1,7 @@
 package com.josephyusuf.subscription.service;
 
 import com.josephyusuf.subscription.client.AuthClient;
+import com.josephyusuf.subscription.dto.PendingTransactionParams;
 import com.josephyusuf.subscription.dto.SubscriptionResponse;
 import com.josephyusuf.subscription.dto.TransactionResponse;
 import com.josephyusuf.subscription.entity.Subscription;
@@ -14,6 +15,7 @@ import com.josephyusuf.subscription.exception.SubscriptionNotFoundException;
 import com.josephyusuf.subscription.mapper.SubscriptionMapper;
 import com.josephyusuf.subscription.repository.SubscriptionRepository;
 import com.josephyusuf.subscription.repository.TransactionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -46,6 +48,11 @@ class SubscriptionServiceTest {
 
     @InjectMocks private SubscriptionService service;
 
+    @BeforeEach
+    void injectSelf() {
+        service.setSelf(service);
+    }
+
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String EXTERNAL_TX = "pi_test_123";
 
@@ -58,9 +65,11 @@ class SubscriptionServiceTest {
         void recordPending_premium_success() {
             when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Transaction tx = service.recordPendingTransaction(USER_ID, PlanTier.PREMIUM,
-                    PaymentProvider.STRIPE, EXTERNAL_TX, new BigDecimal("499"), "EUR",
-                    null, null, null);
+            PendingTransactionParams params = PendingTransactionParams.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM).provider(PaymentProvider.STRIPE)
+                    .externalTxId(EXTERNAL_TX).amount(new BigDecimal("499")).currency("EUR")
+                    .build();
+            Transaction tx = service.recordPendingTransaction(params);
 
             assertThat(tx.getStatus()).isEqualTo(TransactionStatus.PENDING);
             assertThat(tx.getProvider()).isEqualTo(PaymentProvider.STRIPE);
@@ -70,9 +79,12 @@ class SubscriptionServiceTest {
         @Test
         @DisplayName("FREE → InvalidPlanException")
         void recordPending_free_throws() {
-            assertThatThrownBy(() -> service.recordPendingTransaction(USER_ID, PlanTier.FREE,
-                    PaymentProvider.STRIPE, EXTERNAL_TX, BigDecimal.ZERO, "EUR",
-                    null, null, null))
+            PendingTransactionParams params = PendingTransactionParams.builder()
+                    .userId(USER_ID).plan(PlanTier.FREE).provider(PaymentProvider.STRIPE)
+                    .externalTxId(EXTERNAL_TX).amount(BigDecimal.ZERO).currency("EUR")
+                    .build();
+
+            assertThatThrownBy(() -> service.recordPendingTransaction(params))
                     .isInstanceOf(InvalidPlanException.class);
         }
     }

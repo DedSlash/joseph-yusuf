@@ -6,8 +6,10 @@ import com.josephyusuf.subscription.dto.PromoCodeValidation;
 import com.josephyusuf.subscription.dto.PromoCodePublicValidationResponse;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.service.PaymentMethodConfigService;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -37,14 +39,14 @@ public class PaymentMethodConfigController {
         return ResponseEntity.ok(adminClient.validate(code, userId));
     }
 
-    // Validation publique (pas besoin de JWT) — utilisée depuis la page d'inscription
     @GetMapping("/api/subscriptions/promo-codes/validate-public")
+    @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<PromoCodePublicValidationResponse> validatePromoPublic(@RequestParam String code) {
         log.info("Validation publique code promo: {}", code);
         try {
             PromoCodeValidation validation = adminClient.validatePublic(code);
             return ResponseEntity.ok(PromoCodePublicValidationResponse.from(validation));
-        } catch (Exception e) {
+        } catch (FeignException e) {
             log.warn("Erreur validation publique code promo '{}': {}", code, e.getMessage());
             return ResponseEntity.ok(PromoCodePublicValidationResponse.notFound());
         }

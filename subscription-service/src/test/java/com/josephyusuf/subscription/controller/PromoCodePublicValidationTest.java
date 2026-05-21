@@ -4,6 +4,9 @@ import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.dto.PromoCodePublicValidationResponse;
 import com.josephyusuf.subscription.dto.PromoCodeValidation;
 import com.josephyusuf.subscription.service.PaymentMethodConfigService;
+import feign.FeignException;
+import feign.Request;
+import feign.RequestTemplate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -117,7 +120,10 @@ class PromoCodePublicValidationTest {
     @Test
     @DisplayName("Erreur réseau Feign → valid: false, reason: NOT_FOUND")
     void networkError_returnsNotFound() {
-        when(adminClient.validatePublic("NET_ERR")).thenThrow(new RuntimeException("Connection refused"));
+        Request feignRequest = Request.create(Request.HttpMethod.GET, "/test",
+                java.util.Collections.emptyMap(), null, new RequestTemplate());
+        when(adminClient.validatePublic("NET_ERR"))
+                .thenThrow(new FeignException.ServiceUnavailable("Connection refused", feignRequest, null, null));
 
         ResponseEntity<PromoCodePublicValidationResponse> response = controller.validatePromoPublic("NET_ERR");
 

@@ -221,7 +221,7 @@ class AdminTransactionServiceTest {
         Transaction tx = sampleTransaction(TransactionStatus.PENDING);
         when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
 
-        AdminTransactionDto dto = service.forceActivate(tx.getId());
+        service.forceActivate(tx.getId());
 
         verify(subscriptionService).activateAfterPayment(
                 tx.getUserId(), tx.getPlan(), tx.getProvider(), tx.getTransactionId());

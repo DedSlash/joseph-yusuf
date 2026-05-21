@@ -1,6 +1,7 @@
 package com.josephyusuf.subscription.service;
 
 import com.josephyusuf.subscription.client.AuthClient;
+import com.josephyusuf.subscription.dto.PendingTransactionParams;
 import com.josephyusuf.subscription.dto.PlanUpdateRequest;
 import com.josephyusuf.subscription.dto.SubscriptionResponse;
 import com.josephyusuf.subscription.dto.TransactionResponse;
@@ -17,12 +18,13 @@ import com.josephyusuf.subscription.repository.SubscriptionRepository;
 import com.josephyusuf.subscription.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -37,24 +39,27 @@ public class SubscriptionService {
     private final SubscriptionMapper mapper;
     private final AuthClient authClient;
 
+    @Autowired
+    @Lazy
+    @lombok.Setter
+    private SubscriptionService self;
+
     @Transactional
-    public Transaction recordPendingTransaction(UUID userId, PlanTier plan, PaymentProvider provider,
-                                                String externalTxId, BigDecimal amount, String currency,
-                                                String promoCode, Integer discountPercent, BigDecimal originalAmount) {
-        if (plan == PlanTier.FREE) {
+    public Transaction recordPendingTransaction(PendingTransactionParams params) {
+        if (params.getPlan() == PlanTier.FREE) {
             throw new InvalidPlanException("Le plan FREE ne nécessite pas de transaction");
         }
         Transaction tx = Transaction.builder()
-                .userId(userId)
-                .plan(plan)
-                .provider(provider)
-                .transactionId(externalTxId)
-                .amount(amount)
-                .currency(currency)
+                .userId(params.getUserId())
+                .plan(params.getPlan())
+                .provider(params.getProvider())
+                .transactionId(params.getExternalTxId())
+                .amount(params.getAmount())
+                .currency(params.getCurrency())
                 .status(TransactionStatus.PENDING)
-                .promoCode(promoCode)
-                .discountPercent(discountPercent)
-                .originalAmount(originalAmount)
+                .promoCode(params.getPromoCode())
+                .discountPercent(params.getDiscountPercent())
+                .originalAmount(params.getOriginalAmount())
                 .build();
         return transactionRepository.save(tx);
     }
@@ -145,7 +150,7 @@ public class SubscriptionService {
         }
 
         PlanTier plan = PlanTier.valueOf(intent.getMetadata().get("plan"));
-        Subscription sub = activateAfterPayment(userId, plan, PaymentProvider.STRIPE, paymentIntentId);
+        Subscription sub = self.activateAfterPayment(userId, plan, PaymentProvider.STRIPE, paymentIntentId);
         return mapper.toResponse(sub);
     }
 
