@@ -53,6 +53,12 @@ export class SubscriptionService {
     );
   }
 
+  validatePromoCodePublic(code: string): Observable<{ valid: boolean; code?: string; discountPercent?: number; reason?: string }> {
+    return this.http.get<{ valid: boolean; code?: string; discountPercent?: number; reason?: string }>(
+      `${this.apiUrl}/promo-codes/validate-public`, { params: { code } }
+    );
+  }
+
   getPaymentMethods(): Observable<PaymentMethodConfig[]> {
     return this.http.get<PaymentMethodConfig[]>(`${this.apiUrl}/payment-methods`);
   }

@@ -3,7 +3,6 @@ package com.josephyusuf.subscription.service;
 import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.StripeConfig;
 import com.josephyusuf.subscription.dto.PaymentIntentResponse;
-import com.josephyusuf.subscription.dto.PromoCodeApplyRequest;
 import com.josephyusuf.subscription.dto.PromoCodeValidation;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.exception.InvalidPlanException;

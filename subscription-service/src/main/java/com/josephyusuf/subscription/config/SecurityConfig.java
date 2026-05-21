@@ -32,7 +32,8 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Non authentifié")))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**", "/api/webhooks/**").permitAll()
+                        .requestMatchers("/actuator/**", "/api/webhooks/**",
+                                "/api/subscriptions/promo-codes/validate-public").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
