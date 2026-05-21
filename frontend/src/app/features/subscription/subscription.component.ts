@@ -297,10 +297,11 @@ const STRIPE_APPEARANCE = {
         </div>
 
         <!-- ── Étape 1 : plan ── -->
-        <div class="step-content" *ngIf="step === 'plan'">
+        <div class="step-content fade-in-up" *ngIf="step === 'plan'">
           <div class="plans-grid" [ngClass]="{ 'plans-grid-2': selectablePlans.length === 2, 'plans-grid-1': selectablePlans.length === 1 }">
-            <div class="plan-card"
-                 *ngFor="let p of selectablePlans"
+            <div class="plan-card fade-in-up"
+                 *ngFor="let p of selectablePlans; let i = index"
+                 [style.animation-delay.ms]="i * 100"
                  [ngClass]="{ selected: selectedPlan === p.id, current: sub?.plan === p.id }"
                  (click)="selectPlan(p.id)">
               <div class="plan-current-tag" *ngIf="sub?.plan === p.id">Plan actuel</div>
@@ -348,7 +349,7 @@ const STRIPE_APPEARANCE = {
         </div>
 
         <!-- ── Étape 2 : méthode de paiement ── -->
-        <div class="step-content" *ngIf="step === 'payment'">
+        <div class="step-content fade-in-up" *ngIf="step === 'payment'">
           <div class="payment-summary">
             <div class="summary-row"><span>Plan</span><strong>{{ planLabel(selectedPlan!) }}</strong></div>
             <div class="summary-row" *ngIf="promoApplied">
@@ -424,7 +425,7 @@ const STRIPE_APPEARANCE = {
         </div>
 
         <!-- ── Étape 3 : formulaire Stripe ── -->
-        <div class="step-content" *ngIf="step === 'confirm' && stripeResult">
+        <div class="step-content fade-in-up" *ngIf="step === 'confirm' && stripeResult">
           <div class="stripe-card">
             <div class="stripe-header">
               <span class="lock-icon">🔒</span>
@@ -453,7 +454,7 @@ const STRIPE_APPEARANCE = {
         </div>
 
         <!-- ── Étape 3 : Mobile Money ── -->
-        <div class="step-content" *ngIf="step === 'confirm' && mobileResult">
+        <div class="step-content fade-in-up" *ngIf="step === 'confirm' && mobileResult">
           <div class="confirm-card">
             <div class="confirm-icon">📱</div>
             <h3>Paiement {{ mobileResult.provider }} en attente</h3>
@@ -758,9 +759,14 @@ const STRIPE_APPEARANCE = {
       border-radius: 18px;
       padding: 1.5rem;
       cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
+      transform: translateY(0);
+      transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
     }
-    .plan-card:hover { border-color: rgba(255,255,255,0.16); }
+    .plan-card:hover {
+      border-color: rgba(255,255,255,0.16);
+      transform: translateY(-10px);
+      box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.45);
+    }
     .plan-card.selected { border-color: var(--gold); background: rgba(28,42,77,0.7); }
     .plan-card.current { border-color: rgba(92,219,131,0.3); }
 
@@ -914,11 +920,49 @@ const STRIPE_APPEARANCE = {
     .success-step p { color: var(--text-2); margin-bottom: 2rem; }
     .success-step .btn-next { display: inline-block; }
 
-    @media (max-width: 600px) {
-      .plans-grid-2 { grid-template-columns: 1fr; }
-      .current-plan-card { flex-direction: column; }
-      .cp-right { text-align: left; }
+    /* Tablet : 768px – 1023px */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .sub-page { padding: 1.5rem; padding-top: 5rem; }
+      .plans-grid-2 { grid-template-columns: 1fr 1fr; }
+      .plan-card { padding: 1.25rem; }
+    }
+
+    /* Mobile : ≤ 767px */
+    @media (max-width: 767px) {
       .sub-page { padding: 1rem; padding-top: 5rem; }
+
+      /* Plans en colonne unique avec scroll */
+      .plans-grid { grid-template-columns: 1fr !important; }
+      .plans-grid-2 { grid-template-columns: 1fr; }
+
+      .plan-card { padding: 1.25rem; }
+      .plan-card:hover { transform: none; }
+
+      .current-plan-card { flex-direction: column; gap: 1rem; }
+      .cp-right { text-align: left; }
+
+      .manage-title { font-size: 1.6rem; }
+
+      /* Payment form — inputs touch-friendly */
+      .payment-methods { gap: 0.5rem; }
+      .pm-card { padding: 0.85rem 1rem; }
+
+      .step-actions { flex-direction: column; gap: 0.5rem; width: 100%; }
+      .step-actions button { width: 100%; padding: 0.85rem; font-size: 0.95rem; }
+
+      .promo-input-row { flex-direction: column; align-items: stretch; }
+      .promo-input { width: 100%; }
+
+      .stripe-card { padding: 1rem; }
+      .stripe-el-container { padding: 0.75rem; }
+
+      .renew-toggle-card { flex-direction: column; align-items: stretch; gap: 1rem; }
+      .renew-toggle-btn { width: 100%; }
+
+      .actions-section { gap: 0.5rem; }
+      .action-card { padding: 0.85rem 1rem; }
+
+      input, select, textarea { font-size: 16px; }  /* évite zoom iOS */
     }
   `]
 })

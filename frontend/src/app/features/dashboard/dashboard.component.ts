@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { Subscription } from 'rxjs';
+import { Chart, registerables } from 'chart.js';
 import { IncomeService } from '../../core/services/income.service';
 import { RuleService } from '../../core/services/rule.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -14,6 +15,8 @@ import { Plan } from '../../shared/models/user.model';
 import { SavingsWidgetComponent } from '../savings/savings-widget.component';
 import { MoneyTipsModalComponent } from '../incomes/money-tips-modal/money-tips-modal.component';
 import { Router } from '@angular/router';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-dashboard',
@@ -66,14 +69,14 @@ import { Router } from '@angular/router';
       </section>
 
       <!-- Section 1: Summary Card -->
-      <section class="summary-section" *ngIf="summary">
+      <section class="summary-section fade-in-up" *ngIf="summary" style="animation-delay: 0ms">
         <div class="summary-card">
           <div class="summary-header">
             <div>
               <span class="summary-label">{{ getSummaryLabel() }}</span>
-              <h2 class="summary-amount">{{ formatCurrency(summary.totalIncome) }}</h2>
+              <h2 class="summary-amount count-up">{{ formatCurrency(animatedTotalIncome) }}</h2>
             </div>
-            <span class="status-badge" [ngClass]="getStatusClass(summary.status)">
+            <span class="status-badge" [ngClass]="getStatusClass(summary.status)" [class.pulse-gold]="summary.status === 'ABUNDANCE'">
               {{ getStatusLabel(summary.status) }}
             </span>
           </div>
@@ -143,7 +146,7 @@ import { Router } from '@angular/router';
       </section>
 
       <!-- Section 2 : Réserve Joseph -->
-      <section class="reserve-section" *ngIf="josephReserve !== null">
+      <section class="reserve-section fade-in-up" *ngIf="josephReserve !== null" style="animation-delay: 100ms">
         <div class="reserve-card" [class.reserve-blurred]="!isPremium()">
           <div class="reserve-header">
             <span class="reserve-label">Réserve Joseph estimée</span>
@@ -174,7 +177,7 @@ import { Router } from '@angular/router';
       </section>
 
       <!-- Section 3: Allocations -->
-      <section class="allocations-section" *ngIf="allocations">
+      <section class="allocations-section fade-in-up" *ngIf="allocations" style="animation-delay: 200ms">
         <div class="section-header">
           <div class="section-header-left">
             <h3 class="section-title">Répartition du mois</h3>
@@ -187,14 +190,19 @@ import { Router } from '@angular/router';
         </div>
 
         <div class="allocation-grid">
-          <div class="allocation-card" *ngFor="let alloc of allocations.allocations">
+          <div class="allocation-card fade-in-up"
+               *ngFor="let alloc of allocations.allocations; let i = index"
+               [style.animation-delay.ms]="i * 80">
             <div class="alloc-header">
               <span class="alloc-category">{{ alloc.category }}</span>
               <span class="alloc-percentage">{{ alloc.percentage }}%</span>
             </div>
             <div class="alloc-amount">{{ formatCurrency(alloc.amount) }}</div>
             <div class="alloc-bar-bg">
-              <div class="alloc-bar" [style.width.%]="alloc.percentage" [style.background]="getAllocColor(alloc.category)"></div>
+              <div class="alloc-bar bar-fill"
+                   [style.--target-width.%]="alloc.percentage"
+                   [style.width.%]="alloc.percentage"
+                   [style.background]="getAllocColor(alloc.category)"></div>
             </div>
           </div>
         </div>
@@ -237,7 +245,7 @@ import { Router } from '@angular/router';
       <app-savings-widget></app-savings-widget>
 
       <!-- Section 4: History -->
-      <section class="history-section" *ngIf="history.length > 0">
+      <section class="history-section fade-in-up" *ngIf="history.length > 0" style="animation-delay: 300ms">
         <div class="section-header">
           <h3 class="section-title">Historique ({{ history.length }} derniers mois saisis)</h3>
           <div class="report-actions" *ngIf="isPremium()">
@@ -271,6 +279,12 @@ import { Router } from '@angular/router';
           </div>
         </div>
         <div class="pdf-error" *ngIf="pdfError">{{ pdfError }}</div>
+
+        <!-- Bar chart : 5 derniers mois -->
+        <div class="history-chart-wrapper" *ngIf="history.length >= 1">
+          <canvas #historyChart></canvas>
+        </div>
+
         <div class="history-table-wrapper">
           <table class="history-table">
             <thead>
@@ -1167,6 +1181,16 @@ import { Router } from '@angular/router';
       margin-bottom: 0.75rem;
     }
 
+    .history-chart-wrapper {
+      position: relative;
+      height: 260px;
+      padding: 1rem 1.25rem;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      margin-bottom: 1.25rem;
+    }
+
     .history-table-wrapper {
       overflow-x: auto;
     }
@@ -1372,19 +1396,58 @@ import { Router } from '@angular/router';
       font-size: 1.1rem;
     }
 
-    @media (max-width: 768px) {
-      .dashboard {
-        padding: 1rem;
-        padding-top: 5rem;
-      }
+    /* Tablet : 768px – 1023px */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .dashboard { padding: 1.5rem; padding-top: 5rem; }
+      .allocation-grid { grid-template-columns: repeat(2, 1fr); }
+      .summary-amount { font-size: 1.9rem; }
+      .history-chart-wrapper { height: 240px; }
+      .report-actions { align-items: stretch; }
+    }
 
-      .allocation-grid {
-        grid-template-columns: 1fr;
-      }
+    /* Mobile : ≤ 767px */
+    @media (max-width: 767px) {
+      .dashboard { padding: 1rem; padding-top: 5rem; }
+      .allocation-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+      .allocation-card { padding: 0.85rem; }
+      .alloc-amount { font-size: 0.95rem; }
+      .alloc-category { font-size: 0.75rem; }
+      .alloc-percentage { font-size: 0.7rem; }
+
+      .summary-card { padding: 1rem 1.1rem; }
+      .summary-amount { font-size: 1.6rem; }
+      .summary-header { flex-direction: column; gap: 0.6rem; align-items: flex-start; }
+
+      .joseph-advice { padding: 1rem; flex-direction: column; gap: 0.65rem; }
+      .threshold-gauge { width: 100%; }
+
+      .reserve-card { padding: 1rem 1.1rem; }
+      .reserve-amount { font-size: 1.5rem; }
+
+      .section-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+      .section-header-right { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+      .section-title { font-size: 1.1rem; }
+
+      .history-chart-wrapper { height: 200px; padding: 0.75rem; }
+
+      .report-actions { flex-direction: column; gap: 0.5rem; align-items: stretch; width: 100%; }
+      .pdf-picker { flex-wrap: wrap; }
+
+      .upgrade-card { flex-direction: column; align-items: flex-start; gap: 1rem; }
+      .btn-upgrade { width: 100%; text-align: center; }
+
+      .welcome-card { padding: 1.5rem 1rem; }
+      .welcome-title { font-size: 1.3rem; }
     }
   `]
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('historyChart') historyChartRef?: ElementRef<HTMLCanvasElement>;
+  private historyChart?: Chart;
+  private countUpRaf = 0;
+  animatedTotalIncome = 0;
+  private viewReady = false;
+
   summary: MonthSummary | null = null;
   allocations: AllocationResult | null = null;
   josephComparison: AllocationResult | null = null;
@@ -1468,8 +1531,137 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+    if (this.history.length > 0) {
+      // History déjà chargée avant la vue
+      setTimeout(() => this.renderHistoryChart(), 0);
+    }
+  }
+
   ngOnDestroy(): void {
     this.updateSub?.unsubscribe();
+    if (this.countUpRaf) { cancelAnimationFrame(this.countUpRaf); }
+    this.historyChart?.destroy();
+  }
+
+  private animateCountUp(target: number, duration = 700): void {
+    if (this.countUpRaf) { cancelAnimationFrame(this.countUpRaf); }
+    const start = this.animatedTotalIncome;
+    const delta = target - start;
+    if (Math.abs(delta) < 1) {
+      this.animatedTotalIncome = target;
+      return;
+    }
+    const startTs = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startTs) / duration);
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      this.animatedTotalIncome = Math.round(start + delta * eased);
+      if (t < 1) {
+        this.countUpRaf = requestAnimationFrame(step);
+      } else {
+        this.animatedTotalIncome = target;
+        this.countUpRaf = 0;
+      }
+    };
+    this.countUpRaf = requestAnimationFrame(step);
+  }
+
+  private renderHistoryChart(): void {
+    if (!this.viewReady || !this.historyChartRef || this.history.length === 0) return;
+    const canvas = this.historyChartRef.nativeElement;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 5 derniers mois — history est ordonnée DESC, on inverse
+    const recent = this.history.slice(0, 5).reverse();
+    const labels = recent.map(h => this.shortMonthLabel(h.month, h.year));
+    const data = recent.map(h => h.totalIncome);
+    const colors = recent.map(h => this.statusColor(h.status));
+    const borderColors = recent.map(h => this.statusColor(h.status, 1));
+
+    if (this.historyChart) {
+      this.historyChart.data.labels = labels;
+      this.historyChart.data.datasets[0].data = data;
+      this.historyChart.data.datasets[0].backgroundColor = colors;
+      this.historyChart.data.datasets[0].borderColor = borderColors;
+      this.historyChart.update();
+      return;
+    }
+
+    this.historyChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Revenu mensuel',
+          data,
+          backgroundColor: colors,
+          borderColor: borderColors,
+          borderWidth: 1,
+          borderRadius: 6,
+          maxBarThickness: 56
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 500, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#13162a',
+            titleColor: '#F5F5F5',
+            bodyColor: '#D9D9DE',
+            borderColor: 'rgba(201, 168, 76, 0.32)',
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              label: (ctx) => this.formatCurrency(ctx.parsed.y ?? 0)
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false, color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#9CA3AF', font: { size: 11 } }
+          },
+          y: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: {
+              color: '#9CA3AF',
+              font: { size: 11 },
+              callback: (v) => this.compactCurrency(Number(v))
+            }
+          }
+        }
+      }
+    });
+  }
+
+  private statusColor(status: MonthStatus, alpha = 0.85): string {
+    const a = alpha;
+    switch (status) {
+      case 'ABUNDANCE': return `rgba(201, 168, 76, ${a})`;
+      case 'LEAN':      return `rgba(231, 76, 60, ${a})`;
+      case 'NORMAL':    return `rgba(74, 144, 217, ${a})`;
+    }
+  }
+
+  private shortMonthLabel(month: number, year: number): string {
+    const d = new Date(year, month - 1);
+    const m = d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+    return `${m.charAt(0).toUpperCase()}${m.slice(1)} ${String(year).slice(-2)}`;
+  }
+
+  private compactCurrency(v: number): string {
+    if (Math.abs(v) >= 1_000_000) return (v / 1_000_000).toFixed(1).replace('.0', '') + 'M';
+    if (Math.abs(v) >= 1_000)     return Math.round(v / 1_000) + 'k';
+    return String(v);
   }
 
   private loadDashboardData(): void {
@@ -1483,6 +1675,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.history = history;
         this.loading = false;
         this.computeJosephReserve(history);
+        setTimeout(() => this.renderHistoryChart(), 0);
 
         // Mois de référence = dernier mois saisi, ou mois courant si rien
         const now = new Date();
@@ -1492,6 +1685,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.incomeService.getSummary(refMonth, refYear).subscribe({
           next: (summary) => {
             this.summary = summary;
+            this.animateCountUp(summary.totalIncome);
             this.loadAllocations(summary, refMonth, refYear);
             this.loadJosephComparison(summary, refMonth, refYear);
             if (summary.totalIncome > 0) {

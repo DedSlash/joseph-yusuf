@@ -103,7 +103,7 @@ interface ImportRow {
             </div>
 
             <div class="sources-list" *ngIf="sources.length > 0">
-              <div class="source-card" *ngFor="let source of sources">
+              <div class="source-card fade-in-up" *ngFor="let source of sources; let i = index" [style.animation-delay.ms]="i * 50">
                 <div class="source-info">
                   <span class="source-name">{{ source.name }}</span>
                   <span class="source-type">{{ getSourceTypeLabel(source.type) }}</span>
@@ -163,7 +163,7 @@ interface ImportRow {
             </div>
 
             <div class="entries-form" *ngIf="sources.length > 0">
-              <div class="entry-row" *ngFor="let entry of entryForms">
+              <div class="entry-row fade-in-up" *ngFor="let entry of entryForms; let i = index" [style.animation-delay.ms]="i * 50">
                 <div class="entry-left">
                   <label class="entry-label">{{ entry.sourceName }}</label>
                   <span class="entry-badge entry-badge-update" *ngIf="entry.entryId">Modifier</span>
@@ -1387,29 +1387,78 @@ interface ImportRow {
       margin-top: 0.5rem;
     }
 
-    @media (max-width: 768px) {
+    /* Tablet : 768px – 1023px */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .incomes-page { padding: 1.5rem; padding-top: 5rem; max-width: none; }
+      .tab-header { gap: 0.75rem; flex-wrap: wrap; }
+      .tab-header-actions { flex-wrap: wrap; gap: 0.5rem; }
+      .month-selector { flex-wrap: wrap; }
+    }
+
+    /* Mobile : ≤ 767px */
+    @media (max-width: 767px) {
       .incomes-page {
         padding: 1rem;
         padding-top: 5rem;
       }
 
+      .page-title { font-size: 1.4rem; margin-bottom: 1rem; }
+
       .tab-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-      }
-
-      .tab-header-actions {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-      }
-
-      .entry-row {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.75rem;
       }
+
+      .tab-header-actions {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 0.5rem;
+      }
+
+      .tab-header-actions .btn-add,
+      .tab-header-actions .btn-import,
+      .tab-header-actions .tips-button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .month-selector { width: 100%; }
+      .month-selector .select-input { flex: 1; min-width: 0; }
+
+      /* Source : tableau-like → carte verticale */
+      .source-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.85rem 1rem;
+      }
+      .source-meta { flex-wrap: wrap; width: 100%; }
+
+      /* Entry rows : empilement vertical */
+      .entry-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+        padding: 0.85rem 1rem;
+      }
+      .entry-left { width: 100%; }
+      .entry-input-wrapper { width: 100%; justify-content: space-between; }
+
+      .entries-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+      }
+      .total-display { flex-wrap: wrap; }
+      .btn-save { width: 100%; padding: 0.85rem; font-size: 0.95rem; }
+
+      /* Dialog Import : full screen sur mobile */
+      :host ::ng-deep .p-dialog { max-width: 95vw !important; }
+      .import-template-banner { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+      .btn-template { width: 100%; justify-content: center; }
+      .import-table-wrapper { overflow-x: auto; }
     }
   `]
 })

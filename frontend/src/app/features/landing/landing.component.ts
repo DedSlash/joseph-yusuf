@@ -2,6 +2,7 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnimateOnScrollDirective } from '../../shared/directives/animate-on-scroll.directive';
 
 interface PlanCard {
   id: string;
@@ -66,7 +67,7 @@ const PLANS: PlanCard[] = [
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AnimateOnScrollDirective],
   template: `
     <!-- ── Navbar ─────────────────────────────────────────────────────── -->
     <header class="lp-nav" [class.scrolled]="scrolled">
@@ -80,29 +81,43 @@ const PLANS: PlanCard[] = [
         <a routerLink="/login"    class="btn-ghost">Se connecter</a>
         <a routerLink="/register" class="btn-gold">Créer un compte</a>
       </div>
+      <button class="lp-burger" (click)="mobileMenuOpen = !mobileMenuOpen" [class.open]="mobileMenuOpen" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </header>
+
+    <!-- ── Drawer mobile ─────────────────────────────────────────────── -->
+    <div class="lp-drawer-overlay" *ngIf="mobileMenuOpen" (click)="mobileMenuOpen = false"></div>
+    <aside class="lp-drawer" [class.open]="mobileMenuOpen">
+      <a href="#principe" class="lp-drawer-link" (click)="scrollTo($event,'principe'); mobileMenuOpen = false">Le Principe</a>
+      <a href="#fonctionnalites" class="lp-drawer-link" (click)="scrollTo($event,'fonctionnalites'); mobileMenuOpen = false">Fonctionnalités</a>
+      <a href="#tarifs" class="lp-drawer-link" (click)="scrollTo($event,'tarifs'); mobileMenuOpen = false">Tarifs</a>
+      <div class="lp-drawer-divider"></div>
+      <a routerLink="/login" class="lp-drawer-link" (click)="mobileMenuOpen = false">Se connecter</a>
+      <a routerLink="/register" class="lp-drawer-cta" (click)="mobileMenuOpen = false">Créer un compte</a>
+    </aside>
 
     <!-- ── Hero ───────────────────────────────────────────────────────── -->
     <section class="hero">
       <div class="hero-glow hero-glow-1"></div>
       <div class="hero-glow hero-glow-2"></div>
       <div class="hero-content">
-        <span class="hero-eyebrow">Gestion des revenus variables</span>
-        <h1 class="hero-title">
+        <span class="hero-eyebrow fade-in-up" style="animation-delay: 0ms">Gestion des revenus variables</span>
+        <h1 class="hero-title fade-in-up" style="animation-delay: 100ms">
           Épargner pendant<br>
           <span class="hero-accent">l'abondance.</span><br>
           Tenir pendant<br>
           <span class="hero-accent">la disette.</span>
         </h1>
-        <p class="hero-sub">
+        <p class="hero-sub fade-in-up" style="animation-delay: 200ms">
           Joseph · Yusuf applique un principe millénaire à votre situation financière.
           Saisissez vos revenus, l'outil fait le reste — alertes, répartitions, réserves.
         </p>
-        <div class="hero-cta">
+        <div class="hero-cta fade-in-up" style="animation-delay: 300ms">
           <a routerLink="/register" class="btn-hero-primary">Commencer gratuitement</a>
           <a href="#principe"       class="btn-hero-ghost"   (click)="scrollTo($event,'principe')">Voir comment ça marche ↓</a>
         </div>
-        <p class="hero-caption">Gratuit · Sans carte bancaire · Idéal pour l'Afrique francophone &amp; la diaspora</p>
+        <p class="hero-caption fade-in-up" style="animation-delay: 400ms">Gratuit · Sans carte bancaire · Idéal pour l'Afrique francophone &amp; la diaspora</p>
       </div>
 
       <!-- Visualisation animée -->
@@ -150,17 +165,17 @@ const PLANS: PlanCard[] = [
         </p>
 
         <div class="principle-grid">
-          <div class="principle-card abundance-card">
+          <div class="principle-card abundance-card" appAnimateOnScroll [animationDelay]="0">
             <div class="principle-icon">🌿</div>
             <h3>Période d'abondance</h3>
             <p>Votre revenu dépasse votre moyenne de 15% ou plus. C'est le moment de constituer une réserve plutôt que d'augmenter vos dépenses.</p>
           </div>
-          <div class="principle-card normal-card">
+          <div class="principle-card normal-card" appAnimateOnScroll [animationDelay]="100">
             <div class="principle-icon">⚖️</div>
             <h3>Période normale</h3>
             <p>Votre revenu reste dans une fourchette de ±15% par rapport à votre moyenne. Continuez à appliquer votre règle de répartition sans changement.</p>
           </div>
-          <div class="principle-card lean-card">
+          <div class="principle-card lean-card" appAnimateOnScroll [animationDelay]="200">
             <div class="principle-icon">⚠️</div>
             <h3>Période de disette</h3>
             <p>Votre revenu est inférieur de 15% ou plus à votre moyenne. Puisez dans la réserve constituée. Ne vous endettez pas.</p>
@@ -191,7 +206,10 @@ const PLANS: PlanCard[] = [
 
         <!-- Feature cards -->
         <div class="features-grid">
-          <div class="feature-card" *ngFor="let f of features">
+          <div class="feature-card"
+               *ngFor="let f of features; let i = index"
+               appAnimateOnScroll
+               [animationDelay]="i * 100">
             <div class="feature-icon">{{ f.icon }}</div>
             <h4 class="feature-title">{{ f.title }}</h4>
             <p class="feature-desc">{{ f.desc }}</p>
@@ -215,8 +233,10 @@ const PLANS: PlanCard[] = [
         <div class="pricing-grid">
           <div
             class="pricing-card"
-            *ngFor="let plan of plans"
+            *ngFor="let plan of plans; let i = index"
             [class.highlighted]="plan.highlight"
+            appAnimateOnScroll
+            [animationDelay]="i * 100"
           >
             <div class="pricing-badge" *ngIf="plan.highlight">Le plus populaire</div>
             <h3 class="pricing-name">{{ plan.name }}</h3>
@@ -250,7 +270,10 @@ const PLANS: PlanCard[] = [
       <div class="container">
         <h2 class="section-title">Fait pour vous si…</h2>
         <div class="audience-grid">
-          <div class="audience-card" *ngFor="let a of audiences">
+          <div class="audience-card"
+               *ngFor="let a of audiences; let i = index"
+               appAnimateOnScroll
+               [animationDelay]="i * 80">
             <div class="audience-icon">{{ a.icon }}</div>
             <p>{{ a.text }}</p>
           </div>
@@ -400,6 +423,88 @@ const PLANS: PlanCard[] = [
     }
 
     .btn-gold:hover { background: linear-gradient(180deg, #F0D88A, #DAC372); box-shadow: 0 10px 28px -8px rgba(201,168,76,0.55); }
+
+    /* ── Burger button (hidden on desktop) ── */
+    .lp-burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+    }
+    .lp-burger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text-0, #F5F5F5);
+      border-radius: 2px;
+      transition: transform 0.25s, opacity 0.25s;
+      transform-origin: center;
+    }
+    .lp-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .lp-burger.open span:nth-child(2) { opacity: 0; }
+    .lp-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── Drawer mobile ── */
+    .lp-drawer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 998;
+      animation: fade-in 0.2s ease-out;
+    }
+    .lp-drawer {
+      position: fixed;
+      top: 0; right: 0;
+      width: 280px;
+      max-width: 85vw;
+      height: 100vh;
+      background: rgba(13, 14, 28, 0.98);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-left: 1px solid rgba(201, 168, 76, 0.2);
+      padding: 80px 1.5rem 2rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    .lp-drawer.open { transform: translateX(0); }
+    .lp-drawer-link {
+      padding: 0.85rem 1rem;
+      color: var(--text-1, #D9D9DE);
+      text-decoration: none;
+      font-size: 0.95rem;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .lp-drawer-link:hover { background: rgba(201,168,76,0.08); color: #C9A84C; }
+    .lp-drawer-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 0.5rem 0;
+    }
+    .lp-drawer-cta {
+      margin-top: 0.5rem;
+      padding: 0.85rem 1rem;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      color: #0D0B07;
+      text-align: center;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
+    }
 
     /* ── Hero ── */
     .hero {
@@ -884,7 +989,10 @@ const PLANS: PlanCard[] = [
       transition: transform 0.2s;
     }
 
-    .pricing-card:hover { transform: translateY(-4px); }
+    .pricing-card { transform: scale(0.98); transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; }
+    .pricing-card:hover { transform: scale(1); border-color: rgba(201, 168, 76, 0.4); }
+    .pricing-card.highlighted { transform: scale(1); }
+    .pricing-card.highlighted:hover { transform: scale(1.02); }
 
     .pricing-card.highlighted {
       border-color: var(--gold, #C9A84C);
@@ -1135,30 +1243,78 @@ const PLANS: PlanCard[] = [
     .footer-col a:hover { color: #C9A84C; }
 
     /* ── Responsive ── */
-    @media (max-width: 900px) {
-      .hero { grid-template-columns: 1fr; padding-top: 6rem; }
-      .hero-visual { display: none; }
-      .principle-grid { grid-template-columns: 1fr; }
-      .pricing-grid { grid-template-columns: 1fr; }
-      .lp-nav-links { display: none; }
-    }
-
-    @media (max-width: 900px) {
+    /* Tablet : 768px – 1023px */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .hero { grid-template-columns: 1fr; padding: 6rem 2rem 4rem; }
+      .hero-title { font-size: 2.5rem; }
+      .hero-visual { max-width: 520px; margin: 0 auto; }
+      .principle-grid { grid-template-columns: repeat(2, 1fr); }
+      .principle-card:last-child { grid-column: 1 / -1; max-width: 50%; margin: 0 auto; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+      .pricing-card.highlighted { grid-column: 1 / -1; max-width: 55%; margin: 0 auto; }
       .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
-      .footer-columns { grid-template-columns: repeat(3, 1fr); }
     }
 
-    @media (max-width: 600px) {
-      .section { padding: 4rem 1.25rem; }
+    /* Mobile : ≤ 767px */
+    @media (max-width: 767px) {
       .lp-nav { padding: 0 1.25rem; }
-      .hero { padding: 5rem 1.25rem 3rem; }
+      .lp-nav-links { display: none; }
+      .lp-nav-actions { display: none; }
+      .lp-burger { display: flex; }
+
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 5rem 1.25rem 3rem;
+        gap: 2.5rem;
+        min-height: auto;
+      }
+      .hero-title { font-size: 2rem; line-height: 1.2; }
+      .hero-sub { font-size: 0.92rem; }
+      .hero-cta { flex-direction: column; gap: 0.65rem; }
+      .hero-cta a { width: 100%; text-align: center; }
+      .hero-visual { display: none; }
+
+      .section { padding: 4rem 1.25rem; }
+      .section-title { font-size: 1.7rem; }
+
+      .principle-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .features-grid { grid-template-columns: 1fr; gap: 1rem; }
+
+      /* Pricing : scroll horizontal pour permettre la comparaison */
+      .pricing-grid {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 1rem 0.5rem;
+        margin: 0 -1.25rem;
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+        -webkit-overflow-scrolling: touch;
+      }
+      .pricing-card {
+        flex: 0 0 85%;
+        scroll-snap-align: center;
+      }
+
+      .audience-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+      .audience-card { padding: 1rem; }
+      .audience-card p { font-size: 0.8rem; }
+
+      .final-cta-card { padding: 3rem 1.25rem; }
+      .final-cta-actions { flex-direction: column; gap: 0.65rem; width: 100%; }
+      .final-cta-actions a { width: 100%; text-align: center; }
+
       .lp-footer { padding: 2rem 1.25rem 1.5rem; }
+      .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
       .footer-columns { grid-template-columns: 1fr; gap: 1.5rem; }
     }
   `]
 })
 export class LandingComponent implements OnInit {
   scrolled = false;
+  mobileMenuOpen = false;
   currency: 'XOF' | 'EUR' = 'XOF';
   year = new Date().getFullYear();
   plans = PLANS;

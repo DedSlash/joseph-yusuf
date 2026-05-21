@@ -14,6 +14,9 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
   template: `
     <nav class="navbar" *ngIf="currentUser$ | async as user">
       <div class="navbar-left">
+        <button class="nav-burger" (click)="toggleDrawer($event)" [class.open]="drawerOpen" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
         <a routerLink="/dashboard" class="logo">Joseph &middot; Yusuf</a>
         <div class="nav-links">
           <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
@@ -54,6 +57,18 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
         </div>
       </div>
     </nav>
+
+    <!-- Drawer mobile -->
+    <div class="nav-drawer-overlay" *ngIf="drawerOpen" (click)="drawerOpen = false"></div>
+    <aside class="nav-drawer" [class.open]="drawerOpen">
+      <a routerLink="/dashboard" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Dashboard</a>
+      <a routerLink="/incomes" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Mes Revenus</a>
+      <a routerLink="/account" class="drawer-link" (click)="drawerOpen = false">Mon compte</a>
+      <a routerLink="/subscription" class="drawer-link" (click)="drawerOpen = false">Mon abonnement</a>
+      <a routerLink="/support" class="drawer-link" (click)="drawerOpen = false">Support</a>
+      <div class="drawer-divider"></div>
+      <button class="drawer-link drawer-logout" (click)="drawerOpen = false; logout()">Déconnexion</button>
+    </aside>
 
     <!-- Modale d'aide — Principe de Joseph -->
     <p-dialog
@@ -423,17 +438,111 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       box-shadow: 0 12px 32px -8px var(--gold-glow);
     }
 
-    @media (max-width: 768px) {
-      .navbar { padding: 0 16px; }
+    /* ── Burger button ── */
+    .nav-burger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      margin-right: 4px;
+    }
+    .nav-burger span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text-0);
+      border-radius: 2px;
+      transition: transform 0.25s, opacity 0.25s;
+    }
+    .nav-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-burger.open span:nth-child(2) { opacity: 0; }
+    .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── Drawer ── */
+    .nav-drawer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 998;
+      animation: fade-in 0.2s ease-out;
+    }
+    .nav-drawer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 270px;
+      max-width: 80vw;
+      height: 100vh;
+      background: rgba(13, 14, 28, 0.98);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-right: 1px solid rgba(201, 168, 76, 0.18);
+      padding: 76px 1rem 1.5rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    .nav-drawer.open { transform: translateX(0); }
+    .drawer-link {
+      padding: 0.85rem 1rem;
+      color: var(--text-1);
+      text-decoration: none;
+      font-size: 0.95rem;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .drawer-link:hover, .drawer-link.active {
+      background: rgba(201,168,76,0.1);
+      color: var(--gold-light);
+    }
+    .drawer-divider { height: 1px; background: var(--line-soft); margin: 0.5rem 0; }
+    .drawer-logout { color: #ff7a6c; }
+    .drawer-logout:hover { background: rgba(255, 122, 108, 0.08); color: #ff7a6c; }
+
+    /* Tablet : 768px – 1023px */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .navbar { padding: 0 20px; }
+      .navbar-right { gap: 8px; }
+      .btn-help span { display: none; }
+    }
+
+    /* Mobile : ≤ 767px */
+    @media (max-width: 767px) {
+      .navbar { padding: 0 12px; height: 56px; }
+      .nav-burger { display: flex; }
       .nav-links { display: none; }
       .btn-help span { display: none; }
+      .btn-upgrade-nav { padding: 6px 10px; font-size: 11px; }
+      .plan-badge { padding: 3px 8px; font-size: 10px; }
+      .logo { font-size: 1rem; }
+      .navbar-right { gap: 6px; }
     }
   `]
 })
 export class NavbarComponent implements OnInit {
   currentUser$: Observable<User | null>;
   dropdownOpen = false;
+  drawerOpen = false;
   showHelp = false;
+
+  toggleDrawer(event: Event): void {
+    event.stopPropagation();
+    this.drawerOpen = !this.drawerOpen;
+  }
 
   constructor(private readonly authService: AuthService, private readonly elRef: ElementRef) {
     this.currentUser$ = this.authService.currentUser$;

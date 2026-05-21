@@ -111,11 +111,13 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 10000;
-      animation: fadeInOverlay 150ms ease-out;
+      animation: fadeInOverlay 200ms ease-out;
     }
 
     @keyframes fadeInOverlay {
@@ -132,12 +134,17 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       background: #1a1a2e;
       border-radius: 12px;
       color: var(--text-0);
-      animation: fadeInModal 150ms ease-out;
+      animation: fadeInModal 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+      transform-origin: center;
     }
 
     @keyframes fadeInModal {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    @media (max-width: 767px) {
+      .modal-content { width: 100%; max-width: 100vw; max-height: 100vh; border-radius: 0; }
     }
 
     .btn-close {
