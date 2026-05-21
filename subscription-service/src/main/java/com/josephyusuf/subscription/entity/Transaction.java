@@ -62,6 +62,12 @@ public class Transaction {
     @Column(name = "original_amount", precision = 15, scale = 2)
     private BigDecimal originalAmount;
 
+    @Column(name = "stripe_invoice_id", length = 255)
+    private String stripeInvoiceId;
+
+    @Column(name = "stripe_payment_intent_id", length = 255)
+    private String stripePaymentIntentId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

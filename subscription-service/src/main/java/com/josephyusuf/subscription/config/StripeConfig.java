@@ -28,6 +28,18 @@ public class StripeConfig {
     @Value("${stripe.prices.premium-plus-xof:6000}")
     private long premiumPlusPriceXof;
 
+    @Value("${stripe.prices.premium-monthly-eur:price_premium_eur_placeholder}")
+    private String premiumMonthlyEurPriceId;
+
+    @Value("${stripe.prices.premium-monthly-xof:price_premium_xof_placeholder}")
+    private String premiumMonthlyXofPriceId;
+
+    @Value("${stripe.prices.premium-plus-monthly-eur:price_premium_plus_eur_placeholder}")
+    private String premiumPlusMonthlyEurPriceId;
+
+    @Value("${stripe.prices.premium-plus-monthly-xof:price_premium_plus_xof_placeholder}")
+    private String premiumPlusMonthlyXofPriceId;
+
     @PostConstruct
     public void init() {
         Stripe.apiKey = stripeApiKey;
