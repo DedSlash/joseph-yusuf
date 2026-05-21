@@ -4,9 +4,7 @@ import com.josephyusuf.subscription.dto.*;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.enums.SubscriptionStatus;
-import org.mockito.ArgumentCaptor;
 import com.josephyusuf.subscription.service.OrangeMoneyService;
-import com.josephyusuf.subscription.service.StripeService;
 import com.josephyusuf.subscription.service.SubscriptionService;
 import com.josephyusuf.subscription.service.WaveService;
 import org.junit.jupiter.api.DisplayName;
@@ -29,7 +27,6 @@ import static org.mockito.Mockito.*;
 @DisplayName("SubscriptionController")
 class SubscriptionControllerTest {
 
-    @Mock private StripeService stripeService;
     @Mock private WaveService waveService;
     @Mock private OrangeMoneyService orangeMoneyService;
     @Mock private SubscriptionService subscriptionService;
@@ -42,34 +39,75 @@ class SubscriptionControllerTest {
 
     private void mockAuth() {
         when(auth.getPrincipal()).thenReturn(userId.toString());
+        lenient().when(auth.getDetails()).thenReturn("user@josephyusuf.com");
     }
 
     @Test
-    @DisplayName("createStripePaymentIntent → 200")
-    void createStripePaymentIntent() {
+    @DisplayName("createStripeSubscription → 200")
+    void createStripeSubscription() {
         mockAuth();
-        PaymentIntentRequest request = new PaymentIntentRequest();
-        request.setPlan(PlanTier.PREMIUM);
-        request.setCurrency("EUR");
-
-        PaymentIntentResponse resp = PaymentIntentResponse.builder()
-                .paymentIntentId("pi_123")
-                .clientSecret("sec_123")
-                .amount(new BigDecimal("4.99"))
+        CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                .planTier(PlanTier.PREMIUM)
                 .currency("EUR")
+                .paymentMethodId("pm_card")
+                .couponCode("EARLY50")
                 .build();
-        when(stripeService.createPaymentIntent(eq(userId), eq(PlanTier.PREMIUM), eq("EUR"), any())).thenReturn(resp);
 
-        ResponseEntity<PaymentIntentResponse> response = controller.createStripePaymentIntent(auth, request);
+        CreateSubscriptionResponse resp = CreateSubscriptionResponse.builder()
+                .subscriptionId("sub_123")
+                .clientSecret("pi_xxx_secret_xxx")
+                .status("incomplete")
+                .build();
+        when(subscriptionService.createStripeSubscription(eq(userId), eq("user@josephyusuf.com"), any()))
+                .thenReturn(resp);
+
+        ResponseEntity<CreateSubscriptionResponse> response = controller.createStripeSubscription(auth, request);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getPaymentIntentId()).isEqualTo("pi_123");
-        ArgumentCaptor<PendingTransactionParams> captor = ArgumentCaptor.forClass(PendingTransactionParams.class);
-        verify(subscriptionService).recordPendingTransaction(captor.capture());
-        assertThat(captor.getValue().getUserId()).isEqualTo(userId);
-        assertThat(captor.getValue().getPlan()).isEqualTo(PlanTier.PREMIUM);
-        assertThat(captor.getValue().getProvider()).isEqualTo(PaymentProvider.STRIPE);
+        assertThat(response.getBody().getSubscriptionId()).isEqualTo("sub_123");
+        assertThat(response.getBody().getClientSecret()).isEqualTo("pi_xxx_secret_xxx");
+    }
+
+    @Test
+    @DisplayName("confirmStripeSubscription → 200")
+    void confirmStripeSubscription() {
+        mockAuth();
+        SubscriptionResponse sub = SubscriptionResponse.builder()
+                .plan(PlanTier.PREMIUM)
+                .status(SubscriptionStatus.ACTIVE)
+                .build();
+        when(subscriptionService.confirmStripeSubscription(userId, "sub_123")).thenReturn(sub);
+
+        ResponseEntity<SubscriptionResponse> response = controller.confirmStripeSubscription(auth, "sub_123");
+
+        assertThat(response.getBody().getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("cancelStripeSubscription par défaut = cancel at period end")
+    void cancelStripeSubscriptionDefault() {
+        mockAuth();
+        SubscriptionResponse sub = SubscriptionResponse.builder().cancelAtPeriodEnd(true).build();
+        when(subscriptionService.cancelStripeSubscription(userId, false)).thenReturn(sub);
+
+        ResponseEntity<SubscriptionResponse> response = controller.cancelStripeSubscription(auth, null);
+
+        assertThat(response.getBody().isCancelAtPeriodEnd()).isTrue();
+        verify(subscriptionService).cancelStripeSubscription(userId, false);
+    }
+
+    @Test
+    @DisplayName("cancelStripeSubscription immediately=true")
+    void cancelStripeSubscriptionImmediately() {
+        mockAuth();
+        SubscriptionResponse sub = SubscriptionResponse.builder().status(SubscriptionStatus.CANCELLED).build();
+        when(subscriptionService.cancelStripeSubscription(userId, true)).thenReturn(sub);
+
+        CancelSubscriptionRequest req = CancelSubscriptionRequest.builder().immediately(true).build();
+        ResponseEntity<SubscriptionResponse> response = controller.cancelStripeSubscription(auth, req);
+
+        verify(subscriptionService).cancelStripeSubscription(userId, true);
+        assertThat(response.getBody().getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
     }
 
     @Test
@@ -134,24 +172,6 @@ class SubscriptionControllerTest {
     }
 
     @Test
-    @DisplayName("confirmPayment → 200")
-    void confirmPayment() {
-        mockAuth();
-        ConfirmPaymentRequest request = new ConfirmPaymentRequest();
-        request.setPaymentIntentId("pi_123");
-
-        SubscriptionResponse sub = SubscriptionResponse.builder()
-                .plan(PlanTier.PREMIUM)
-                .status(SubscriptionStatus.ACTIVE)
-                .build();
-        when(subscriptionService.confirmStripePayment(userId, "pi_123")).thenReturn(sub);
-
-        ResponseEntity<SubscriptionResponse> response = controller.confirmPayment(auth, request);
-
-        assertThat(response.getBody().getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
-    }
-
-    @Test
     @DisplayName("setAutoRenew → 200")
     void setAutoRenew() {
         mockAuth();
@@ -161,20 +181,5 @@ class SubscriptionControllerTest {
         ResponseEntity<SubscriptionResponse> response = controller.setAutoRenew(auth, true);
 
         assertThat(response.getBody().isAutoRenew()).isTrue();
-    }
-
-    @Test
-    @DisplayName("cancel → 200")
-    void cancel() {
-        mockAuth();
-        SubscriptionResponse sub = SubscriptionResponse.builder()
-                .status(SubscriptionStatus.CANCELLED)
-                .build();
-        when(subscriptionService.getCurrent(userId)).thenReturn(sub);
-
-        ResponseEntity<SubscriptionResponse> response = controller.cancel(auth);
-
-        verify(subscriptionService).cancel(userId);
-        assertThat(response.getBody().getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
     }
 }

@@ -11,14 +11,17 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PaymentIntentRequest {
+public class CreateSubscriptionRequest {
 
     @NotNull
-    private PlanTier plan;
+    private PlanTier planTier;
 
     @NotBlank
     @Pattern(regexp = "EUR|XOF", message = "currency must be EUR or XOF")
     private String currency;
 
-    private String promoCode;
+    @NotBlank
+    private String paymentMethodId;
+
+    private String couponCode;
 }

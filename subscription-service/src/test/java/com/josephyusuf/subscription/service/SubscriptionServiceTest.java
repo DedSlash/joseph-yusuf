@@ -1,11 +1,16 @@
 package com.josephyusuf.subscription.service;
 
 import com.josephyusuf.subscription.client.AuthClient;
+import com.josephyusuf.subscription.config.StripeConfig;
+import com.josephyusuf.subscription.dto.CreateSubscriptionRequest;
+import com.josephyusuf.subscription.dto.CreateSubscriptionResponse;
 import com.josephyusuf.subscription.dto.PendingTransactionParams;
+import com.josephyusuf.subscription.dto.StripeSubscriptionResult;
 import com.josephyusuf.subscription.dto.SubscriptionResponse;
 import com.josephyusuf.subscription.dto.TransactionResponse;
 import com.josephyusuf.subscription.entity.Subscription;
 import com.josephyusuf.subscription.entity.Transaction;
+import com.josephyusuf.subscription.enums.CouponDuration;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.enums.SubscriptionStatus;
@@ -15,12 +20,11 @@ import com.josephyusuf.subscription.exception.SubscriptionNotFoundException;
 import com.josephyusuf.subscription.mapper.SubscriptionMapper;
 import com.josephyusuf.subscription.repository.SubscriptionRepository;
 import com.josephyusuf.subscription.repository.TransactionRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.stripe.model.Invoice;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -46,56 +50,64 @@ class SubscriptionServiceTest {
     @Mock private TransactionRepository transactionRepository;
     @Mock private SubscriptionMapper mapper;
     @Mock private AuthClient authClient;
+    @Mock private StripeService stripeService;
+    @Mock private StripeConfig stripeConfig;
 
     @InjectMocks private SubscriptionService service;
-
-    @BeforeEach
-    void injectSelf() {
-        ReflectionTestUtils.setField(service, "self", service);
-    }
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String EXTERNAL_TX = "pi_test_123";
 
     @Nested
-    @DisplayName("recordPendingTransaction")
-    class RecordPendingTests {
+    @DisplayName("createStripeSubscription")
+    class CreateStripeSubscriptionTests {
 
         @Test
-        @DisplayName("Crée une transaction PENDING pour PREMIUM")
-        void recordPending_premium_success() {
-            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+        @DisplayName("Crée subscription PENDING + délègue à StripeService")
+        void createsPendingSubscription() {
+            StripeSubscriptionResult result = StripeSubscriptionResult.builder()
+                    .stripeSubscriptionId("sub_1").stripeCustomerId("cus_1")
+                    .stripePriceId("price_1").clientSecret("pi_secret")
+                    .status("incomplete").appliedCouponId("EARLY50")
+                    .couponDuration(CouponDuration.FOREVER).build();
+            when(stripeService.createSubscription(USER_ID, "u@e.com",
+                    PlanTier.PREMIUM, "EUR", "EARLY50", "pm_x"))
+                    .thenReturn(result);
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            PendingTransactionParams params = PendingTransactionParams.builder()
-                    .userId(USER_ID).plan(PlanTier.PREMIUM).provider(PaymentProvider.STRIPE)
-                    .externalTxId(EXTERNAL_TX).amount(new BigDecimal("499")).currency("EUR")
-                    .build();
-            Transaction tx = service.recordPendingTransaction(params);
+            CreateSubscriptionRequest req = CreateSubscriptionRequest.builder()
+                    .planTier(PlanTier.PREMIUM).currency("EUR")
+                    .paymentMethodId("pm_x").couponCode("EARLY50").build();
+            CreateSubscriptionResponse resp = service.createStripeSubscription(USER_ID, "u@e.com", req);
 
-            assertThat(tx.getStatus()).isEqualTo(TransactionStatus.PENDING);
-            assertThat(tx.getProvider()).isEqualTo(PaymentProvider.STRIPE);
-            assertThat(tx.getTransactionId()).isEqualTo(EXTERNAL_TX);
+            assertThat(resp.getSubscriptionId()).isEqualTo("sub_1");
+            assertThat(resp.getClientSecret()).isEqualTo("pi_secret");
+            verify(subscriptionRepository).save(argThat(s ->
+                    s.getStatus() == SubscriptionStatus.PENDING
+                            && "sub_1".equals(s.getStripeSubscriptionId())
+                            && "EARLY50".equals(s.getStripeCouponId())
+                            && CouponDuration.FOREVER == s.getCouponDuration()
+                            && "EUR".equals(s.getCurrency())));
         }
 
         @Test
-        @DisplayName("FREE → InvalidPlanException")
-        void recordPending_free_throws() {
-            PendingTransactionParams params = PendingTransactionParams.builder()
-                    .userId(USER_ID).plan(PlanTier.FREE).provider(PaymentProvider.STRIPE)
-                    .externalTxId(EXTERNAL_TX).amount(BigDecimal.ZERO).currency("EUR")
-                    .build();
-
-            assertThatThrownBy(() -> service.recordPendingTransaction(params))
+        @DisplayName("FREE → InvalidPlanException avant appel Stripe")
+        void freePlanThrows() {
+            CreateSubscriptionRequest req = CreateSubscriptionRequest.builder()
+                    .planTier(PlanTier.FREE).currency("EUR").paymentMethodId("pm_x").build();
+            assertThatThrownBy(() -> service.createStripeSubscription(USER_ID, "u@e.com", req))
                     .isInstanceOf(InvalidPlanException.class);
+            verify(stripeService, never()).createSubscription(any(), any(), any(), any(), any(), any());
         }
     }
 
     @Nested
-    @DisplayName("activateAfterPayment")
+    @DisplayName("activateAfterPayment (manuel / Wave / Orange)")
     class ActivateTests {
 
         @Test
-        @DisplayName("Crée une nouvelle subscription si l'utilisateur n'en a pas")
+        @DisplayName("Crée une nouvelle subscription si absente")
         void activate_creates_new() {
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
             when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> {
@@ -116,25 +128,7 @@ class SubscriptionServiceTest {
         }
 
         @Test
-        @DisplayName("Met à jour la subscription existante")
-        void activate_updates_existing() {
-            Subscription existing = Subscription.builder()
-                    .id(UUID.randomUUID()).userId(USER_ID).plan(PlanTier.PREMIUM)
-                    .status(SubscriptionStatus.CANCELLED).build();
-            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
-            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(transactionRepository.findByTransactionId(EXTERNAL_TX)).thenReturn(Optional.empty());
-
-            Subscription result = service.activateAfterPayment(USER_ID, PlanTier.PREMIUM_PLUS,
-                    PaymentProvider.STRIPE, EXTERNAL_TX);
-
-            assertThat(result.getPlan()).isEqualTo(PlanTier.PREMIUM_PLUS);
-            assertThat(result.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
-            assertThat(result.getCancelledAt()).isNull();
-        }
-
-        @Test
-        @DisplayName("L'échec d'AuthClient ne casse pas l'activation")
+        @DisplayName("Échec AuthClient swallowed")
         void activate_authClientFailure_swallowed() {
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
             when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -144,134 +138,200 @@ class SubscriptionServiceTest {
                     PaymentProvider.STRIPE, null);
 
             assertThat(result).isNotNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Webhooks-driven flows")
+    class WebhookFlowsTests {
+
+        @Test
+        @DisplayName("activateSubscriptionFromInvoice → ACTIVE + transaction SUCCEEDED")
+        void activateFromInvoice() {
+            Subscription local = Subscription.builder().id(UUID.randomUUID()).userId(USER_ID)
+                    .plan(PlanTier.PREMIUM).stripeSubscriptionId("sub_1").build();
+            when(subscriptionRepository.findByStripeSubscriptionId("sub_1")).thenReturn(Optional.of(local));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(transactionRepository.findByStripeInvoiceId("inv_1")).thenReturn(Optional.empty());
+
+            com.stripe.model.Subscription stripeSub = mock(com.stripe.model.Subscription.class);
+            when(stripeSub.getStatus()).thenReturn("active");
+            when(stripeSub.getCurrentPeriodEnd()).thenReturn(1900000000L);
+            when(stripeSub.getCancelAtPeriodEnd()).thenReturn(false);
+            when(stripeService.retrieveSubscription("sub_1")).thenReturn(stripeSub);
+
+            Invoice invoice = mock(Invoice.class);
+            when(invoice.getId()).thenReturn("inv_1");
+            when(invoice.getSubscription()).thenReturn("sub_1");
+            when(invoice.getAmountPaid()).thenReturn(499L);
+            when(invoice.getCurrency()).thenReturn("eur");
+
+            service.activateSubscriptionFromInvoice(invoice);
+
+            verify(subscriptionRepository).save(argThat(s -> s.getStatus() == SubscriptionStatus.ACTIVE));
+            verify(transactionRepository).save(argThat(tx ->
+                    tx.getStatus() == TransactionStatus.SUCCEEDED
+                            && "inv_1".equals(tx.getStripeInvoiceId())
+                            && tx.getAmount().compareTo(new BigDecimal("499")) == 0));
             verify(authClient).updatePlan(any());
         }
-    }
-
-    @Nested
-    @DisplayName("markTransactionFailed / Refunded")
-    class MarkTransactionTests {
 
         @Test
-        @DisplayName("Marque FAILED avec raison")
-        void markFailed_setsReason() {
-            Transaction tx = Transaction.builder().userId(USER_ID).status(TransactionStatus.PENDING).build();
-            when(transactionRepository.findByTransactionId(EXTERNAL_TX)).thenReturn(Optional.of(tx));
+        @DisplayName("activateSubscriptionFromInvoice : subscription locale absente → no-op")
+        void activateFromInvoice_unknownSub() {
+            Invoice invoice = mock(Invoice.class);
+            when(invoice.getSubscription()).thenReturn("sub_unknown");
+            when(subscriptionRepository.findByStripeSubscriptionId("sub_unknown")).thenReturn(Optional.empty());
 
-            service.markTransactionFailed(EXTERNAL_TX, "carte refusée");
+            service.activateSubscriptionFromInvoice(invoice);
 
-            verify(transactionRepository).save(argThat(t ->
-                    t.getStatus() == TransactionStatus.FAILED && "carte refusée".equals(t.getFailureReason())));
-        }
-
-        @Test
-        @DisplayName("Marque REFUNDED")
-        void markRefunded() {
-            Transaction tx = Transaction.builder().userId(USER_ID).status(TransactionStatus.SUCCEEDED).build();
-            when(transactionRepository.findByTransactionId(EXTERNAL_TX)).thenReturn(Optional.of(tx));
-
-            service.markTransactionRefunded(EXTERNAL_TX);
-
-            verify(transactionRepository).save(argThat(t -> t.getStatus() == TransactionStatus.REFUNDED));
-        }
-
-        @Test
-        @DisplayName("Transaction inconnue : no-op silencieux")
-        void markFailed_unknownTx_silent() {
-            when(transactionRepository.findByTransactionId(EXTERNAL_TX)).thenReturn(Optional.empty());
-
-            service.markTransactionFailed(EXTERNAL_TX, "x");
-
+            verify(subscriptionRepository, never()).save(any());
             verify(transactionRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("recordPaymentFailure → transaction FAILED")
+        void recordFailure() {
+            Subscription local = Subscription.builder().id(UUID.randomUUID()).userId(USER_ID)
+                    .plan(PlanTier.PREMIUM).stripeSubscriptionId("sub_1").build();
+            when(subscriptionRepository.findByStripeSubscriptionId("sub_1")).thenReturn(Optional.of(local));
+
+            Invoice invoice = mock(Invoice.class);
+            when(invoice.getId()).thenReturn("inv_fail");
+            when(invoice.getSubscription()).thenReturn("sub_1");
+            when(invoice.getAmountDue()).thenReturn(499L);
+            when(invoice.getCurrency()).thenReturn("eur");
+
+            service.recordPaymentFailure(invoice);
+
+            verify(transactionRepository).save(argThat(tx -> tx.getStatus() == TransactionStatus.FAILED
+                    && "inv_fail".equals(tx.getStripeInvoiceId())));
+        }
+
+        @Test
+        @DisplayName("downgradeToFree → CANCELLED + plan FREE + sync auth")
+        void downgrade() {
+            Subscription local = Subscription.builder().userId(USER_ID).plan(PlanTier.PREMIUM)
+                    .stripeCustomerId("cus_1").status(SubscriptionStatus.ACTIVE).build();
+            when(subscriptionRepository.findByStripeCustomerId("cus_1")).thenReturn(Optional.of(local));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            service.downgradeToFree("cus_1");
+
+            verify(subscriptionRepository).save(argThat(s ->
+                    s.getStatus() == SubscriptionStatus.CANCELLED
+                            && s.getPlan() == PlanTier.FREE
+                            && s.getCancelledAt() != null));
+            verify(authClient).updatePlan(argThat(req -> req.getPlan() == PlanTier.FREE));
+        }
+
+        @Test
+        @DisplayName("updateSubscriptionFromStripe → currentPeriodEnd mis à jour")
+        void updateFromStripe() {
+            Subscription local = Subscription.builder().userId(USER_ID).plan(PlanTier.PREMIUM)
+                    .stripeSubscriptionId("sub_1").build();
+            when(subscriptionRepository.findByStripeSubscriptionId("sub_1")).thenReturn(Optional.of(local));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            com.stripe.model.Subscription stripeSub = mock(com.stripe.model.Subscription.class);
+            when(stripeSub.getId()).thenReturn("sub_1");
+            when(stripeSub.getStatus()).thenReturn("active");
+            when(stripeSub.getCurrentPeriodEnd()).thenReturn(1900000000L);
+            when(stripeSub.getCancelAtPeriodEnd()).thenReturn(true);
+
+            service.updateSubscriptionFromStripe(stripeSub);
+
+            verify(subscriptionRepository).save(argThat(s ->
+                    s.getCurrentPeriodEnd() != null && s.isCancelAtPeriodEnd()));
+        }
     }
 
     @Nested
-    @DisplayName("cancel / setAutoRenew")
+    @DisplayName("cancelStripeSubscription / setAutoRenew")
     class CancelTests {
 
         @Test
-        @DisplayName("cancel - ACTIVE → CANCELLED")
-        void cancel_active() {
-            Subscription sub = Subscription.builder().userId(USER_ID)
-                    .plan(PlanTier.PREMIUM).status(SubscriptionStatus.ACTIVE).build();
-            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sub));
+        @DisplayName("cancelStripeSubscription immediately=false → cancelAtPeriodEnd")
+        void cancel_atEnd() {
+            Subscription local = Subscription.builder().userId(USER_ID).plan(PlanTier.PREMIUM)
+                    .stripeSubscriptionId("sub_1").status(SubscriptionStatus.ACTIVE).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(local));
             when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(mapper.toResponse(any(Subscription.class)))
+                    .thenReturn(SubscriptionResponse.builder().cancelAtPeriodEnd(true).build());
 
-            Subscription result = service.cancel(USER_ID);
+            com.stripe.model.Subscription stripeSub = mock(com.stripe.model.Subscription.class);
+            when(stripeSub.getCancelAtPeriodEnd()).thenReturn(true);
+            when(stripeService.cancelSubscription("sub_1", false)).thenReturn(stripeSub);
 
-            assertThat(result.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
-            assertThat(result.getCancelledAt()).isNotNull();
-            verify(authClient).updatePlan(any());
+            SubscriptionResponse resp = service.cancelStripeSubscription(USER_ID, false);
+
+            assertThat(resp.isCancelAtPeriodEnd()).isTrue();
+            verify(stripeService).cancelSubscription("sub_1", false);
         }
 
         @Test
-        @DisplayName("cancel - déjà annulé → InvalidPlanException")
-        void cancel_alreadyCancelled() {
-            Subscription sub = Subscription.builder().userId(USER_ID)
-                    .status(SubscriptionStatus.CANCELLED).build();
-            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sub));
-
-            assertThatThrownBy(() -> service.cancel(USER_ID))
-                    .isInstanceOf(InvalidPlanException.class)
-                    .hasMessageContaining("déjà annulé");
+        @DisplayName("cancelStripeSubscription sans subscription Stripe → InvalidPlanException")
+        void cancel_noStripeSub() {
+            Subscription local = Subscription.builder().userId(USER_ID).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(local));
+            assertThatThrownBy(() -> service.cancelStripeSubscription(USER_ID, false))
+                    .isInstanceOf(InvalidPlanException.class);
         }
 
         @Test
         @DisplayName("cancel - pas d'abonnement → SubscriptionNotFoundException")
         void cancel_notFound() {
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.cancel(USER_ID))
+            assertThatThrownBy(() -> service.cancelStripeSubscription(USER_ID, false))
                     .isInstanceOf(SubscriptionNotFoundException.class);
         }
 
         @Test
-        @DisplayName("setAutoRenew - existant → met à jour")
-        void setAutoRenew_success() {
+        @DisplayName("setAutoRenew(false) → délègue à StripeService.cancelSubscription")
+        void setAutoRenew_off() {
             Subscription sub = Subscription.builder().userId(USER_ID)
-                    .plan(PlanTier.PREMIUM).autoRenew(false).build();
+                    .stripeSubscriptionId("sub_1").autoRenew(true).build();
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sub));
             when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            com.stripe.model.Subscription stripeSub = mock(com.stripe.model.Subscription.class);
+            when(stripeSub.getCancelAtPeriodEnd()).thenReturn(true);
+            when(stripeService.cancelSubscription("sub_1", false)).thenReturn(stripeSub);
             when(mapper.toResponse(any(Subscription.class)))
-                    .thenReturn(SubscriptionResponse.builder().autoRenew(true).build());
+                    .thenReturn(SubscriptionResponse.builder().autoRenew(false).build());
 
-            SubscriptionResponse result = service.setAutoRenew(USER_ID, true);
+            SubscriptionResponse result = service.setAutoRenew(USER_ID, false);
 
-            assertThat(result.isAutoRenew()).isTrue();
-        }
-
-        @Test
-        @DisplayName("setAutoRenew - pas d'abonnement → SubscriptionNotFoundException")
-        void setAutoRenew_notFound() {
-            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.setAutoRenew(USER_ID, true))
-                    .isInstanceOf(SubscriptionNotFoundException.class);
+            assertThat(result.isAutoRenew()).isFalse();
+            verify(stripeService).cancelSubscription("sub_1", false);
         }
     }
 
     @Nested
-    @DisplayName("getCurrent / getHistory")
+    @DisplayName("getCurrent / getHistory / recordPendingTransaction")
     class QueryTests {
 
         @Test
-        @DisplayName("getCurrent retourne la subscription mappée")
+        @DisplayName("getCurrent retourne la subscription mappée avec nextInvoiceAmount")
         void getCurrent_returnsMapped() {
-            Subscription s = Subscription.builder().userId(USER_ID).plan(PlanTier.PREMIUM).build();
+            Subscription s = Subscription.builder().userId(USER_ID).plan(PlanTier.PREMIUM)
+                    .currency("EUR").build();
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(s));
-            when(mapper.toResponse(s)).thenReturn(SubscriptionResponse.builder().userId(USER_ID).plan(PlanTier.PREMIUM).build());
+            when(mapper.toResponse(s)).thenReturn(SubscriptionResponse.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM).build());
+            when(stripeConfig.getPremiumPriceEur()).thenReturn(499L);
 
             SubscriptionResponse result = service.getCurrent(USER_ID);
 
             assertThat(result.getPlan()).isEqualTo(PlanTier.PREMIUM);
+            assertThat(result.getNextInvoiceAmount()).isEqualByComparingTo("499");
+            assertThat(result.getCurrency()).isEqualTo("EUR");
         }
 
         @Test
         @DisplayName("getCurrent : SubscriptionNotFoundException si absent")
         void getCurrent_notFound() {
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
-
             assertThatThrownBy(() -> service.getCurrent(USER_ID))
                     .isInstanceOf(SubscriptionNotFoundException.class);
         }
@@ -287,6 +347,30 @@ class SubscriptionServiceTest {
             Page<TransactionResponse> result = service.getHistory(USER_ID, PageRequest.of(0, 10));
 
             assertThat(result.getTotalElements()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("recordPendingTransaction crée tx PENDING")
+        void recordPending_success() {
+            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+            PendingTransactionParams params = PendingTransactionParams.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM).provider(PaymentProvider.WAVE)
+                    .externalTxId("wave_1").amount(new BigDecimal("3000")).currency("XOF").build();
+
+            Transaction tx = service.recordPendingTransaction(params);
+
+            assertThat(tx.getStatus()).isEqualTo(TransactionStatus.PENDING);
+            assertThat(tx.getProvider()).isEqualTo(PaymentProvider.WAVE);
+        }
+
+        @Test
+        @DisplayName("recordPendingTransaction FREE → InvalidPlanException")
+        void recordPending_free() {
+            PendingTransactionParams params = PendingTransactionParams.builder()
+                    .userId(USER_ID).plan(PlanTier.FREE).provider(PaymentProvider.WAVE)
+                    .externalTxId("wave_1").amount(BigDecimal.ZERO).currency("XOF").build();
+            assertThatThrownBy(() -> service.recordPendingTransaction(params))
+                    .isInstanceOf(InvalidPlanException.class);
         }
     }
 }

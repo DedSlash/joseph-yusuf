@@ -4,35 +4,35 @@ import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.StripeConfig;
 import com.josephyusuf.subscription.dto.PromoCodeApplyRequest;
 import com.josephyusuf.subscription.entity.ProcessedWebhookEvent;
+import com.josephyusuf.subscription.entity.Subscription;
 import com.josephyusuf.subscription.enums.PaymentProvider;
-import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.exception.PaymentException;
 import com.josephyusuf.subscription.repository.ProcessedWebhookEventRepository;
+import com.josephyusuf.subscription.repository.SubscriptionRepository;
 import com.stripe.exception.SignatureVerificationException;
-import com.stripe.model.Charge;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
-import com.stripe.model.PaymentIntent;
+import com.stripe.model.Invoice;
 import com.stripe.net.Webhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WebhookService {
 
-    static final String EVENT_PI_SUCCEEDED = "payment_intent.succeeded";
-    static final String EVENT_PI_FAILED = "payment_intent.payment_failed";
-    static final String EVENT_CHARGE_REFUNDED = "charge.refunded";
+    static final String EVENT_INVOICE_PAID = "invoice.payment_succeeded";
+    static final String EVENT_INVOICE_FAILED = "invoice.payment_failed";
+    static final String EVENT_SUB_DELETED = "customer.subscription.deleted";
+    static final String EVENT_SUB_UPDATED = "customer.subscription.updated";
 
     private final StripeConfig stripeConfig;
     private final ProcessedWebhookEventRepository processedEventRepository;
     private final SubscriptionService subscriptionService;
+    private final SubscriptionRepository subscriptionRepository;
     private final AdminClient adminClient;
 
     @Transactional
@@ -47,9 +47,10 @@ public class WebhookService {
         log.info("Webhook Stripe reçu eventId={} type={}", event.getId(), event.getType());
 
         switch (event.getType()) {
-            case EVENT_PI_SUCCEEDED -> handleSucceeded(event);
-            case EVENT_PI_FAILED -> handleFailed(event);
-            case EVENT_CHARGE_REFUNDED -> handleRefunded(event);
+            case EVENT_INVOICE_PAID -> handleInvoicePaid(event);
+            case EVENT_INVOICE_FAILED -> handleInvoiceFailed(event);
+            case EVENT_SUB_DELETED -> handleSubscriptionDeleted(event);
+            case EVENT_SUB_UPDATED -> handleSubscriptionUpdated(event);
             default -> log.info("Événement Stripe non géré : {}", event.getType());
         }
 
@@ -69,86 +70,72 @@ public class WebhookService {
         }
     }
 
-    private void handleSucceeded(Event event) {
-        PaymentIntent intent = extract(event, PaymentIntent.class);
-        if (intent == null) return;
-
-        UUID userId = parseUserId(intent.getMetadata().get("userId"));
-        PlanTier plan = parsePlan(intent.getMetadata().get("plan"));
-        if (userId == null || plan == null) {
-            log.error("Metadata Stripe incomplètes pi={}", intent.getId());
-            return;
-        }
-
-        subscriptionService.activateAfterPayment(userId, plan, PaymentProvider.STRIPE, intent.getId());
-
-        // Enregistrer l'usage du code promo après confirmation du paiement
-        String promoCode = intent.getMetadata().get("promoCode");
-        if (promoCode != null && !promoCode.isBlank()) {
-            try {
-                adminClient.apply(PromoCodeApplyRequest.builder()
-                        .code(promoCode)
-                        .userId(userId)
-                        .transactionId(intent.getId())
-                        .build());
-                log.info("Usage code promo {} enregistré pour userId={} tx={}", promoCode, userId, intent.getId());
-            } catch (Exception e) {
-                log.error("Échec enregistrement usage code promo {} userId={} tx={} : {}",
-                        promoCode, userId, intent.getId(), e.getMessage());
-            }
-        }
+    private void handleInvoicePaid(Event event) {
+        Invoice invoice = extract(event, Invoice.class);
+        if (invoice == null) return;
+        subscriptionService.activateSubscriptionFromInvoice(invoice);
+        applyPromoCodeIfPresent(invoice);
     }
 
-    private void handleFailed(Event event) {
-        PaymentIntent intent = extract(event, PaymentIntent.class);
-        if (intent == null) return;
-        String reason = intent.getLastPaymentError() != null
-                ? intent.getLastPaymentError().getMessage()
-                : "Paiement échoué";
-        subscriptionService.markTransactionFailed(intent.getId(), reason);
+    private void handleInvoiceFailed(Event event) {
+        Invoice invoice = extract(event, Invoice.class);
+        if (invoice == null) return;
+        subscriptionService.recordPaymentFailure(invoice);
     }
 
-    private void handleRefunded(Event event) {
-        Charge charge = extract(event, Charge.class);
-        if (charge == null || charge.getPaymentIntent() == null) {
-            log.warn("Refund sans PaymentIntent associé");
-            return;
+    private void handleSubscriptionDeleted(Event event) {
+        com.stripe.model.Subscription sub = extract(event, com.stripe.model.Subscription.class);
+        if (sub == null || sub.getCustomer() == null) return;
+        subscriptionService.downgradeToFree(sub.getCustomer());
+    }
+
+    private void handleSubscriptionUpdated(Event event) {
+        com.stripe.model.Subscription sub = extract(event, com.stripe.model.Subscription.class);
+        if (sub == null) return;
+        subscriptionService.updateSubscriptionFromStripe(sub);
+    }
+
+    /**
+     * Enregistre l'usage du code promo interne après le premier paiement réussi.
+     * Coexistence : Stripe applique automatiquement la réduction récurrente, mais
+     * on garde l'historique côté joseph_admin.promo_codes (compteurs, limites par user).
+     */
+    private void applyPromoCodeIfPresent(Invoice invoice) {
+        String subscriptionId = invoice.getSubscription();
+        if (subscriptionId == null) return;
+        Subscription local = subscriptionRepository.findByStripeSubscriptionId(subscriptionId).orElse(null);
+        if (local == null || local.getStripeCouponId() == null) return;
+        // Une seule fois par subscription : on regarde si c'est la première invoice payée
+        // (heuristique simple : si la subscription vient juste d'être activée)
+        try {
+            adminClient.apply(PromoCodeApplyRequest.builder()
+                    .code(local.getStripeCouponId())
+                    .userId(local.getUserId())
+                    .transactionId(invoice.getId())
+                    .build());
+            log.info("Usage code promo {} enregistré userId={} invoice={}",
+                    local.getStripeCouponId(), local.getUserId(), invoice.getId());
+        } catch (Exception e) {
+            log.error("Échec enregistrement usage code promo {} userId={} invoice={} : {}",
+                    local.getStripeCouponId(), local.getUserId(), invoice.getId(), e.getMessage());
         }
-        subscriptionService.markTransactionRefunded(charge.getPaymentIntent());
     }
 
     private <T> T extract(Event event, Class<T> type) {
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
 
-        // Tentative avec la version stricte d'abord
         if (deserializer.getObject().isPresent()) {
             Object obj = deserializer.getObject().get();
             return type.isInstance(obj) ? type.cast(obj) : null;
         }
 
         // Fallback : désérialisation sans vérification de version API
-        // Nécessaire quand la version de l'événement Stripe diffère de celle de la SDK
         try {
             com.stripe.model.StripeObject raw = deserializer.deserializeUnsafe();
             return type.isInstance(raw) ? type.cast(raw) : null;
         } catch (Exception e) {
-            log.error("Désérialisation impossible eventId={} type={} : {}", event.getId(), event.getType(), e.getMessage());
-            return null;
-        }
-    }
-
-    private UUID parseUserId(String value) {
-        try {
-            return value == null ? null : UUID.fromString(value);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    private PlanTier parsePlan(String value) {
-        try {
-            return value == null ? null : PlanTier.valueOf(value);
-        } catch (IllegalArgumentException e) {
+            log.error("Désérialisation impossible eventId={} type={} : {}",
+                    event.getId(), event.getType(), e.getMessage());
             return null;
         }
     }

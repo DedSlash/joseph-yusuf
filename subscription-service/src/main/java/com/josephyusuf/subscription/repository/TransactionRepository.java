@@ -19,6 +19,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     Optional<Transaction> findByTransactionId(String transactionId);
 
+    Optional<Transaction> findByStripeInvoiceId(String stripeInvoiceId);
+
     @Query("""
             SELECT t FROM Transaction t
             WHERE (:status IS NULL OR t.status = :status)
