@@ -47,5 +47,21 @@ export const routes: Routes = [
     loadComponent: () => import('./features/support/support-detail.component').then(m => m.SupportDetailComponent),
     canActivate: [authGuard]
   },
-  { path: '**', redirectTo: '' }
+  {
+    path: '404',
+    loadComponent: () => import('./shared/components/error-pages/not-found/not-found.component').then(m => m.NotFoundComponent)
+  },
+  {
+    path: 'error/500',
+    loadComponent: () => import('./shared/components/error-pages/server-error/server-error.component').then(m => m.ServerErrorComponent)
+  },
+  {
+    path: 'maintenance',
+    loadComponent: () => import('./shared/components/error-pages/maintenance/maintenance.component').then(m => m.MaintenanceComponent)
+  },
+  {
+    path: 'offline',
+    loadComponent: () => import('./shared/components/error-pages/offline/offline.component').then(m => m.OfflineComponent)
+  },
+  { path: '**', redirectTo: '/404' }
 ];

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="30">
+<title>Erreur serveur &middot; Joseph &middot; Yusuf</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #ffffff;
+  }
+  .wrap {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+  }
+  .brand {
+    font-family: Georgia, serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    color: #C9A84C;
+    margin-bottom: 2.5rem;
+    text-transform: uppercase;
+  }
+  .icon { font-size: 4rem; margin-bottom: 1rem; }
+  h1 {
+    font-size: 2rem;
+    color: #C9A84C;
+    margin-bottom: 1rem;
+  }
+  p {
+    font-size: 1.1rem;
+    color: #cccccc;
+    max-width: 500px;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+  a.btn {
+    background: #C9A84C;
+    color: #1a1a2e;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+  }
+  a.btn:hover { background: #b8973b; }
+  .counter { font-size: 0.9rem; color: #888888; margin-top: 1rem; }
+  .contact { margin-top: 2rem; font-size: 0.9rem; color: #aaaaaa; }
+  .contact a { color: #C9A84C; text-decoration: none; }
+  .contact a:hover { text-decoration: underline; }
+  @media (max-width: 600px) {
+    h1 { font-size: 1.5rem; }
+    .icon { font-size: 3rem; }
+    a.btn { width: 100%; max-width: 280px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">Joseph &middot; Yusuf</div>
+    <div class="icon" aria-hidden="true">&#x2699;&#xFE0F;</div>
+    <h1>Quelque chose s'est mal pass&eacute;</h1>
+    <p>Nos &eacute;quipes ont &eacute;t&eacute; notifi&eacute;es. Veuillez r&eacute;essayer dans quelques instants.</p>
+    <a href="/" class="btn">Retour &agrave; l'accueil</a>
+    <p class="counter">Nouvelle tentative automatique dans 30 secondes...</p>
+    <p class="contact">
+      <a href="mailto:support@josephyusuf.com">support&#64;josephyusuf.com</a>
+    </p>
+  </div>
+</body>
+</html>

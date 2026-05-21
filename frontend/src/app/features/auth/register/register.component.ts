@@ -410,10 +410,10 @@ export class RegisterComponent implements OnInit {
   urlPromoInvalid = false;
 
   constructor(
-    private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private subscriptionService: SubscriptionService
+    private readonly authService: AuthService,
+    private readonly router: Router,
+    private readonly route: ActivatedRoute,
+    private readonly subscriptionService: SubscriptionService
   ) {}
 
   ngOnInit(): void {
