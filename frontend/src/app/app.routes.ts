@@ -53,6 +53,22 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'cgu',
+    loadComponent: () => import('./features/legal/cgu.component').then(m => m.CguComponent)
+  },
+  {
+    path: 'privacy',
+    loadComponent: () => import('./features/legal/privacy.component').then(m => m.PrivacyComponent)
+  },
+  {
+    path: 'legal',
+    loadComponent: () => import('./features/legal/legal.component').then(m => m.LegalComponent)
+  },
+  {
+    path: 'contact',
+    loadComponent: () => import('./features/legal/contact.component').then(m => m.ContactComponent)
+  },
+  {
     path: '404',
     loadComponent: () => import('./shared/components/error-pages/not-found/not-found.component').then(m => m.NotFoundComponent)
   },

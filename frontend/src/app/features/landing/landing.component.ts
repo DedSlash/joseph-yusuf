@@ -279,11 +279,28 @@ const PLANS: PlanCard[] = [
     <!-- ── Footer ─────────────────────────────────────────────────────── -->
     <footer class="lp-footer">
       <div class="footer-inner">
-        <span class="footer-logo">Joseph · Yusuf</span>
-        <span class="footer-copy">© {{ year }} Rey Dedy Pangou — Tous droits réservés</span>
-        <div class="footer-links">
-          <a routerLink="/login">Connexion</a>
-          <a routerLink="/register">Inscription</a>
+        <div class="footer-brand">
+          <span class="footer-logo">Joseph · Yusuf</span>
+          <span class="footer-copy">© {{ year }} Rey Dedy Pangou — Tous droits réservés</span>
+        </div>
+        <div class="footer-columns">
+          <div class="footer-col">
+            <span class="footer-col-title">Produit</span>
+            <a routerLink="/register">Créer un compte</a>
+            <a routerLink="/login">Se connecter</a>
+            <a href="#tarifs" (click)="scrollTo($event,'tarifs')">Tarifs</a>
+          </div>
+          <div class="footer-col">
+            <span class="footer-col-title">Légal</span>
+            <a routerLink="/cgu">CGU</a>
+            <a routerLink="/privacy">Confidentialité</a>
+            <a routerLink="/legal">Mentions légales</a>
+          </div>
+          <div class="footer-col">
+            <span class="footer-col-title">Support</span>
+            <a routerLink="/contact">Contact</a>
+            <a href="mailto:support&#64;josephyusuf.com">support&#64;josephyusuf.com</a>
+          </div>
         </div>
       </div>
     </footer>
@@ -1039,43 +1056,64 @@ const PLANS: PlanCard[] = [
     /* ── Footer ── */
     .lp-footer {
       border-top: 1px solid rgba(201,168,76,0.1);
-      padding: 1.5rem 2.5rem;
+      padding: 2.5rem 2.5rem 2rem;
     }
 
     .footer-inner {
       max-width: 1100px;
       margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 2.5rem;
+      align-items: start;
+    }
+
+    .footer-brand {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 0.4rem;
     }
 
     .footer-logo {
       font-family: 'Cormorant Garamond', serif;
-      color: rgba(201,168,76,0.7);
-      font-size: 1rem;
+      color: rgba(201,168,76,0.85);
+      font-size: 1.1rem;
     }
 
     .footer-copy {
       font-size: 0.78rem;
-      color: rgba(240,232,208,0.3);
+      color: rgba(240,232,208,0.35);
     }
 
-    .footer-links {
-      display: flex;
+    .footer-columns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 1.5rem;
     }
 
-    .footer-links a {
-      font-size: 0.8rem;
-      color: rgba(240,232,208,0.4);
+    .footer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .footer-col-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #C9A84C;
+      margin-bottom: 0.35rem;
+    }
+
+    .footer-col a {
+      font-size: 0.83rem;
+      color: rgba(240,232,208,0.5);
       text-decoration: none;
       transition: color 0.2s;
     }
 
-    .footer-links a:hover { color: #C9A84C; }
+    .footer-col a:hover { color: #C9A84C; }
 
     /* ── Responsive ── */
     @media (max-width: 900px) {
@@ -1086,10 +1124,17 @@ const PLANS: PlanCard[] = [
       .lp-nav-links { display: none; }
     }
 
+    @media (max-width: 900px) {
+      .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
+      .footer-columns { grid-template-columns: repeat(3, 1fr); }
+    }
+
     @media (max-width: 600px) {
       .section { padding: 4rem 1.25rem; }
       .lp-nav { padding: 0 1.25rem; }
       .hero { padding: 5rem 1.25rem 3rem; }
+      .lp-footer { padding: 2rem 1.25rem 1.5rem; }
+      .footer-columns { grid-template-columns: 1fr; gap: 1.5rem; }
     }
   `]
 })
