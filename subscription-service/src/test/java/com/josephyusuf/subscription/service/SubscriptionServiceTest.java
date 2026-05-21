@@ -70,8 +70,8 @@ class SubscriptionServiceTest {
                     .stripePriceId("price_1").clientSecret("pi_secret")
                     .status("incomplete").appliedCouponId("EARLY50")
                     .couponDuration(CouponDuration.FOREVER).build();
-            when(stripeService.createSubscription(eq(USER_ID), eq("u@e.com"),
-                    eq(PlanTier.PREMIUM), eq("EUR"), eq("EARLY50"), eq("pm_x")))
+            when(stripeService.createSubscription(USER_ID, "u@e.com",
+                    PlanTier.PREMIUM, "EUR", "EARLY50", "pm_x"))
                     .thenReturn(result);
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
             when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));

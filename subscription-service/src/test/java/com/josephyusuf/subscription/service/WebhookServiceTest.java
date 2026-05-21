@@ -174,7 +174,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("Signature invalide → PaymentException")
-    void invalidSignature_throws() throws Exception {
+    void invalidSignature_throws() {
         when(stripeConfig.getStripeWebhookSecret()).thenReturn(SECRET);
         webhookMock.when(() -> Webhook.constructEvent(anyString(), anyString(), eq(SECRET)))
                 .thenThrow(new SignatureVerificationException("bad sig", "header"));

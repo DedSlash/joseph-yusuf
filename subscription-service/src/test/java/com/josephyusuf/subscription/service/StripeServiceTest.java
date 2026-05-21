@@ -125,11 +125,11 @@ class StripeServiceTest {
 
     @Test
     @DisplayName("createSubscription sans coupon → pas de setCoupon Stripe")
-    void createSubscription_withoutCoupon() throws Exception {
+    void createSubscription_withoutCoupon() {
         when(stripeConfig.getPremiumMonthlyEurPriceId()).thenReturn("price_p_eur");
         when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
-        Customer customer = mockCustomer("cus_new");
+        mockCustomer("cus_new");
         PaymentMethod pm = mock(PaymentMethod.class);
         pmMock.when(() -> PaymentMethod.retrieve("pm_x")).thenReturn(pm);
 
@@ -148,14 +148,13 @@ class StripeServiceTest {
 
     @Test
     @DisplayName("createSubscription avec coupon EARLY50 valide → setCoupon appliqué")
-    void createSubscription_withValidCoupon() throws Exception {
+    void createSubscription_withValidCoupon() {
         when(stripeConfig.getPremiumMonthlyEurPriceId()).thenReturn("price_p_eur");
         when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.empty());
         when(adminClient.validate("EARLY50", userId)).thenReturn(
                 PromoCodeValidation.builder().code("EARLY50").discountPercent(50).valid(true).build());
 
-        Customer customer = mockCustomer("cus_new");
-        assertThat(customer).isNotNull();
+        mockCustomer("cus_new");
         PaymentMethod pm = mock(PaymentMethod.class);
         pmMock.when(() -> PaymentMethod.retrieve("pm_x")).thenReturn(pm);
 
@@ -197,7 +196,7 @@ class StripeServiceTest {
 
     @Test
     @DisplayName("createSubscription : StripeException → PaymentException")
-    void createSubscription_stripeException() throws Exception {
+    void createSubscription_stripeException() {
         when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.empty());
         customerMock.when(() -> Customer.create(any(com.stripe.param.CustomerCreateParams.class)))
                 .thenThrow(new ApiException("Stripe down", "req_1", "api_error", 500, null));
@@ -255,7 +254,7 @@ class StripeServiceTest {
         assertThat(StripeService.toCouponDuration(null)).isNull();
     }
 
-    private Customer mockCustomer(String id) throws Exception {
+    private Customer mockCustomer(String id) {
         Customer customer = mock(Customer.class);
         when(customer.getId()).thenReturn(id);
         customerMock.when(() -> Customer.create(any(com.stripe.param.CustomerCreateParams.class))).thenReturn(customer);
