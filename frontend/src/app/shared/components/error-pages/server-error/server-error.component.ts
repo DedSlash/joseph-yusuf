@@ -34,7 +34,7 @@ export class ServerErrorComponent implements OnInit, OnDestroy {
   countdown = 30;
   private timerId: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private router: Router) {}
+  constructor(private readonly router: Router) {}
 
   ngOnInit(): void {
     this.timerId = setInterval(() => {

@@ -24,7 +24,7 @@ import { Router } from '@angular/router';
 export class OfflineComponent implements OnInit, OnDestroy {
   private readonly onlineListener = () => this.retry();
 
-  constructor(private router: Router) {}
+  constructor(private readonly router: Router) {}
 
   ngOnInit(): void {
     window.addEventListener('online', this.onlineListener);
