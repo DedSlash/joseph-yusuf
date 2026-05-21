@@ -309,9 +309,9 @@ const PLANS: PlanCard[] = [
     /* ── Reset & tokens ── */
     :host {
       display: block;
-      background: #0D0B07;
-      color: #F0E8D0;
-      font-family: 'DM Sans', sans-serif;
+      background: var(--night-1, #0d0e1c);
+      color: var(--text-0, #F5F5F5);
+      font-family: var(--font-sans, 'DM Sans', sans-serif);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -327,17 +327,21 @@ const PLANS: PlanCard[] = [
       padding: 0 2.5rem;
       z-index: 1000;
       transition: background 0.3s, border-color 0.3s;
-      border-bottom: 1px solid transparent;
+      background: rgba(8, 8, 15, 0.55);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .lp-nav.scrolled {
-      background: rgba(13, 11, 7, 0.95);
-      backdrop-filter: blur(12px);
-      border-color: rgba(201, 168, 76, 0.15);
+      background: rgba(8, 8, 15, 0.85);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-color: rgba(255, 255, 255, 0.06);
     }
 
     .lp-logo {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 1.4rem;
       font-weight: 600;
       color: #C9A84C;
@@ -352,14 +356,14 @@ const PLANS: PlanCard[] = [
     }
 
     .lp-nav-link {
-      color: rgba(240, 232, 208, 0.65);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       text-decoration: none;
       font-size: 0.88rem;
       font-weight: 500;
       transition: color 0.2s;
     }
 
-    .lp-nav-link:hover { color: #F0E8D0; }
+    .lp-nav-link:hover { color: var(--text-0, #F5F5F5); }
 
     .lp-nav-actions {
       display: flex;
@@ -369,8 +373,8 @@ const PLANS: PlanCard[] = [
 
     .btn-ghost {
       padding: 0.4rem 1rem;
-      color: #F0E8D0;
-      border: 1px solid rgba(240, 232, 208, 0.2);
+      color: var(--text-0, #F5F5F5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       font-size: 0.85rem;
       text-decoration: none;
@@ -378,23 +382,24 @@ const PLANS: PlanCard[] = [
     }
 
     .btn-ghost:hover {
-      border-color: rgba(240, 232, 208, 0.4);
-      background: rgba(240, 232, 208, 0.05);
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .btn-gold {
       padding: 0.4rem 1rem;
-      background: #C9A84C;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
       color: #0D0B07;
       border: none;
       border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 700;
       text-decoration: none;
-      transition: background 0.2s;
+      transition: background 0.2s, box-shadow 0.2s;
     }
 
-    .btn-gold:hover { background: #DAC372; }
+    .btn-gold:hover { background: linear-gradient(180deg, #F0D88A, #DAC372); box-shadow: 0 10px 28px -8px rgba(201,168,76,0.55); }
 
     /* ── Hero ── */
     .hero {
@@ -419,13 +424,13 @@ const PLANS: PlanCard[] = [
 
     .hero-glow-1 {
       width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(201,168,76,0.1) 0%, rgba(30,60,120,0.08) 40%, transparent 70%);
       top: -100px; left: -100px;
     }
 
     .hero-glow-2 {
       width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(92,219,111,0.06) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(40,80,160,0.1) 0%, rgba(92,219,111,0.04) 50%, transparent 70%);
       bottom: 0; right: 100px;
     }
 
@@ -436,18 +441,19 @@ const PLANS: PlanCard[] = [
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: #C9A84C;
-      border: 1px solid rgba(201, 168, 76, 0.35);
+      border: 1px solid rgba(201, 168, 76, 0.3);
       padding: 0.25rem 0.75rem;
       border-radius: 20px;
       margin-bottom: 1.5rem;
     }
 
     .hero-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: clamp(2.6rem, 5vw, 4rem);
       font-weight: 600;
       line-height: 1.15;
-      color: #F0E8D0;
+      letter-spacing: -0.025em;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 1.5rem;
     }
 
@@ -458,7 +464,7 @@ const PLANS: PlanCard[] = [
 
     .hero-sub {
       font-size: 1rem;
-      color: rgba(240, 232, 208, 0.65);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.75;
       max-width: 480px;
       margin-bottom: 2.5rem;
@@ -473,25 +479,27 @@ const PLANS: PlanCard[] = [
 
     .btn-hero-primary {
       padding: 0.85rem 2rem;
-      background: #C9A84C;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
       color: #0D0B07;
       border: none;
       border-radius: 10px;
       font-size: 0.95rem;
       font-weight: 700;
       text-decoration: none;
-      transition: background 0.2s, transform 0.15s;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     }
 
     .btn-hero-primary:hover {
-      background: #DAC372;
+      background: linear-gradient(180deg, #F0D88A, #DAC372);
+      box-shadow: 0 10px 28px -8px rgba(201,168,76,0.55);
       transform: translateY(-1px);
     }
 
     .btn-hero-ghost {
       padding: 0.85rem 1.75rem;
-      color: rgba(240, 232, 208, 0.75);
-      border: 1px solid rgba(240, 232, 208, 0.2);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 10px;
       font-size: 0.95rem;
       text-decoration: none;
@@ -499,13 +507,13 @@ const PLANS: PlanCard[] = [
     }
 
     .btn-hero-ghost:hover {
-      border-color: rgba(240, 232, 208, 0.4);
-      color: #F0E8D0;
+      border-color: rgba(255, 255, 255, 0.18);
+      color: var(--text-0, #F5F5F5);
     }
 
     .hero-caption {
       font-size: 0.75rem;
-      color: rgba(240, 232, 208, 0.35);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     /* Hero visual */
@@ -518,14 +526,16 @@ const PLANS: PlanCard[] = [
     }
 
     .vis-card {
-      background: #1A1710;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
       border-radius: 14px;
       padding: 1.25rem 1.5rem;
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .vis-card-main {
-      border-color: rgba(201, 168, 76, 0.3);
+      border-color: rgba(255, 255, 255, 0.12);
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
 
@@ -533,15 +543,15 @@ const PLANS: PlanCard[] = [
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: rgba(240,232,208,0.45);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
       margin-bottom: 0.5rem;
     }
 
     .vis-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 2rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.5rem;
     }
 
@@ -587,7 +597,7 @@ const PLANS: PlanCard[] = [
 
     .vis-bar-item span {
       font-size: 0.62rem;
-      color: rgba(240,232,208,0.45);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     .vis-card-secondary {
@@ -599,12 +609,12 @@ const PLANS: PlanCard[] = [
       font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: rgba(240,232,208,0.4);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
       margin-bottom: 0.3rem;
     }
 
     .vis-mini-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 1.35rem;
       color: #5cdb6f;
       font-weight: 600;
@@ -612,7 +622,7 @@ const PLANS: PlanCard[] = [
 
     .vis-mini-sub {
       font-size: 0.68rem;
-      color: rgba(240,232,208,0.4);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
       margin-top: 0.2rem;
     }
 
@@ -622,11 +632,11 @@ const PLANS: PlanCard[] = [
       gap: 0.65rem;
       padding: 0.85rem 1.1rem;
       background: rgba(201,168,76,0.07);
-      border-color: rgba(201,168,76,0.3);
+      border-color: rgba(201,168,76,0.25);
     }
 
     .vis-alert-icon { color: #C9A84C; font-size: 0.9rem; flex-shrink: 0; }
-    .vis-alert-text { font-size: 0.78rem; color: rgba(240,232,208,0.75); line-height: 1.4; }
+    .vis-alert-text { font-size: 0.78rem; color: var(--text-2, rgba(245, 245, 245, 0.65)); line-height: 1.4; }
 
     /* ── Sections communes ── */
     .section {
@@ -649,17 +659,17 @@ const PLANS: PlanCard[] = [
     }
 
     .section-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: clamp(1.8rem, 3.5vw, 2.6rem);
       font-weight: 600;
       line-height: 1.25;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 1.25rem;
     }
 
     .section-sub {
       font-size: 0.95rem;
-      color: rgba(240,232,208,0.6);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.75;
       max-width: 600px;
       margin-bottom: 3.5rem;
@@ -667,7 +677,7 @@ const PLANS: PlanCard[] = [
 
     /* ── Section Principe ── */
     .section-principe {
-      background: linear-gradient(180deg, #0D0B07 0%, #121007 100%);
+      background: linear-gradient(180deg, #0d0e1c 0%, #101325 100%);
     }
 
     .principle-grid {
@@ -706,13 +716,13 @@ const PLANS: PlanCard[] = [
     .principle-card h3 {
       font-size: 1rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.75rem;
     }
 
     .principle-card p {
       font-size: 0.85rem;
-      color: rgba(240,232,208,0.6);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.65;
       margin-bottom: 1.25rem;
     }
@@ -720,8 +730,8 @@ const PLANS: PlanCard[] = [
 
     /* ── Steps ── */
     .section-steps {
-      border-top: 1px solid rgba(201,168,76,0.08);
-      border-bottom: 1px solid rgba(201,168,76,0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .steps-timeline {
@@ -764,7 +774,7 @@ const PLANS: PlanCard[] = [
       width: 1px;
       flex: 1;
       min-height: 32px;
-      background: rgba(201,168,76,0.15);
+      background: rgba(255, 255, 255, 0.08);
       margin: 6px 0;
     }
 
@@ -777,13 +787,13 @@ const PLANS: PlanCard[] = [
     .step-title {
       font-size: 1rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.35rem;
     }
 
     .step-desc {
       font-size: 0.875rem;
-      color: rgba(240,232,208,0.6);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.65;
     }
 
@@ -797,14 +807,16 @@ const PLANS: PlanCard[] = [
 
     .feature-card {
       padding: 1.5rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.1);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
       transition: border-color 0.2s, transform 0.2s;
     }
 
     .feature-card:hover {
-      border-color: rgba(201,168,76,0.3);
+      border-color: rgba(255, 255, 255, 0.18);
       transform: translateY(-2px);
     }
 
@@ -813,23 +825,23 @@ const PLANS: PlanCard[] = [
     .feature-title {
       font-size: 0.9rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.4rem;
     }
 
     .feature-desc {
       font-size: 0.8rem;
-      color: rgba(240,232,208,0.55);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.6;
     }
 
     /* ── Pricing ── */
-    .section-pricing { background: #0D0B07; }
+    .section-pricing { background: #0d0e1c; }
 
     .currency-toggle {
       display: inline-flex;
       gap: 0;
-      border: 1px solid rgba(201,168,76,0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       overflow: hidden;
       margin-bottom: 3rem;
@@ -839,7 +851,7 @@ const PLANS: PlanCard[] = [
       padding: 0.45rem 1.25rem;
       background: transparent;
       border: none;
-      color: rgba(240,232,208,0.5);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
@@ -861,8 +873,10 @@ const PLANS: PlanCard[] = [
     .pricing-card {
       position: relative;
       padding: 2rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.12);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 16px;
       display: flex;
       flex-direction: column;
@@ -873,9 +887,9 @@ const PLANS: PlanCard[] = [
     .pricing-card:hover { transform: translateY(-4px); }
 
     .pricing-card.highlighted {
-      border-color: #C9A84C;
-      background: linear-gradient(160deg, rgba(201,168,76,0.08) 0%, #1A1710 100%);
-      box-shadow: 0 0 0 1px rgba(201,168,76,0.3), 0 16px 48px rgba(201,168,76,0.08);
+      border-color: var(--gold, #C9A84C);
+      background: linear-gradient(160deg, rgba(201,168,76,0.06) 0%, rgba(19, 22, 42, 0.7) 100%);
+      box-shadow: 0 0 0 1px rgba(201,168,76,0.25) inset, 0 30px 60px -20px rgba(201,168,76,0.18);
     }
 
     .pricing-badge {
@@ -895,15 +909,15 @@ const PLANS: PlanCard[] = [
     }
 
     .pricing-name {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 1.5rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
     }
 
     .pricing-tagline {
       font-size: 0.8rem;
-      color: rgba(240,232,208,0.5);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       margin-top: -1rem;
     }
 
@@ -914,15 +928,15 @@ const PLANS: PlanCard[] = [
     }
 
     .price-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 2rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
     }
 
     .price-period {
       font-size: 0.8rem;
-      color: rgba(240,232,208,0.4);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     .pricing-features {
@@ -935,7 +949,7 @@ const PLANS: PlanCard[] = [
 
     .pricing-features li {
       font-size: 0.83rem;
-      color: rgba(240,232,208,0.7);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       display: flex;
       gap: 0.5rem;
       align-items: flex-start;
@@ -951,7 +965,7 @@ const PLANS: PlanCard[] = [
       display: block;
       text-align: center;
       padding: 0.75rem;
-      border: 1px solid rgba(201,168,76,0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       color: #C9A84C;
       text-decoration: none;
@@ -960,19 +974,20 @@ const PLANS: PlanCard[] = [
       transition: background 0.2s, border-color 0.2s;
     }
 
-    .btn-plan:hover { background: rgba(201,168,76,0.1); border-color: #C9A84C; }
+    .btn-plan:hover { background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.4); }
 
     .btn-plan-gold {
-      background: #C9A84C;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
       color: #0D0B07;
       border-color: #C9A84C;
     }
 
-    .btn-plan-gold:hover { background: #DAC372; border-color: #DAC372; }
+    .btn-plan-gold:hover { background: linear-gradient(180deg, #F0D88A, #DAC372); border-color: #DAC372; }
 
     /* ── Audience ── */
     .section-audience {
-      border-top: 1px solid rgba(201,168,76,0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .audience-grid {
@@ -984,8 +999,10 @@ const PLANS: PlanCard[] = [
 
     .audience-card {
       padding: 1.5rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.1);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
       text-align: center;
     }
@@ -994,7 +1011,7 @@ const PLANS: PlanCard[] = [
 
     .audience-card p {
       font-size: 0.85rem;
-      color: rgba(240,232,208,0.65);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.6;
     }
 
@@ -1008,8 +1025,10 @@ const PLANS: PlanCard[] = [
       overflow: hidden;
       text-align: center;
       padding: 5rem 2rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.25);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 20px;
     }
 
@@ -1030,17 +1049,17 @@ const PLANS: PlanCard[] = [
     }
 
     .final-cta-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: clamp(1.8rem, 3.5vw, 2.8rem);
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 1rem;
       position: relative;
     }
 
     .final-cta-sub {
       font-size: 0.95rem;
-      color: rgba(240,232,208,0.55);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       margin-bottom: 2.5rem;
       position: relative;
     }
@@ -1055,7 +1074,7 @@ const PLANS: PlanCard[] = [
 
     /* ── Footer ── */
     .lp-footer {
-      border-top: 1px solid rgba(201,168,76,0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       padding: 2.5rem 2.5rem 2rem;
     }
 
@@ -1075,14 +1094,14 @@ const PLANS: PlanCard[] = [
     }
 
     .footer-logo {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       color: rgba(201,168,76,0.85);
       font-size: 1.1rem;
     }
 
     .footer-copy {
       font-size: 0.78rem;
-      color: rgba(240,232,208,0.35);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     .footer-columns {
@@ -1108,7 +1127,7 @@ const PLANS: PlanCard[] = [
 
     .footer-col a {
       font-size: 0.83rem;
-      color: rgba(240,232,208,0.5);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       text-decoration: none;
       transition: color 0.2s;
     }

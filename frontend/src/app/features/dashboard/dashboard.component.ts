@@ -387,10 +387,12 @@ import { Router } from '@angular/router';
   `,
   styles: [`
     .dashboard {
-      padding: 2rem;
-      padding-top: 5rem;
-      max-width: 1100px;
+      padding: 32px 28px 80px;
+      padding-top: 92px;
+      max-width: 1280px;
       margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
 
     /* ── Carte d'accueil ── */
@@ -399,30 +401,31 @@ import { Router } from '@angular/router';
     }
 
     .welcome-card {
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.2);
-      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 18px;
       padding: 2.5rem;
       text-align: center;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 6px 24px -10px rgba(0, 0, 0, 0.5);
     }
 
     .welcome-icon {
       font-size: 2rem;
-      color: #C9A84C;
+      color: var(--gold-light);
       margin-bottom: 1rem;
     }
 
     .welcome-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.8rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 600;
       margin: 0 0 1rem;
     }
 
     .welcome-intro {
-      color: #F0E8D0;
-      opacity: 0.75;
+      color: var(--text-1);
       font-size: 0.95rem;
       line-height: 1.7;
       max-width: 680px;
@@ -430,8 +433,7 @@ import { Router } from '@angular/router';
     }
 
     .welcome-intro strong {
-      color: #C9A84C;
-      opacity: 1;
+      color: var(--gold-light);
     }
 
     .welcome-steps {
@@ -454,9 +456,9 @@ import { Router } from '@angular/router';
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: rgba(201, 168, 76, 0.15);
-      border: 1px solid rgba(201, 168, 76, 0.4);
-      color: #C9A84C;
+      background: var(--gold-tint);
+      border: 1px solid var(--line-strong);
+      color: var(--gold-light);
       font-size: 0.8rem;
       font-weight: 700;
       display: flex;
@@ -467,13 +469,13 @@ import { Router } from '@angular/router';
 
     .step strong {
       display: block;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.9rem;
       margin-bottom: 0.25rem;
     }
 
     .step p {
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.6;
       font-size: 0.85rem;
       line-height: 1.6;
@@ -481,7 +483,7 @@ import { Router } from '@angular/router';
     }
 
     .step em {
-      color: #C9A84C;
+      color: var(--gold-light);
       font-style: normal;
       font-weight: 500;
     }
@@ -489,10 +491,10 @@ import { Router } from '@angular/router';
     .btn-start {
       display: inline-block;
       padding: 0.75rem 2rem;
-      background: rgba(201, 168, 76, 0.15);
-      border: 1px solid rgba(201, 168, 76, 0.5);
+      background: var(--gold-tint);
+      border: 1px solid var(--gold);
       border-radius: 8px;
-      color: #C9A84C;
+      color: var(--gold-light);
       font-size: 0.9rem;
       font-weight: 600;
       text-decoration: none;
@@ -500,7 +502,7 @@ import { Router } from '@angular/router';
     }
 
     .btn-start:hover {
-      background: rgba(201, 168, 76, 0.25);
+      background: var(--line-strong);
     }
 
     /* ── Données insuffisantes ── */
@@ -510,8 +512,8 @@ import { Router } from '@angular/router';
       align-items: flex-start;
       margin-top: 1rem;
       padding: 1rem 1.25rem;
-      background: rgba(201, 168, 76, 0.05);
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      background: var(--gold-tint);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
     }
 
@@ -524,20 +526,20 @@ import { Router } from '@angular/router';
     .insufficient-title {
       font-size: 0.85rem;
       font-weight: 600;
-      color: #C9A84C;
+      color: var(--gold-light);
       margin: 0 0 0.3rem;
     }
 
     .insufficient-body {
       font-size: 0.82rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.65;
       line-height: 1.6;
       margin: 0;
     }
 
     .link-import {
-      color: #C9A84C;
+      color: var(--gold-light);
       text-decoration: underline;
       text-underline-offset: 2px;
     }
@@ -547,9 +549,9 @@ import { Router } from '@angular/router';
     }
 
     .summary-card {
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.15);
-      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
       padding: 1.5rem 2rem;
     }
 
@@ -561,21 +563,21 @@ import { Router } from '@angular/router';
 
     .summary-label {
       font-size: 0.85rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.6;
     }
 
     .summary-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 2.2rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin: 0.25rem 0 0;
       font-weight: 600;
     }
 
     .status-badge {
       padding: 0.3rem 0.75rem;
-      border-radius: 12px;
+      border-radius: 18px;
       font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
@@ -589,19 +591,19 @@ import { Router } from '@angular/router';
 
     .status-abundance {
       background: rgba(40, 167, 69, 0.15);
-      color: #5cdb6f;
+      color: #5cdb83;
       border: 1px solid rgba(40, 167, 69, 0.3);
     }
 
     .status-lean {
       background: rgba(220, 53, 69, 0.15);
-      color: #ff6b7a;
+      color: #ff7a6c;
       border: 1px solid rgba(220, 53, 69, 0.3);
     }
 
     .status-normal {
       background: rgba(52, 152, 219, 0.15);
-      color: #5dade2;
+      color: #7fc1ea;
       border: 1px solid rgba(52, 152, 219, 0.3);
     }
 
@@ -618,16 +620,16 @@ import { Router } from '@angular/router';
     }
 
     .positive {
-      color: #5cdb6f;
+      color: #5cdb83;
     }
 
     .negative {
-      color: #ff6b7a;
+      color: #ff7a6c;
     }
 
     .vs-average {
       font-size: 0.8rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.5;
     }
 
@@ -642,7 +644,7 @@ import { Router } from '@angular/router';
     .status-banner.abundance {
       background: rgba(40, 167, 69, 0.08);
       border: 1px solid rgba(40, 167, 69, 0.2);
-      color: #5cdb6f;
+      color: #5cdb83;
     }
 
     .status-banner.lean {
@@ -655,7 +657,7 @@ import { Router } from '@angular/router';
     .joseph-advice {
       margin-top: 1rem;
       padding: 1.25rem 1.5rem;
-      border-radius: 10px;
+      border-radius: 14px;
       display: flex;
       gap: 1rem;
       align-items: flex-start;
@@ -663,7 +665,7 @@ import { Router } from '@angular/router';
 
     .joseph-advice.advice-normal {
       background: rgba(201, 168, 76, 0.06);
-      border: 1px solid rgba(201, 168, 76, 0.2);
+      border: 1px solid var(--line);
     }
 
     .joseph-advice.advice-abundance {
@@ -681,13 +683,13 @@ import { Router } from '@angular/router';
     .advice-title {
       font-weight: 600;
       font-size: 0.9rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin: 0 0 0.35rem;
     }
 
     .advice-text {
       font-size: 0.85rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.75;
       line-height: 1.6;
       margin: 0 0 0.75rem;
@@ -700,7 +702,7 @@ import { Router } from '@angular/router';
       display: flex;
       justify-content: space-between;
       font-size: 0.65rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.5;
       margin-bottom: 0.3rem;
       text-transform: uppercase;
@@ -728,13 +730,13 @@ import { Router } from '@angular/router';
       background: #C9A84C;
       border-radius: 50%;
       transform: translateX(-50%);
-      border: 2px solid #0D0B07;
+      border: 2px solid var(--night-1);
       transition: left 0.4s ease;
     }
 
     .gauge-hint {
       font-size: 0.72rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.55;
       margin: 0.4rem 0 0;
     }
@@ -743,9 +745,9 @@ import { Router } from '@angular/router';
     .reserve-section { margin-bottom: 2.5rem; }
 
     .reserve-card {
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.15);
-      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
       padding: 1.25rem 1.5rem;
       position: relative;
       overflow: hidden;
@@ -771,7 +773,7 @@ import { Router } from '@angular/router';
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 12px;
+      border-radius: 18px;
     }
 
     .reserve-overlay-content {
@@ -783,15 +785,15 @@ import { Router } from '@angular/router';
     .overlay-icon {
       display: block;
       font-size: 1.5rem;
-      color: #C9A84C;
+      color: var(--gold-light);
       margin-bottom: 0.65rem;
     }
 
     .overlay-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.15rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin-bottom: 0.6rem;
     }
 
@@ -822,15 +824,15 @@ import { Router } from '@angular/router';
       gap: 0.5rem;
       margin-top: 0.75rem;
       padding: 0.5rem 0.75rem;
-      background: rgba(201, 168, 76, 0.05);
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      background: var(--gold-tint);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
       font-size: 0.77rem;
       color: rgba(240, 232, 208, 0.5);
     }
 
     .gauge-upgrade-link {
-      color: #C9A84C;
+      color: var(--gold-light);
       text-decoration: underline;
       text-underline-offset: 2px;
     }
@@ -844,7 +846,7 @@ import { Router } from '@angular/router';
 
     .reserve-label {
       font-size: 0.8rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.6;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -852,24 +854,24 @@ import { Router } from '@angular/router';
 
     .reserve-tooltip {
       font-size: 0.75rem;
-      color: #C9A84C;
+      color: var(--gold-light);
       cursor: help;
       opacity: 0.7;
     }
 
     .reserve-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.8rem;
       font-weight: 600;
       margin-bottom: 0.4rem;
     }
 
-    .reserve-amount.positive { color: #5cdb6f; }
-    .reserve-amount.neutral  { color: #F0E8D0; opacity: 0.5; }
+    .reserve-amount.positive { color: #5cdb83; }
+    .reserve-amount.neutral  { color: var(--text-0); opacity: 0.5; }
 
     .reserve-sub {
       font-size: 0.8rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.55;
       line-height: 1.6;
       margin: 0;
@@ -882,13 +884,13 @@ import { Router } from '@angular/router';
       align-items: flex-start;
       margin-top: 1.25rem;
       padding: 1rem 1.25rem;
-      background: rgba(201, 168, 76, 0.05);
-      border: 1px solid rgba(201, 168, 76, 0.2);
+      background: var(--gold-tint);
+      border: 1px solid var(--line);
       border-radius: 8px;
     }
 
     .suggestion-icon {
-      color: #C9A84C;
+      color: var(--gold-light);
       font-size: 1rem;
       flex-shrink: 0;
       margin-top: 2px;
@@ -897,13 +899,13 @@ import { Router } from '@angular/router';
     .joseph-suggestion strong {
       display: block;
       font-size: 0.85rem;
-      color: #C9A84C;
+      color: var(--gold-light);
       margin-bottom: 0.3rem;
     }
 
     .joseph-suggestion p, .joseph-active-message p {
       font-size: 0.82rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.75;
       line-height: 1.6;
       margin: 0 0 0.75rem;
@@ -913,17 +915,17 @@ import { Router } from '@angular/router';
 
     .btn-switch-joseph {
       padding: 0.4rem 0.85rem;
-      background: rgba(201, 168, 76, 0.15);
-      border: 1px solid rgba(201, 168, 76, 0.4);
+      background: var(--gold-tint);
+      border: 1px solid var(--line-strong);
       border-radius: 6px;
-      color: #C9A84C;
+      color: var(--gold-light);
       font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
     }
 
-    .btn-switch-joseph:hover { background: rgba(201, 168, 76, 0.25); }
+    .btn-switch-joseph:hover { background: var(--line-strong); }
 
     .rule-change-warning {
       display: flex;
@@ -942,7 +944,7 @@ import { Router } from '@angular/router';
     .warning-icon { color: #f5b041; flex-shrink: 0; }
 
     .warning-link {
-      color: #C9A84C;
+      color: var(--gold-light);
       text-decoration: underline;
       text-underline-offset: 2px;
     }
@@ -983,9 +985,9 @@ import { Router } from '@angular/router';
     .active-rule-badge {
       font-size: 0.72rem;
       font-weight: 600;
-      color: #C9A84C;
-      background: rgba(201, 168, 76, 0.1);
-      border: 1px solid rgba(201, 168, 76, 0.3);
+      color: var(--gold-light);
+      background: var(--gold-tint);
+      border: 1px solid var(--line-strong);
       padding: 0.2rem 0.6rem;
       border-radius: 20px;
       letter-spacing: 0.02em;
@@ -993,9 +995,9 @@ import { Router } from '@angular/router';
     }
 
     .section-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.3rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin: 0 0 1.25rem;
     }
 
@@ -1017,7 +1019,7 @@ import { Router } from '@angular/router';
       background: rgba(201,168,76,0.12);
       border: 1px solid rgba(201,168,76,0.4);
       border-radius: 20px;
-      color: #C9A84C;
+      color: var(--gold-light);
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
@@ -1033,10 +1035,10 @@ import { Router } from '@angular/router';
 
     .btn-change-rule {
       padding: 0.5rem 1rem;
-      background: rgba(201, 168, 76, 0.1);
-      border: 1px solid rgba(201, 168, 76, 0.3);
+      background: var(--gold-tint);
+      border: 1px solid var(--line-strong);
       border-radius: 6px;
-      color: #C9A84C;
+      color: var(--gold-light);
       font-size: 0.8rem;
       font-weight: 500;
       cursor: pointer;
@@ -1044,7 +1046,7 @@ import { Router } from '@angular/router';
     }
 
     .btn-change-rule:hover {
-      background: rgba(201, 168, 76, 0.2);
+      background: var(--line);
     }
 
     .allocation-grid {
@@ -1054,9 +1056,9 @@ import { Router } from '@angular/router';
     }
 
     .allocation-card {
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.1);
-      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
       padding: 1.25rem;
     }
 
@@ -1069,26 +1071,26 @@ import { Router } from '@angular/router';
 
     .alloc-category {
       font-size: 0.85rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 500;
     }
 
     .alloc-percentage {
       font-size: 0.8rem;
-      color: #C9A84C;
+      color: var(--gold-light);
       font-weight: 600;
     }
 
     .alloc-amount {
       font-size: 1.1rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 600;
       margin-bottom: 0.75rem;
     }
 
     .alloc-bar-bg {
       height: 4px;
-      background: rgba(201, 168, 76, 0.1);
+      background: var(--gold-tint);
       border-radius: 2px;
       overflow: hidden;
     }
@@ -1118,25 +1120,25 @@ import { Router } from '@angular/router';
 
     .pdf-select {
       padding: 0.3rem 0.5rem;
-      background: rgba(13, 11, 7, 0.7);
-      border: 1px solid rgba(201, 168, 76, 0.2);
+      background: rgba(8, 8, 15, 0.5);
+      border: 1px solid var(--line);
       border-radius: 5px;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.75rem;
       outline: none;
       cursor: pointer;
     }
 
     .pdf-select:focus {
-      border-color: rgba(201, 168, 76, 0.5);
+      border-color: var(--gold);
     }
 
     .btn-pdf {
       padding: 0.4rem 0.9rem;
-      background: rgba(201, 168, 76, 0.1);
+      background: var(--gold-tint);
       border: 1px solid rgba(201, 168, 76, 0.35);
       border-radius: 6px;
-      color: #C9A84C;
+      color: var(--gold-light);
       font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
@@ -1144,24 +1146,24 @@ import { Router } from '@angular/router';
       white-space: nowrap;
     }
 
-    .btn-pdf:hover:not(:disabled) { background: rgba(201, 168, 76, 0.2); }
+    .btn-pdf:hover:not(:disabled) { background: var(--line); }
     .btn-pdf:disabled { opacity: 0.45; cursor: not-allowed; }
 
     .btn-pdf-secondary {
       background: transparent;
-      border-color: rgba(201, 168, 76, 0.2);
-      color: #F0E8D0;
+      border-color: var(--line);
+      color: var(--text-0);
       opacity: 0.7;
     }
 
     .btn-pdf-secondary:hover:not(:disabled) {
-      background: rgba(201, 168, 76, 0.08);
+      background: var(--gold-tint);
       opacity: 1;
     }
 
     .pdf-error {
       font-size: 0.8rem;
-      color: #ff6b7a;
+      color: #ff7a6c;
       margin-bottom: 0.75rem;
     }
 
@@ -1172,8 +1174,8 @@ import { Router } from '@angular/router';
     .history-table {
       width: 100%;
       border-collapse: collapse;
-      background: #1A1710;
-      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border-radius: 14px;
       overflow: hidden;
     }
 
@@ -1196,7 +1198,7 @@ import { Router } from '@angular/router';
     }
 
     .no-baseline {
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.35;
       font-size: 0.85rem;
     }
@@ -1206,18 +1208,18 @@ import { Router } from '@angular/router';
       padding: 0.85rem 1.25rem;
       font-size: 0.8rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.6;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.1);
+      border-bottom: 1px solid var(--line-soft);
     }
 
     .history-table td {
       padding: 0.85rem 1.25rem;
       font-size: 0.9rem;
-      color: #F0E8D0;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.05);
+      color: var(--text-0);
+      border-bottom: 1px solid var(--line-soft);
     }
 
     .history-table tbody tr:last-child td {
@@ -1235,21 +1237,21 @@ import { Router } from '@angular/router';
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.25rem;
-      background: rgba(13, 11, 7, 0.5);
-      border: 1px solid rgba(201, 168, 76, 0.1);
+      background: rgba(8, 8, 15, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
     }
 
     .rule-item:hover:not(.locked) {
-      border-color: rgba(201, 168, 76, 0.3);
-      background: rgba(201, 168, 76, 0.05);
+      border-color: var(--line-strong);
+      background: var(--gold-tint);
     }
 
     .rule-item.active {
-      border-color: #C9A84C;
-      background: rgba(201, 168, 76, 0.08);
+      border-color: var(--gold-light);
+      background: var(--gold-tint);
     }
 
     /* ── Upgrade / Plan badge ── */
@@ -1260,9 +1262,9 @@ import { Router } from '@angular/router';
       align-items: center;
       justify-content: space-between;
       padding: 1.25rem 1.5rem;
-      background: linear-gradient(135deg, rgba(201, 168, 76, 0.08) 0%, rgba(201, 168, 76, 0.04) 100%);
-      border: 1px solid rgba(201, 168, 76, 0.25);
-      border-radius: 12px;
+      background: linear-gradient(135deg, var(--gold-tint) 0%, var(--gold-tint) 100%);
+      border: 1px solid var(--line-strong);
+      border-radius: 18px;
       gap: 1rem;
     }
 
@@ -1274,7 +1276,7 @@ import { Router } from '@angular/router';
 
     .upgrade-icon {
       font-size: 1.4rem;
-      color: #C9A84C;
+      color: var(--gold-light);
       flex-shrink: 0;
       margin-top: 2px;
     }
@@ -1282,14 +1284,14 @@ import { Router } from '@angular/router';
     .upgrade-title {
       display: block;
       font-size: 0.95rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 600;
       margin-bottom: 0.25rem;
     }
 
     .upgrade-desc {
       font-size: 0.82rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.6;
       margin: 0;
       line-height: 1.4;
@@ -1319,21 +1321,21 @@ import { Router } from '@angular/router';
       padding: 0.75rem 1.25rem;
       background: rgba(92, 219, 111, 0.06);
       border: 1px solid rgba(92, 219, 111, 0.2);
-      border-radius: 10px;
+      border-radius: 14px;
     }
 
-    .plan-badge-icon { color: #5cdb6f; font-size: 1rem; }
+    .plan-badge-icon { color: #5cdb83; font-size: 1rem; }
 
     .plan-badge-label {
       font-size: 0.85rem;
-      color: #5cdb6f;
+      color: #5cdb83;
       font-weight: 600;
       flex: 1;
     }
 
     .btn-manage-plan {
       font-size: 0.78rem;
-      color: #C9A84C;
+      color: var(--gold-light);
       text-decoration: underline;
       cursor: pointer;
     }
@@ -1351,7 +1353,7 @@ import { Router } from '@angular/router';
 
     .rule-name {
       font-size: 0.9rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 500;
     }
 
@@ -1360,13 +1362,13 @@ import { Router } from '@angular/router';
       border-radius: 4px;
       font-size: 0.65rem;
       font-weight: 600;
-      background: rgba(201, 168, 76, 0.2);
-      color: #C9A84C;
+      background: var(--line);
+      color: var(--gold-light);
       text-transform: uppercase;
     }
 
     .rule-check {
-      color: #C9A84C;
+      color: var(--gold-light);
       font-size: 1.1rem;
     }
 

@@ -508,9 +508,9 @@ interface ImportRow {
     }
 
     .page-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.8rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin-bottom: 1.5rem;
     }
 
@@ -533,16 +533,16 @@ interface ImportRow {
 
     .tab-title {
       font-size: 1rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin: 0;
     }
 
     .btn-add, .btn-import {
       padding: 0.5rem 1rem;
-      background: rgba(201, 168, 76, 0.1);
-      border: 1px solid rgba(201, 168, 76, 0.3);
+      background: var(--line-soft);
+      border: 1px solid var(--line-strong);
       border-radius: 6px;
-      color: #C9A84C;
+      color: var(--gold);
       font-size: 0.8rem;
       font-weight: 500;
       cursor: pointer;
@@ -553,7 +553,7 @@ interface ImportRow {
     }
 
     .btn-add:hover:not(:disabled), .btn-import:hover:not(:disabled) {
-      background: rgba(201, 168, 76, 0.2);
+      background: var(--line);
     }
 
     .btn-add:disabled, .btn-import:disabled {
@@ -572,9 +572,10 @@ interface ImportRow {
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.25rem;
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.1);
-      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 14px;
     }
 
     .source-info {
@@ -585,14 +586,13 @@ interface ImportRow {
 
     .source-name {
       font-size: 0.9rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 500;
     }
 
     .source-type {
       font-size: 0.75rem;
-      color: #F0E8D0;
-      opacity: 0.5;
+      color: var(--text-3);
     }
 
     .source-meta {
@@ -603,7 +603,7 @@ interface ImportRow {
 
     .source-currency {
       font-size: 0.8rem;
-      color: #C9A84C;
+      color: var(--gold);
       font-weight: 500;
     }
 
@@ -616,8 +616,8 @@ interface ImportRow {
     }
 
     .source-status.active {
-      background: rgba(40, 167, 69, 0.15);
-      color: #5cdb6f;
+      background: rgba(92, 219, 131, 0.15);
+      color: #5cdb83;
     }
 
     .source-status.inactive {
@@ -631,21 +631,21 @@ interface ImportRow {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(201, 168, 76, 0.08);
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
-      color: #C9A84C;
+      color: var(--gold);
       cursor: pointer;
       transition: background 0.2s;
       font-size: 0.8rem;
     }
 
     .btn-icon:hover {
-      background: rgba(201, 168, 76, 0.2);
+      background: var(--line);
     }
 
     .btn-icon-danger {
-      color: #ff6b7a;
+      color: #ff7a6c;
       background: rgba(220, 53, 69, 0.08);
       border-color: rgba(220, 53, 69, 0.15);
     }
@@ -657,13 +657,12 @@ interface ImportRow {
     .empty-state {
       text-align: center;
       padding: 3rem 1rem;
-      color: #F0E8D0;
-      opacity: 0.6;
+      color: var(--text-2);
     }
 
     .empty-hint {
       font-size: 0.85rem;
-      opacity: 0.7;
+      color: var(--text-3);
       margin-top: 0.5rem;
     }
 
@@ -674,16 +673,16 @@ interface ImportRow {
 
     .select-input {
       padding: 0.5rem 0.75rem;
-      background: rgba(13, 11, 7, 0.6);
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      background: rgba(8, 8, 15, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.85rem;
       outline: none;
     }
 
     .select-input:focus {
-      border-color: #C9A84C;
+      border-color: var(--gold);
     }
 
     .entries-form {
@@ -697,9 +696,10 @@ interface ImportRow {
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.25rem;
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.1);
-      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 14px;
     }
 
     .entry-left {
@@ -710,20 +710,18 @@ interface ImportRow {
 
     .entry-label {
       font-size: 0.9rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 500;
     }
 
     .entry-converted {
       font-size: 0.75rem;
-      color: #C9A84C;
-      opacity: 0.8;
+      color: var(--gold-light);
     }
 
     .currency-hint {
       font-size: 0.75rem;
-      color: #C9A84C;
-      opacity: 0.8;
+      color: var(--gold-light);
       margin-top: 0.25rem;
     }
 
@@ -735,7 +733,7 @@ interface ImportRow {
 
     .entry-currency {
       font-size: 0.8rem;
-      color: #C9A84C;
+      color: var(--gold);
       font-weight: 500;
     }
 
@@ -747,18 +745,18 @@ interface ImportRow {
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
-    .entry-badge-update { background: rgba(201,168,76,0.15); color: #C9A84C; }
-    .entry-badge-new { background: rgba(100,200,100,0.15); color: #7ec77e; }
+    .entry-badge-update { background: rgba(255,255,255,0.08); color: var(--gold); }
+    .entry-badge-new { background: rgba(92,219,131,0.15); color: #5cdb83; }
 
     .tips-button {
       display: flex;
       align-items: center;
       gap: 0.3rem;
       padding: 0.35rem 0.8rem;
-      background: rgba(201,168,76,0.12);
-      border: 1px solid rgba(201,168,76,0.4);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--line-strong);
       border-radius: 20px;
-      color: #C9A84C;
+      color: var(--gold);
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
@@ -766,10 +764,10 @@ interface ImportRow {
       transition: background 0.2s;
       white-space: nowrap;
     }
-    .tips-button:hover { background: rgba(201,168,76,0.22); }
+    .tips-button:hover { background: var(--line); }
     @keyframes tipsPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.3); }
-      50% { box-shadow: 0 0 0 4px rgba(201,168,76,0); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(var(--gold-rgb, 201,168,76),0.3); }
+      50% { box-shadow: 0 0 0 4px rgba(var(--gold-rgb, 201,168,76),0); }
     }
 
     .entries-footer {
@@ -778,9 +776,10 @@ interface ImportRow {
       align-items: center;
       margin-top: 1.5rem;
       padding: 1rem 1.25rem;
-      background: rgba(201, 168, 76, 0.05);
-      border: 1px solid rgba(201, 168, 76, 0.15);
-      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 14px;
     }
 
     .total-display {
@@ -791,13 +790,12 @@ interface ImportRow {
 
     .total-label {
       font-size: 0.85rem;
-      color: #F0E8D0;
-      opacity: 0.7;
+      color: var(--text-2);
     }
 
     .total-amount {
       font-size: 1.2rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 600;
     }
 
@@ -810,39 +808,41 @@ interface ImportRow {
     }
 
     .status-abundance {
-      background: rgba(40, 167, 69, 0.15);
-      color: #5cdb6f;
+      background: rgba(92, 219, 131, 0.15);
+      color: #5cdb83;
     }
 
     .status-lean {
-      background: rgba(220, 53, 69, 0.15);
-      color: #ff6b7a;
+      background: rgba(255, 122, 108, 0.15);
+      color: #ff7a6c;
     }
 
     .status-normal {
-      background: rgba(52, 152, 219, 0.15);
-      color: #5dade2;
+      background: rgba(127, 193, 234, 0.15);
+      color: #7fc1ea;
     }
 
     .btn-save {
       padding: 0.6rem 1.5rem;
-      background: #C9A84C;
-      color: #0D0B07;
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
+      color: #1b1500;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
+      box-shadow: 0 8px 24px -8px var(--gold-glow);
     }
 
     .btn-save:hover:not(:disabled) {
-      background: #DAC372;
+      filter: brightness(1.1);
     }
 
     .btn-save:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     .dialog-form {
@@ -859,35 +859,34 @@ interface ImportRow {
 
     .form-group label {
       font-size: 0.85rem;
-      color: #F0E8D0;
-      opacity: 0.8;
+      color: var(--text-1);
     }
 
     .form-input {
       padding: 0.65rem 0.85rem;
-      background: rgba(13, 11, 7, 0.6);
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      background: rgba(8, 8, 15, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.9rem;
       outline: none;
       transition: border-color 0.2s;
     }
 
     .form-input:focus {
-      border-color: #C9A84C;
+      border-color: var(--gold);
     }
 
     .form-input::placeholder {
-      color: rgba(240, 232, 208, 0.3);
+      color: var(--text-3);
     }
 
     .btn-cancel {
       padding: 0.5rem 1rem;
       background: transparent;
-      border: 1px solid rgba(240, 232, 208, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 6px;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.85rem;
       cursor: pointer;
       margin-right: 0.5rem;
@@ -895,22 +894,24 @@ interface ImportRow {
 
     .btn-confirm {
       padding: 0.5rem 1rem;
-      background: #C9A84C;
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
       border: none;
-      border-radius: 6px;
-      color: #0D0B07;
+      border-radius: 8px;
+      color: #1b1500;
       font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
+      box-shadow: 0 8px 24px -8px var(--gold-glow);
     }
 
     .btn-confirm:hover:not(:disabled) {
-      background: #DAC372;
+      filter: brightness(1.1);
     }
 
     .btn-confirm:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     .btn-danger {
@@ -929,7 +930,7 @@ interface ImportRow {
     }
 
     .delete-message {
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.9rem;
       line-height: 1.6;
     }
@@ -946,10 +947,10 @@ interface ImportRow {
       align-items: flex-start;
       gap: 1rem;
       padding: 1rem 1.25rem;
-      background: rgba(13, 11, 7, 0.5);
-      border: 1px solid rgba(201, 168, 76, 0.15);
-      border-radius: 8px;
-      color: #F0E8D0;
+      background: rgba(8, 8, 15, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      color: var(--text-0);
       cursor: pointer;
       text-align: left;
       transition: border-color 0.2s, background 0.2s;
@@ -957,13 +958,13 @@ interface ImportRow {
     }
 
     .btn-option:hover {
-      border-color: rgba(201, 168, 76, 0.4);
-      background: rgba(201, 168, 76, 0.05);
+      border-color: rgba(255, 255, 255, 0.16);
+      background: rgba(28, 42, 77, 0.35);
     }
 
     .btn-option i {
       font-size: 1.2rem;
-      color: #C9A84C;
+      color: var(--gold);
       margin-top: 0.1rem;
     }
 
@@ -975,7 +976,7 @@ interface ImportRow {
 
     .option-desc {
       font-size: 0.75rem;
-      opacity: 0.6;
+      color: var(--text-3);
     }
 
     .btn-option-danger:hover {
@@ -984,7 +985,7 @@ interface ImportRow {
     }
 
     .btn-option-danger i {
-      color: #ff6b7a;
+      color: #ff7a6c;
     }
 
     /* Import styles */
@@ -994,9 +995,9 @@ interface ImportRow {
       justify-content: space-between;
       gap: 1rem;
       padding: 0.85rem 1.1rem;
-      background: rgba(92, 219, 111, 0.05);
-      border: 1px solid rgba(92, 219, 111, 0.2);
-      border-radius: 8px;
+      background: rgba(92, 219, 131, 0.05);
+      border: 1px solid rgba(92, 219, 131, 0.2);
+      border-radius: 14px;
       margin-bottom: 1.1rem;
     }
 
@@ -1008,7 +1009,7 @@ interface ImportRow {
 
     .template-icon {
       font-size: 1.4rem;
-      color: #5cdb6f;
+      color: #5cdb83;
       flex-shrink: 0;
     }
 
@@ -1016,13 +1017,13 @@ interface ImportRow {
       display: block;
       font-size: 0.83rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0);
     }
 
     .template-sub {
       display: block;
       font-size: 0.72rem;
-      color: rgba(240, 232, 208, 0.5);
+      color: var(--text-3);
       margin-top: 0.15rem;
       font-family: monospace;
     }
@@ -1033,10 +1034,10 @@ interface ImportRow {
       align-items: center;
       gap: 0.4rem;
       padding: 0.45rem 0.9rem;
-      background: rgba(92, 219, 111, 0.1);
-      border: 1px solid rgba(92, 219, 111, 0.35);
+      background: rgba(92, 219, 131, 0.1);
+      border: 1px solid rgba(92, 219, 131, 0.35);
       border-radius: 6px;
-      color: #5cdb6f;
+      color: #5cdb83;
       font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
@@ -1044,18 +1045,18 @@ interface ImportRow {
       transition: background 0.2s;
     }
 
-    .btn-template:hover { background: rgba(92, 219, 111, 0.18); }
+    .btn-template:hover { background: rgba(92, 219, 131, 0.18); }
 
     .label-hint {
       font-size: 0.72rem;
-      color: rgba(240, 232, 208, 0.45);
+      color: var(--text-3);
       font-weight: 400;
     }
 
     /* ── Bloc aide IA ── */
     .ai-help-block {
-      border: 1px solid rgba(201, 168, 76, 0.18);
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
       overflow: hidden;
       margin-bottom: 1.1rem;
     }
@@ -1066,16 +1067,16 @@ interface ImportRow {
       align-items: center;
       justify-content: space-between;
       padding: 0.7rem 1rem;
-      background: rgba(201, 168, 76, 0.05);
+      background: rgba(28, 42, 77, 0.3);
       border: none;
       cursor: pointer;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.82rem;
       font-weight: 500;
       transition: background 0.2s;
     }
 
-    .ai-help-toggle:hover { background: rgba(201, 168, 76, 0.1); }
+    .ai-help-toggle:hover { background: rgba(28, 42, 77, 0.5); }
 
     .ai-help-toggle-left {
       display: flex;
@@ -1084,24 +1085,24 @@ interface ImportRow {
     }
 
     .ai-icon {
-      color: #C9A84C;
+      color: var(--gold);
       font-size: 0.85rem;
     }
 
     .ai-help-toggle .pi-chevron-up,
     .ai-help-toggle .pi-chevron-down {
       font-size: 0.75rem;
-      color: rgba(240, 232, 208, 0.45);
+      color: var(--text-3);
     }
 
     .ai-help-body {
       padding: 1rem 1.1rem 1.1rem;
-      border-top: 1px solid rgba(201, 168, 76, 0.12);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .ai-help-intro {
       font-size: 0.82rem;
-      color: rgba(240, 232, 208, 0.65);
+      color: var(--text-2);
       line-height: 1.6;
       margin-bottom: 1rem;
     }
@@ -1124,9 +1125,9 @@ interface ImportRow {
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: rgba(201, 168, 76, 0.12);
-      border: 1px solid rgba(201, 168, 76, 0.35);
-      color: #C9A84C;
+      background: var(--line-soft);
+      border: 1px solid var(--line-strong);
+      color: var(--gold);
       font-size: 0.7rem;
       font-weight: 700;
       display: flex;
@@ -1137,12 +1138,12 @@ interface ImportRow {
 
     .ai-steps li div {
       font-size: 0.82rem;
-      color: rgba(240, 232, 208, 0.75);
+      color: var(--text-1);
       line-height: 1.55;
     }
 
     .ai-steps li strong {
-      color: #F0E8D0;
+      color: var(--text-0);
       font-weight: 600;
     }
 
@@ -1152,17 +1153,17 @@ interface ImportRow {
       font-weight: 600;
       padding: 0.1rem 0.45rem;
       border-radius: 4px;
-      background: rgba(201, 168, 76, 0.1);
-      border: 1px solid rgba(201, 168, 76, 0.25);
-      color: #C9A84C;
+      background: var(--line-soft);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--gold);
       margin: 0 1px;
     }
 
     .ai-prompt-box {
       margin-top: 0.6rem;
       padding: 0.75rem 1rem;
-      background: rgba(13, 11, 7, 0.6);
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      background: rgba(8, 8, 15, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
       display: flex;
       align-items: flex-start;
@@ -1171,7 +1172,7 @@ interface ImportRow {
 
     .ai-prompt-text {
       font-size: 0.78rem;
-      color: rgba(240, 232, 208, 0.6);
+      color: var(--text-2);
       line-height: 1.6;
       font-style: italic;
       flex: 1;
@@ -1183,10 +1184,10 @@ interface ImportRow {
       align-items: center;
       gap: 0.3rem;
       padding: 0.3rem 0.65rem;
-      background: rgba(201, 168, 76, 0.1);
-      border: 1px solid rgba(201, 168, 76, 0.3);
+      background: var(--line-soft);
+      border: 1px solid var(--line-strong);
       border-radius: 5px;
-      color: #C9A84C;
+      color: var(--gold);
       font-size: 0.72rem;
       font-weight: 600;
       cursor: pointer;
@@ -1195,11 +1196,11 @@ interface ImportRow {
       align-self: flex-start;
     }
 
-    .btn-copy-prompt:hover { background: rgba(201, 168, 76, 0.18); }
+    .btn-copy-prompt:hover { background: var(--line); }
 
     .import-upload-zone {
-      border: 2px dashed rgba(201, 168, 76, 0.3);
-      border-radius: 10px;
+      border: 2px dashed var(--line-strong);
+      border-radius: 14px;
       padding: 2.5rem;
       text-align: center;
       cursor: pointer;
@@ -1208,25 +1209,23 @@ interface ImportRow {
     }
 
     .import-upload-zone:hover {
-      border-color: #C9A84C;
-      background: rgba(201, 168, 76, 0.03);
+      border-color: var(--gold);
+      background: rgba(28, 42, 77, 0.2);
     }
 
     .import-icon {
       font-size: 2.5rem;
-      color: #C9A84C;
-      opacity: 0.6;
+      color: var(--gold-light);
     }
 
     .import-text {
-      color: #F0E8D0;
+      color: var(--text-0);
       margin: 0.75rem 0 0.25rem;
       font-size: 0.9rem;
     }
 
     .import-formats {
-      color: #F0E8D0;
-      opacity: 0.5;
+      color: var(--text-3);
       font-size: 0.75rem;
     }
 
@@ -1249,29 +1248,29 @@ interface ImportRow {
       gap: 0.75rem;
       align-items: flex-start;
       padding: 0.85rem 1rem;
-      background: rgba(92, 219, 111, 0.06);
-      border: 1px solid rgba(92, 219, 111, 0.2);
-      border-radius: 8px;
+      background: rgba(92, 219, 131, 0.06);
+      border: 1px solid rgba(92, 219, 131, 0.2);
+      border-radius: 14px;
     }
 
-    .sources-summary-icon { color: #C9A84C; flex-shrink: 0; margin-top: 2px; }
+    .sources-summary-icon { color: var(--gold); flex-shrink: 0; margin-top: 2px; }
 
     .import-sources-summary strong {
       display: block;
       font-size: 0.83rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin-bottom: 0.2rem;
     }
 
     .new-sources-list {
       font-size: 0.78rem;
-      color: #5cdb6f;
+      color: #5cdb83;
       font-weight: 600;
     }
 
     .sources-summary-hint {
       font-size: 0.73rem;
-      color: rgba(240,232,208,0.45);
+      color: var(--text-3);
       margin: 0.2rem 0 0;
     }
 
@@ -1280,7 +1279,7 @@ interface ImportRow {
       align-items: center;
       gap: 0.75rem;
       font-size: 0.85rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       flex-wrap: wrap;
     }
 
@@ -1290,7 +1289,7 @@ interface ImportRow {
     }
 
     .import-invalid {
-      color: #ff6b7a;
+      color: #ff7a6c;
       font-size: 0.8rem;
     }
 
@@ -1304,28 +1303,28 @@ interface ImportRow {
     }
 
     .source-tag-new {
-      background: rgba(92,219,111,0.12);
-      color: #5cdb6f;
-      border: 1px solid rgba(92,219,111,0.3);
+      background: rgba(92,219,131,0.12);
+      color: #5cdb83;
+      border: 1px solid rgba(92,219,131,0.3);
     }
 
     .source-tag-exists {
-      background: rgba(201,168,76,0.1);
-      color: #C9A84C;
-      border: 1px solid rgba(201,168,76,0.25);
+      background: var(--line-soft);
+      color: var(--gold);
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
     .import-table-wrapper {
       max-height: 350px;
       overflow-y: auto;
-      border-radius: 8px;
-      border: 1px solid rgba(201, 168, 76, 0.1);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .import-table {
       width: 100%;
       border-collapse: collapse;
-      background: #1A1710;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
     }
 
     .import-table th {
@@ -1333,21 +1332,20 @@ interface ImportRow {
       padding: 0.7rem 1rem;
       font-size: 0.75rem;
       font-weight: 600;
-      color: #F0E8D0;
-      opacity: 0.6;
+      color: var(--text-2);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       position: sticky;
       top: 0;
-      background: #1A1710;
+      background: rgba(19, 22, 42, 0.95);
     }
 
     .import-table td {
       padding: 0.6rem 1rem;
       font-size: 0.85rem;
-      color: #F0E8D0;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.05);
+      color: var(--text-0);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
 
     .row-invalid {
@@ -1363,13 +1361,13 @@ interface ImportRow {
     }
 
     .import-status-new {
-      background: rgba(40, 167, 69, 0.15);
-      color: #5cdb6f;
+      background: rgba(92, 219, 131, 0.15);
+      color: #5cdb83;
     }
 
     .import-status-existing {
-      background: rgba(52, 152, 219, 0.15);
-      color: #5dade2;
+      background: rgba(127, 193, 234, 0.15);
+      color: #7fc1ea;
     }
 
     .import-status-conflict {
@@ -1378,8 +1376,8 @@ interface ImportRow {
     }
 
     .import-status-invalid {
-      background: rgba(220, 53, 69, 0.15);
-      color: #ff6b7a;
+      background: rgba(255, 122, 108, 0.15);
+      color: #ff7a6c;
     }
 
     .import-actions {
