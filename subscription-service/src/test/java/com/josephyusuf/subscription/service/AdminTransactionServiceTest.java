@@ -40,6 +40,7 @@ import static org.mockito.Mockito.*;
 class AdminTransactionServiceTest {
 
     @Mock private TransactionRepository transactionRepository;
+    @Mock private SubscriptionService subscriptionService;
 
     @InjectMocks private AdminTransactionService service;
 
@@ -176,5 +177,75 @@ class AdminTransactionServiceTest {
 
         assertThat(tx.getStatus()).isEqualTo(TransactionStatus.SUCCEEDED);
         verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cancel - status PENDING → CANCELLED")
+    void cancel_pending() {
+        Transaction tx = sampleTransaction(TransactionStatus.PENDING);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        AdminTransactionDto dto = service.cancel(tx.getId());
+
+        assertThat(dto.getStatus()).isEqualTo(TransactionStatus.CANCELLED);
+        assertThat(tx.getStatus()).isEqualTo(TransactionStatus.CANCELLED);
+        verify(transactionRepository).save(tx);
+    }
+
+    @Test
+    @DisplayName("cancel - status FAILED → CANCELLED")
+    void cancel_failed() {
+        Transaction tx = sampleTransaction(TransactionStatus.FAILED);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        AdminTransactionDto dto = service.cancel(tx.getId());
+
+        assertThat(dto.getStatus()).isEqualTo(TransactionStatus.CANCELLED);
+        verify(transactionRepository).save(tx);
+    }
+
+    @Test
+    @DisplayName("cancel - status SUCCEEDED → PaymentException")
+    void cancel_succeeded_rejected() {
+        Transaction tx = sampleTransaction(TransactionStatus.SUCCEEDED);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        assertThatThrownBy(() -> service.cancel(tx.getId()))
+                .isInstanceOf(PaymentException.class)
+                .hasMessageContaining("PENDING ou FAILED");
+    }
+
+    @Test
+    @DisplayName("forceActivate - PENDING → active l'abonnement")
+    void forceActivate_pending() {
+        Transaction tx = sampleTransaction(TransactionStatus.PENDING);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        AdminTransactionDto dto = service.forceActivate(tx.getId());
+
+        verify(subscriptionService).activateAfterPayment(
+                tx.getUserId(), tx.getPlan(), tx.getProvider(), tx.getTransactionId());
+    }
+
+    @Test
+    @DisplayName("forceActivate - REFUNDED → PaymentException")
+    void forceActivate_refunded_rejected() {
+        Transaction tx = sampleTransaction(TransactionStatus.REFUNDED);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        assertThatThrownBy(() -> service.forceActivate(tx.getId()))
+                .isInstanceOf(PaymentException.class)
+                .hasMessageContaining("ne peut pas être activée");
+    }
+
+    @Test
+    @DisplayName("forceActivate - CANCELLED → PaymentException")
+    void forceActivate_cancelled_rejected() {
+        Transaction tx = sampleTransaction(TransactionStatus.CANCELLED);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        assertThatThrownBy(() -> service.forceActivate(tx.getId()))
+                .isInstanceOf(PaymentException.class)
+                .hasMessageContaining("ne peut pas être activée");
     }
 }

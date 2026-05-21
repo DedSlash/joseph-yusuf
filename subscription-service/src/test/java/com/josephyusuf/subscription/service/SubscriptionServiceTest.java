@@ -174,6 +174,71 @@ class SubscriptionServiceTest {
     }
 
     @Nested
+    @DisplayName("cancel / setAutoRenew")
+    class CancelTests {
+
+        @Test
+        @DisplayName("cancel - ACTIVE → CANCELLED")
+        void cancel_active() {
+            Subscription sub = Subscription.builder().userId(USER_ID)
+                    .plan(PlanTier.PREMIUM).status(SubscriptionStatus.ACTIVE).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sub));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            Subscription result = service.cancel(USER_ID);
+
+            assertThat(result.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
+            assertThat(result.getCancelledAt()).isNotNull();
+            verify(authClient).updatePlan(any());
+        }
+
+        @Test
+        @DisplayName("cancel - déjà annulé → InvalidPlanException")
+        void cancel_alreadyCancelled() {
+            Subscription sub = Subscription.builder().userId(USER_ID)
+                    .status(SubscriptionStatus.CANCELLED).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sub));
+
+            assertThatThrownBy(() -> service.cancel(USER_ID))
+                    .isInstanceOf(InvalidPlanException.class)
+                    .hasMessageContaining("déjà annulé");
+        }
+
+        @Test
+        @DisplayName("cancel - pas d'abonnement → SubscriptionNotFoundException")
+        void cancel_notFound() {
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.cancel(USER_ID))
+                    .isInstanceOf(SubscriptionNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("setAutoRenew - existant → met à jour")
+        void setAutoRenew_success() {
+            Subscription sub = Subscription.builder().userId(USER_ID)
+                    .plan(PlanTier.PREMIUM).autoRenew(false).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sub));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(mapper.toResponse(any(Subscription.class)))
+                    .thenReturn(SubscriptionResponse.builder().autoRenew(true).build());
+
+            SubscriptionResponse result = service.setAutoRenew(USER_ID, true);
+
+            assertThat(result.isAutoRenew()).isTrue();
+        }
+
+        @Test
+        @DisplayName("setAutoRenew - pas d'abonnement → SubscriptionNotFoundException")
+        void setAutoRenew_notFound() {
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.setAutoRenew(USER_ID, true))
+                    .isInstanceOf(SubscriptionNotFoundException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("getCurrent / getHistory")
     class QueryTests {
 
