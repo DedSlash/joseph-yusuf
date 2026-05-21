@@ -20,6 +20,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -50,7 +51,7 @@ class SubscriptionServiceTest {
 
     @BeforeEach
     void injectSelf() {
-        service.setSelf(service);
+        ReflectionTestUtils.setField(service, "self", service);
     }
 
     private static final UUID USER_ID = UUID.randomUUID();

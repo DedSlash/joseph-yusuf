@@ -16,9 +16,7 @@ import com.josephyusuf.subscription.exception.SubscriptionNotFoundException;
 import com.josephyusuf.subscription.mapper.SubscriptionMapper;
 import com.josephyusuf.subscription.repository.SubscriptionRepository;
 import com.josephyusuf.subscription.repository.TransactionRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,18 +29,25 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final TransactionRepository transactionRepository;
     private final SubscriptionMapper mapper;
     private final AuthClient authClient;
-
-    @Autowired
-    @Lazy
-    @lombok.Setter
     private SubscriptionService self;
+
+    public SubscriptionService(SubscriptionRepository subscriptionRepository,
+                               TransactionRepository transactionRepository,
+                               SubscriptionMapper mapper,
+                               AuthClient authClient,
+                               @Lazy SubscriptionService self) {
+        this.subscriptionRepository = subscriptionRepository;
+        this.transactionRepository = transactionRepository;
+        this.mapper = mapper;
+        this.authClient = authClient;
+        this.self = self;
+    }
 
     @Transactional
     public Transaction recordPendingTransaction(PendingTransactionParams params) {
