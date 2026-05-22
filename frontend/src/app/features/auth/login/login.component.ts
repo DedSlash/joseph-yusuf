@@ -86,40 +86,52 @@ import { LoginRequest } from '../../../shared/models/user.model';
 
     .auth-left {
       flex: 1;
-      background: #0D0B07;
+      background: var(--night-1);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-left::before {
+      content: "";
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(600px 400px at 30% 20%, rgba(201, 168, 76, 0.1), transparent 60%),
+        radial-gradient(500px 400px at 70% 80%, rgba(93, 173, 226, 0.05), transparent 60%);
     }
 
     .branding {
       max-width: 400px;
       text-align: center;
+      position: relative;
+      z-index: 1;
     }
 
     .logo {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 2.5rem;
       font-weight: 600;
-      color: #C9A84C;
+      color: var(--gold-light);
       margin-bottom: 1rem;
+      letter-spacing: -0.02em;
     }
 
     .tagline {
       font-size: 1.1rem;
-      color: #F0E8D0;
-      opacity: 0.8;
+      color: var(--text-1);
       margin-bottom: 2rem;
     }
 
     .verse {
+      font-family: var(--font-serif);
       font-style: italic;
-      color: #F0E8D0;
-      opacity: 0.6;
-      font-size: 0.9rem;
+      color: var(--text-2);
+      font-size: 0.95rem;
       line-height: 1.6;
-      border-left: 2px solid rgba(201, 168, 76, 0.4);
+      border-left: 2px solid var(--line-strong);
       padding-left: 1rem;
       text-align: left;
     }
@@ -129,13 +141,15 @@ import { LoginRequest } from '../../../shared/models/user.model';
       margin-top: 0.75rem;
       font-style: normal;
       font-weight: 600;
-      color: #C9A84C;
-      opacity: 0.8;
+      color: var(--gold);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
     }
 
     .auth-right {
       flex: 1;
-      background: #1A1710;
+      background: var(--night-2);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -148,25 +162,25 @@ import { LoginRequest } from '../../../shared/models/user.model';
     }
 
     .form-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.8rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
     }
 
     .form-subtitle {
-      color: #F0E8D0;
-      opacity: 0.6;
+      color: var(--text-2);
       font-size: 0.9rem;
       margin-bottom: 2rem;
     }
 
     .error-message {
-      background: rgba(220, 53, 69, 0.1);
-      border: 1px solid rgba(220, 53, 69, 0.3);
-      color: #ff6b7a;
+      background: rgba(231, 76, 60, 0.08);
+      border: 1px solid rgba(231, 76, 60, 0.25);
+      color: #ff7a6c;
       padding: 0.75rem 1rem;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 0.85rem;
       margin-bottom: 1.5rem;
     }
@@ -177,51 +191,58 @@ import { LoginRequest } from '../../../shared/models/user.model';
 
     .form-group label {
       display: block;
-      color: #F0E8D0;
-      font-size: 0.85rem;
+      color: var(--text-2);
+      font-size: 12px;
       font-weight: 500;
-      margin-bottom: 0.5rem;
-      opacity: 0.8;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .form-input {
       width: 100%;
-      padding: 0.75rem 1rem;
-      background: rgba(13, 11, 7, 0.6);
-      border: 1px solid rgba(201, 168, 76, 0.15);
-      border-radius: 8px;
-      color: #F0E8D0;
-      font-size: 0.9rem;
-      transition: border-color 0.2s;
+      padding: 11px 14px;
+      background: rgba(8, 8, 15, 0.5);
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      color: var(--text-0);
+      font-size: 14px;
+      transition: border-color 0.15s, box-shadow 0.15s;
       outline: none;
       box-sizing: border-box;
     }
 
     .form-input:focus {
-      border-color: #C9A84C;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
     }
 
     .form-input::placeholder {
-      color: rgba(240, 232, 208, 0.3);
+      color: var(--text-3);
     }
 
     .btn-submit {
       width: 100%;
-      padding: 0.85rem;
-      background: #C9A84C;
-      color: #0D0B07;
+      padding: 12px;
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
+      color: #1b1500;
       border: none;
-      border-radius: 8px;
-      font-size: 0.95rem;
+      border-radius: 10px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      transition: transform 0.15s, box-shadow 0.2s;
       margin-top: 0.5rem;
+      box-shadow: 0 8px 24px -8px var(--gold-glow);
     }
 
     .btn-submit:hover:not(:disabled) {
-      background: #DAC372;
       transform: translateY(-1px);
+      box-shadow: 0 12px 32px -8px var(--gold-glow);
+    }
+
+    .btn-submit:active:not(:disabled) {
+      transform: scale(0.98);
     }
 
     .btn-submit:disabled {
@@ -232,8 +253,7 @@ import { LoginRequest } from '../../../shared/models/user.model';
     .form-footer {
       margin-top: 1.5rem;
       text-align: center;
-      color: #F0E8D0;
-      opacity: 0.7;
+      color: var(--text-2);
       font-size: 0.85rem;
     }
 
@@ -244,18 +264,17 @@ import { LoginRequest } from '../../../shared/models/user.model';
     }
 
     .link-secondary {
-      color: #F0E8D0;
-      opacity: 0.7;
+      color: var(--text-2);
       text-decoration: none;
+      transition: color 0.15s;
     }
 
     .link-secondary:hover {
-      opacity: 1;
-      text-decoration: underline;
+      color: var(--text-0);
     }
 
     .link-gold {
-      color: #C9A84C;
+      color: var(--gold-light);
       text-decoration: none;
       font-weight: 500;
     }

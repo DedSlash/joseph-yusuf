@@ -50,19 +50,19 @@ import { AuthService } from '../../../core/auth/auth.service';
     </div>
   `,
   styles: [`
-    .auth-container { display:flex; min-height:100vh; background:#1A1710; }
+    .auth-container { display:flex; min-height:100vh; background:var(--night-2); }
     .auth-right { flex:1; display:flex; align-items:center; justify-content:center; padding:3rem; }
     .form-wrapper { width:100%; max-width:380px; }
-    .form-title { font-family:'Cormorant Garamond',serif; font-size:1.8rem; color:#F0E8D0; margin-bottom:.5rem; }
-    .form-subtitle { color:#F0E8D0; opacity:.6; font-size:.9rem; margin-bottom:2rem; }
+    .form-title { font-family:'Cormorant Garamond',serif; font-size:1.8rem; color:var(--text-0); margin-bottom:.5rem; }
+    .form-subtitle { color:var(--text-0); opacity:.6; font-size:.9rem; margin-bottom:2rem; }
     .form-group { margin-bottom:1.25rem; }
-    .form-group label { display:block; color:#F0E8D0; font-size:.85rem; font-weight:500; margin-bottom:.5rem; opacity:.8; }
-    .form-input { width:100%; padding:.75rem 1rem; background:rgba(13,11,7,.6); border:1px solid rgba(201,168,76,.15); border-radius:8px; color:#F0E8D0; font-size:.9rem; outline:none; box-sizing:border-box; }
-    .form-input:focus { border-color:#C9A84C; }
-    .btn-submit { width:100%; padding:.85rem; background:#C9A84C; color:#0D0B07; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer; }
+    .form-group label { display:block; color:var(--text-0); font-size:.85rem; font-weight:500; margin-bottom:.5rem; opacity:.8; }
+    .form-input { width:100%; padding:.75rem 1rem; background:rgba(13,11,7,.6); border:1px solid rgba(201,168,76,.15); border-radius:8px; color:var(--text-0); font-size:.9rem; outline:none; box-sizing:border-box; }
+    .form-input:focus { border-color:var(--gold); }
+    .btn-submit { width:100%; padding:.85rem; background:var(--gold); color:var(--night-1); border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer; }
     .btn-submit:disabled { opacity:.6; cursor:not-allowed; }
     .form-footer { margin-top:1.5rem; text-align:center; font-size:.85rem; }
-    .link-gold { color:#C9A84C; text-decoration:none; font-weight:500; }
+    .link-gold { color:var(--gold); text-decoration:none; font-weight:500; }
     .link-gold:hover { text-decoration:underline; }
     .success-message { background:rgba(40,167,69,.1); border:1px solid rgba(40,167,69,.3); color:#7ad99e; padding:.75rem 1rem; border-radius:8px; font-size:.85rem; margin-bottom:1.5rem; }
   `]
