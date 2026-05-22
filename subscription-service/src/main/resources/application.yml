@@ -54,6 +54,14 @@ paydunya:
   return-url: ${PAYDUNYA_RETURN_URL:http://localhost:4200/subscription/success}
   cancel-url: ${PAYDUNYA_CANCEL_URL:http://localhost:4200/subscription}
 
+paytech:
+  api-key: ${PAYTECH_API_KEY:test_paytech_api_key}
+  api-secret: ${PAYTECH_API_SECRET:test_paytech_api_secret}
+  env: ${PAYTECH_ENV:test}
+  success-url: ${PAYTECH_SUCCESS_URL:http://localhost:4200/subscription/success}
+  cancel-url: ${PAYTECH_CANCEL_URL:http://localhost:4200/subscription}
+  ipn-url: ${PAYTECH_IPN_URL:http://localhost:8080/api/webhooks/paytech}
+
 eureka:
   client:
     register-with-eureka: true

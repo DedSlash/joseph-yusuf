@@ -7,6 +7,8 @@ import com.josephyusuf.subscription.dto.OrangeMoneyRequest;
 import com.josephyusuf.subscription.dto.PayDunyaInvoiceResponse;
 import com.josephyusuf.subscription.dto.PayDunyaRequest;
 import com.josephyusuf.subscription.dto.PayDunyaStatusResponse;
+import com.josephyusuf.subscription.dto.PayTechPaymentResponse;
+import com.josephyusuf.subscription.dto.PayTechRequest;
 import com.josephyusuf.subscription.dto.PaymentProviderResponse;
 import com.josephyusuf.subscription.dto.PendingTransactionParams;
 import com.josephyusuf.subscription.dto.SubscriptionResponse;
@@ -15,6 +17,7 @@ import com.josephyusuf.subscription.dto.WavePaymentRequest;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.service.OrangeMoneyService;
 import com.josephyusuf.subscription.service.PayDunyaService;
+import com.josephyusuf.subscription.service.PayTechService;
 import com.josephyusuf.subscription.service.SubscriptionService;
 import com.josephyusuf.subscription.service.WaveService;
 import jakarta.validation.Valid;
@@ -44,6 +47,7 @@ public class SubscriptionController {
     private final OrangeMoneyService orangeMoneyService;
     private final SubscriptionService subscriptionService;
     private final PayDunyaService payDunyaService;
+    private final PayTechService payTechService;
 
     @PostMapping("/stripe/create")
     public ResponseEntity<CreateSubscriptionResponse> createStripeSubscription(Authentication auth,
@@ -110,6 +114,14 @@ public class SubscriptionController {
     public ResponseEntity<PayDunyaStatusResponse> confirmPayDunya(
             @PathVariable("token") String token) {
         return ResponseEntity.ok(payDunyaService.checkInvoiceStatus(token));
+    }
+
+    @PostMapping("/paytech/create")
+    public ResponseEntity<PayTechPaymentResponse> createPayTechPayment(
+            Authentication auth, @Valid @RequestBody PayTechRequest request) {
+        UUID userId = userIdOf(auth);
+        return ResponseEntity.ok(payTechService.createPayment(
+                userId, request.getPlanTier(), request.getCouponCode()));
     }
 
     @GetMapping("/current")

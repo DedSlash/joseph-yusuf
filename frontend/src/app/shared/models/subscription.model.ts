@@ -51,3 +51,14 @@ export interface PaymentMethodConfig {
   provider: string;
   enabled: boolean;
 }
+
+export interface PayTechRequest {
+  planTier: string;
+  couponCode: string | null;
+}
+
+export interface PayTechPaymentResponse {
+  refCommand: string;
+  redirectUrl: string;
+  mobileRedirectUrl: string;
+}

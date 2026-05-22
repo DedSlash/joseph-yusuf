@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { EMPTY, of, throwError } from 'rxjs';
 import { SubscriptionComponent } from './subscription.component';
@@ -17,7 +17,8 @@ describe('SubscriptionComponent', () => {
       'getCurrent', 'cancelSubscription', 'setAutoRenew',
       'createSubscription', 'confirmSubscription',
       'initiateWave', 'initiateOrange',
-      'validatePromoCode', 'getPaymentMethods'
+      'validatePromoCode', 'getPaymentMethods',
+      'createPayTechPayment'
     ]);
     subscriptionSpy.getCurrent.and.returnValue(EMPTY);
     subscriptionSpy.getPaymentMethods.and.returnValue(of([]));
@@ -160,6 +161,726 @@ describe('SubscriptionComponent', () => {
       component.promoDiscount = 50;
 
       expect(component.getPriceDisplay()).toBe('2.50 €');
+    });
+
+    it('retourne "" si aucun plan sélectionné', () => {
+      component.selectedPlan = null;
+      expect(component.getPriceDisplay()).toBe('');
+    });
+
+    it('XOF sans promo → formatXof appliqué', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.currencyMode = 'XOF';
+      expect(component.getPriceDisplay()).toContain('3');
+    });
+
+    it('XOF avec promo → applique le facteur sur priceXof', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.currencyMode = 'XOF';
+      component.promoDiscount = 50;
+      // 3000 * 0.5 = 1500
+      expect(component.getPriceDisplay()).toContain('1');
+    });
+  });
+
+  describe('getOriginalPriceDisplay', () => {
+    it('vide sans promo', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.promoDiscount = null;
+      expect(component.getOriginalPriceDisplay()).toBe('');
+    });
+
+    it('vide sans plan', () => {
+      component.selectedPlan = null;
+      component.promoDiscount = 50;
+      expect(component.getOriginalPriceDisplay()).toBe('');
+    });
+
+    it('EUR avec promo → renvoie le prix original', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.currencyMode = 'EUR';
+      component.promoDiscount = 50;
+      expect(component.getOriginalPriceDisplay()).toBe('4.99 €');
+    });
+
+    it('XOF avec promo → formatXof', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.currencyMode = 'XOF';
+      component.promoDiscount = 50;
+      expect(component.getOriginalPriceDisplay()).toContain('3');
+    });
+  });
+
+  describe('initiatePayment - branches manquantes', () => {
+    it('no-op si aucun plan ou méthode sélectionnée', () => {
+      component.selectedPlan = null;
+      component.paymentMethod = 'stripe';
+      component.initiatePayment();
+      expect(subscriptionSpy.createSubscription).not.toHaveBeenCalled();
+    });
+
+    it('Orange : appel backend et passage à confirm', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentMethod = 'orange';
+      component.phoneNumber = '+221780000000';
+      subscriptionSpy.initiateOrange.and.returnValue(of({
+        provider: 'ORANGE_MONEY', transactionId: 'o_1', status: 'PENDING',
+        amount: 3000, currency: 'XOF', redirectUrl: null, message: null
+      }));
+
+      component.initiatePayment();
+
+      expect(subscriptionSpy.initiateOrange).toHaveBeenCalledWith('PREMIUM', '+221780000000');
+      expect(component.step).toBe('confirm');
+      expect(component.mobileResult?.transactionId).toBe('o_1');
+    });
+
+    it('Wave en erreur → paymentError prend le message backend', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentMethod = 'wave';
+      component.phoneNumber = '+221770000000';
+      subscriptionSpy.initiateWave.and.returnValue(
+        throwError(() => ({ error: { message: 'Provider Wave indisponible' } }))
+      );
+
+      component.initiatePayment();
+
+      expect(component.paying).toBe(false);
+      expect(component.paymentError).toBe('Provider Wave indisponible');
+    });
+
+    it('Orange en erreur sans message → fallback "Erreur Orange Money."', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentMethod = 'orange';
+      component.phoneNumber = '+221780000000';
+      subscriptionSpy.initiateOrange.and.returnValue(throwError(() => ({})));
+
+      component.initiatePayment();
+
+      expect(component.paymentError).toBe('Erreur Orange Money.');
+    });
+  });
+
+  describe('validatePromo - branches', () => {
+    it('no-op si code vide', () => {
+      component.promoCode = '   ';
+      component.validatePromo();
+      expect(subscriptionSpy.validatePromoCode).not.toHaveBeenCalled();
+    });
+
+    it('valid sans discountPercent → promoError avec raison', () => {
+      component.promoCode = 'X';
+      subscriptionSpy.validatePromoCode.and.returnValue(of({
+        valid: true, discountPercent: null, reason: 'Non applicable'
+      }));
+
+      component.validatePromo();
+
+      expect(component.promoApplied).toBe(false);
+      expect(component.promoError).toBe('Non applicable');
+    });
+
+    it('invalid sans reason → fallback "Code promo invalide"', () => {
+      component.promoCode = 'X';
+      subscriptionSpy.validatePromoCode.and.returnValue(of({
+        valid: false, discountPercent: null, reason: null
+      }));
+
+      component.validatePromo();
+
+      expect(component.promoError).toBe('Code promo invalide');
+    });
+
+    it('erreur HTTP → promoError fallback "Code promo invalide ou expiré"', () => {
+      component.promoCode = 'X';
+      subscriptionSpy.validatePromoCode.and.returnValue(throwError(() => new Error('boom')));
+
+      component.validatePromo();
+
+      expect(component.promoValidating).toBe(false);
+      expect(component.promoError).toBe('Code promo invalide ou expiré');
+    });
+  });
+
+  describe('canPay', () => {
+    it('false si aucun paymentMethod', () => {
+      component.paymentMethod = null;
+      expect(component.canPay()).toBe(false);
+    });
+
+    it('false si wave/orange sans numéro', () => {
+      component.paymentMethod = 'wave';
+      component.phoneNumber = '   ';
+      expect(component.canPay()).toBe(false);
+    });
+
+    it('true si stripe (pas de numéro requis)', () => {
+      component.paymentMethod = 'stripe';
+      expect(component.canPay()).toBe(true);
+    });
+
+    it('true si wave + numéro renseigné', () => {
+      component.paymentMethod = 'wave';
+      component.phoneNumber = '+221770000000';
+      expect(component.canPay()).toBe(true);
+    });
+  });
+
+  describe('isEnabled / allMethodsUnavailable', () => {
+    it('isEnabled=true par défaut si paymentMethods vide', () => {
+      component.paymentMethods = [];
+      expect(component.isEnabled('STRIPE')).toBe(true);
+    });
+
+    it('isEnabled reflète le flag enabled du provider', () => {
+      component.paymentMethods = [
+        { provider: 'STRIPE', enabled: true },
+        { provider: 'WAVE', enabled: false }
+      ];
+      expect(component.isEnabled('STRIPE')).toBe(true);
+      expect(component.isEnabled('WAVE')).toBe(false);
+      expect(component.isEnabled('INCONNU')).toBe(false);
+    });
+
+    it('allMethodsUnavailable=false si liste vide', () => {
+      component.paymentMethods = [];
+      expect(component.allMethodsUnavailable).toBe(false);
+    });
+
+    it('allMethodsUnavailable=true si tous désactivés', () => {
+      component.paymentMethods = [
+        { provider: 'STRIPE', enabled: false },
+        { provider: 'WAVE', enabled: false }
+      ];
+      expect(component.allMethodsUnavailable).toBe(true);
+    });
+  });
+
+  describe('Wizard helpers', () => {
+    it('isStepDone : "plan" est done quand step=payment', () => {
+      component.step = 'payment';
+      expect(component.isStepDone('plan')).toBe(true);
+      expect(component.isStepDone('payment')).toBe(false);
+    });
+
+    it('selectPlan met à jour selectedPlan', () => {
+      component.selectPlan('PREMIUM_PLUS');
+      expect(component.selectedPlan).toBe('PREMIUM_PLUS');
+    });
+
+    it('selectMobile force XOF', () => {
+      component.currencyMode = 'EUR';
+      component.selectMobile('wave');
+      expect(component.paymentMethod).toBe('wave');
+      expect(component.currencyMode).toBe('XOF');
+    });
+
+    it('onPromoInput remet les flags promo à zéro', () => {
+      component.promoApplied = true;
+      component.promoError = 'X';
+      component.promoDiscount = 50;
+
+      component.onPromoInput();
+
+      expect(component.promoApplied).toBe(false);
+      expect(component.promoError).toBe('');
+      expect(component.promoDiscount).toBeNull();
+    });
+
+    it('goToPayment no-op sans plan', () => {
+      component.selectedPlan = null;
+      component.step = 'plan';
+      component.goToPayment();
+      expect(component.step).toBe('plan');
+    });
+
+    it('goToPayment passe à "payment" si plan défini', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentError = 'old';
+      component.goToPayment();
+      expect(component.step).toBe('payment');
+      expect(component.paymentError).toBe('');
+    });
+  });
+
+  describe('Labels et getters PLANS', () => {
+    it('planLabel renvoie le nom du plan trouvé', () => {
+      expect(component.planLabel('PREMIUM')).toBe('Premium');
+      expect(component.planLabel('PREMIUM_PLUS')).toBe('Premium +');
+    });
+
+    it('planLabel renvoie l\'ID si inconnu', () => {
+      expect(component.planLabel('INCONNU')).toBe('INCONNU');
+    });
+
+    it('planBadgeClass mappe les 3 plans', () => {
+      expect(component.planBadgeClass('PREMIUM')).toContain('badge-premium');
+      expect(component.planBadgeClass('PREMIUM_PLUS')).toContain('badge-premium-plus');
+      expect(component.planBadgeClass('FREE')).toContain('badge-free');
+    });
+
+    it('providerLabel mappe les 4 providers + fallback', () => {
+      expect(component.providerLabel('STRIPE')).toBe('Carte bancaire');
+      expect(component.providerLabel('WAVE')).toBe('Wave');
+      expect(component.providerLabel('ORANGE_MONEY')).toBe('Orange Money');
+      expect(component.providerLabel('PAYDUNYA')).toContain('PayDunya');
+      expect(component.providerLabel('AUTRE')).toBe('AUTRE');
+    });
+
+    it('selectablePlans : context=new → exclut FREE', () => {
+      component.upgradeContext = 'new';
+      const plans = component.selectablePlans;
+      expect(plans.every(p => p.id !== 'FREE')).toBe(true);
+    });
+
+    it('selectablePlans : context=renew → seulement le targetPlan', () => {
+      component.upgradeContext = 'renew';
+      component.targetPlan = 'PREMIUM';
+      const plans = component.selectablePlans;
+      expect(plans.length).toBe(1);
+      expect(plans[0].id).toBe('PREMIUM');
+    });
+
+    it('selectablePlans : context=upgrade → uniquement rangs > courant', () => {
+      component.sub = { plan: 'PREMIUM' } as any;
+      component.upgradeContext = 'upgrade';
+      const plans = component.selectablePlans;
+      expect(plans.every(p => p.rank > 1)).toBe(true);
+    });
+
+    it('selectablePlans : context=downgrade → rangs < courant, hors FREE', () => {
+      component.sub = { plan: 'PREMIUM_PLUS' } as any;
+      component.upgradeContext = 'downgrade';
+      const plans = component.selectablePlans;
+      expect(plans.every(p => p.rank < 2 && p.id !== 'FREE')).toBe(true);
+    });
+
+    it('upperMeta retourne le plan rank+1', () => {
+      component.sub = { plan: 'PREMIUM' } as any;
+      expect(component.upperMeta?.id).toBe('PREMIUM_PLUS');
+    });
+
+    it('lowerMeta retourne undefined si déjà au rang 0', () => {
+      component.sub = { plan: 'FREE' } as any;
+      expect(component.lowerMeta).toBeUndefined();
+    });
+
+    it('lowerMeta retourne le plan rank-1 sinon', () => {
+      component.sub = { plan: 'PREMIUM' } as any;
+      expect(component.lowerMeta?.id).toBe('FREE');
+    });
+  });
+
+  describe('startUpgrade', () => {
+    it('CANCELLED → context=renew', () => {
+      component.sub = { plan: 'PREMIUM', status: 'CANCELLED' } as any;
+      component.startUpgrade('PREMIUM');
+      expect(component.upgradeContext).toBe('renew');
+      expect(component.targetPlan).toBe('PREMIUM');
+    });
+
+    it('rang supérieur → context=upgrade', () => {
+      component.sub = { plan: 'PREMIUM', status: 'ACTIVE' } as any;
+      component.startUpgrade('PREMIUM_PLUS');
+      expect(component.upgradeContext).toBe('upgrade');
+    });
+
+    it('rang inférieur → context=downgrade', () => {
+      component.sub = { plan: 'PREMIUM_PLUS', status: 'ACTIVE' } as any;
+      component.startUpgrade('PREMIUM');
+      expect(component.upgradeContext).toBe('downgrade');
+    });
+
+    it('FREE → step reste "plan" et selectedPlan=null', () => {
+      component.sub = { plan: 'PREMIUM', status: 'ACTIVE' } as any;
+      component.startUpgrade('FREE');
+      expect(component.selectedPlan).toBeNull();
+      expect(component.step).toBe('plan');
+    });
+
+    it('plan payant → step=payment', () => {
+      component.sub = { plan: 'PREMIUM', status: 'ACTIVE' } as any;
+      component.startUpgrade('PREMIUM_PLUS');
+      expect(component.step).toBe('payment');
+    });
+  });
+
+  describe('backToManage', () => {
+    it('sub actif payant → retour à la vue manage', () => {
+      component.sub = { plan: 'PREMIUM', status: 'ACTIVE' } as any;
+      component.backToManage();
+      expect(component.view).toBe('manage');
+      expect(component.step).toBe('plan');
+    });
+
+    it('pas d\'abonnement payant → navigate /dashboard', () => {
+      const router = TestBed.inject(Router);
+      const navSpy = spyOn(router, 'navigate');
+      component.sub = null;
+      component.backToManage();
+      expect(navSpy).toHaveBeenCalledWith(['/dashboard']);
+    });
+  });
+
+  describe('Auto-renew', () => {
+    it('askDisableRenew met confirmDisableRenew=true', () => {
+      component.confirmDisableRenew = false;
+      component.askDisableRenew();
+      expect(component.confirmDisableRenew).toBe(true);
+    });
+
+    it('doDisableRenew succès → met à jour sub', () => {
+      const updated = { plan: 'PREMIUM', autoRenew: false } as any;
+      subscriptionSpy.setAutoRenew.and.returnValue(of(updated));
+
+      component.doDisableRenew();
+
+      expect(subscriptionSpy.setAutoRenew).toHaveBeenCalledWith(false);
+      expect(component.sub).toBe(updated);
+      expect(component.togglingRenew).toBe(false);
+      expect(component.confirmDisableRenew).toBe(false);
+    });
+
+    it('doDisableRenew erreur → reset des flags', () => {
+      subscriptionSpy.setAutoRenew.and.returnValue(throwError(() => new Error()));
+      component.doDisableRenew();
+      expect(component.togglingRenew).toBe(false);
+      expect(component.confirmDisableRenew).toBe(false);
+    });
+
+    it('enableRenew succès', () => {
+      const updated = { plan: 'PREMIUM', autoRenew: true } as any;
+      subscriptionSpy.setAutoRenew.and.returnValue(of(updated));
+      component.enableRenew();
+      expect(component.sub).toBe(updated);
+      expect(component.togglingRenew).toBe(false);
+    });
+
+    it('enableRenew erreur → reset togglingRenew', () => {
+      subscriptionSpy.setAutoRenew.and.returnValue(throwError(() => new Error()));
+      component.enableRenew();
+      expect(component.togglingRenew).toBe(false);
+    });
+  });
+
+  describe('loadSubscription via ngOnInit', () => {
+    it('plan payant actif → view=manage', () => {
+      subscriptionSpy.getCurrent.and.returnValue(of({
+        plan: 'PREMIUM', status: 'ACTIVE'
+      } as any));
+
+      component.ngOnInit();
+
+      expect(component.view).toBe('manage');
+    });
+
+    it('plan FREE → view=upgrade, context=new', () => {
+      subscriptionSpy.getCurrent.and.returnValue(of({
+        plan: 'FREE', status: 'ACTIVE'
+      } as any));
+
+      component.ngOnInit();
+
+      expect(component.view).toBe('upgrade');
+      expect(component.upgradeContext).toBe('new');
+    });
+
+    it('erreur API → view=upgrade (nouveau client)', () => {
+      subscriptionSpy.getCurrent.and.returnValue(throwError(() => new Error()));
+
+      component.ngOnInit();
+
+      expect(component.view).toBe('upgrade');
+    });
+
+    it('getPaymentMethods en erreur → liste fallback (Stripe activé)', () => {
+      subscriptionSpy.getPaymentMethods.and.returnValue(throwError(() => new Error()));
+      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
+
+      component.ngOnInit();
+
+      expect(component.paymentMethods.length).toBe(3);
+      expect(component.paymentMethods.find(m => m.provider === 'STRIPE')?.enabled).toBe(true);
+    });
+  });
+
+  describe('applyStoredPromoCode (via ngOnInit)', () => {
+    afterEach(() => {
+      localStorage.removeItem('joseph_promo_code');
+    });
+
+    it('code stocké valide → promoApplied=true', () => {
+      localStorage.setItem('joseph_promo_code', 'early50');
+      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
+      subscriptionSpy.validatePromoCode.and.returnValue(of({
+        valid: true, discountPercent: 30, reason: null
+      }));
+
+      component.ngOnInit();
+
+      expect(component.promoCode).toBe('EARLY50');
+      expect(component.promoApplied).toBe(true);
+      expect(component.promoDiscount).toBe(30);
+    });
+
+    it('code stocké invalide → retiré du localStorage + message', () => {
+      localStorage.setItem('joseph_promo_code', 'EXPIRED');
+      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
+      subscriptionSpy.validatePromoCode.and.returnValue(of({
+        valid: false, discountPercent: null, reason: null
+      }));
+
+      component.ngOnInit();
+
+      expect(localStorage.getItem('joseph_promo_code')).toBeNull();
+      expect(component.promoError).toContain('EXPIRED');
+    });
+
+    it('erreur HTTP sur le code stocké → retiré du localStorage', () => {
+      localStorage.setItem('joseph_promo_code', 'X');
+      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
+      subscriptionSpy.validatePromoCode.and.returnValue(throwError(() => new Error()));
+
+      component.ngOnInit();
+
+      expect(localStorage.getItem('joseph_promo_code')).toBeNull();
+      expect(component.promoValidating).toBe(false);
+    });
+  });
+
+  describe('prefillWaitlistEmail (via ngOnInit)', () => {
+    afterEach(() => localStorage.removeItem('user'));
+
+    it('user en localStorage avec email → waitlistEmail pré-rempli', () => {
+      localStorage.setItem('user', JSON.stringify({ email: 'jane@example.com' }));
+      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
+
+      component.ngOnInit();
+
+      expect(component.waitlistEmail).toBe('jane@example.com');
+    });
+
+    it('user malformé → silencieux, pas d\'erreur', () => {
+      localStorage.setItem('user', '{not-json}');
+      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
+
+      expect(() => component.ngOnInit()).not.toThrow();
+      expect(component.waitlistEmail).toBe('');
+    });
+  });
+
+  describe('submitWaitlist', () => {
+    it('no-op si email vide', () => {
+      component.waitlistEmail = '   ';
+      component.selectedPlan = 'PREMIUM';
+      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist');
+      component.submitWaitlist();
+      expect((subscriptionSpy as any).joinWaitlist).not.toHaveBeenCalled();
+    });
+
+    it('succès → waitlistSuccess=true + promoCode renvoyé', () => {
+      component.waitlistEmail = 'a@b.c';
+      component.selectedPlan = 'PREMIUM';
+      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(of({
+        email: 'a@b.c', planTier: 'PREMIUM', promoCodeReserved: 'EARLY99', message: 'ok'
+      }));
+
+      component.submitWaitlist();
+
+      expect(component.waitlistSuccess).toBe(true);
+      expect(component.waitlistPromoCode).toBe('EARLY99');
+    });
+
+    it('succès sans promoCodeReserved → fallback EARLY50', () => {
+      component.waitlistEmail = 'a@b.c';
+      component.selectedPlan = 'PREMIUM';
+      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(of({
+        email: 'a@b.c', planTier: 'PREMIUM', promoCodeReserved: '', message: 'ok'
+      }));
+
+      component.submitWaitlist();
+
+      expect(component.waitlistPromoCode).toBe('EARLY50');
+    });
+
+    it('erreur 409 → traité comme succès avec EARLY50', () => {
+      component.waitlistEmail = 'a@b.c';
+      component.selectedPlan = 'PREMIUM';
+      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(
+        throwError(() => ({ status: 409, error: {} }))
+      );
+
+      component.submitWaitlist();
+
+      expect(component.waitlistSuccess).toBe(true);
+      expect(component.waitlistPromoCode).toBe('EARLY50');
+    });
+
+    it('erreur 500 → waitlistError prend le message backend', () => {
+      component.waitlistEmail = 'a@b.c';
+      component.selectedPlan = 'PREMIUM';
+      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(
+        throwError(() => ({ status: 500, error: { message: 'Service down' } }))
+      );
+
+      component.submitWaitlist();
+
+      expect(component.waitlistError).toBe('Service down');
+    });
+  });
+
+  describe('payWithPayDunya', () => {
+    it('no-op si pas de plan sélectionné', () => {
+      component.selectedPlan = null;
+      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice');
+      component.payWithPayDunya();
+      expect((subscriptionSpy as any).createPayDunyaInvoice).not.toHaveBeenCalled();
+    });
+
+    it('erreur → paymentError prend le message backend', () => {
+      component.selectedPlan = 'PREMIUM';
+      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice')
+        .and.returnValue(throwError(() => ({ error: { message: 'PayDunya KO' } })));
+
+      component.payWithPayDunya();
+
+      expect(component.payDunyaLoading).toBe(false);
+      expect(component.paymentError).toBe('PayDunya KO');
+    });
+
+    it('erreur sans message → fallback générique', () => {
+      component.selectedPlan = 'PREMIUM';
+      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice')
+        .and.returnValue(throwError(() => ({})));
+
+      component.payWithPayDunya();
+
+      expect(component.paymentError).toBe('Erreur lors de la création du paiement.');
+    });
+  });
+
+  describe('payWithPayTech', () => {
+    afterEach(() => localStorage.removeItem('paytech_ref'));
+
+    it('no-op si pas de plan sélectionné', () => {
+      component.selectedPlan = null;
+      component.payWithPayTech();
+      expect(subscriptionSpy.createPayTechPayment).not.toHaveBeenCalled();
+    });
+
+    it('erreur → paymentError prend le message backend', () => {
+      component.selectedPlan = 'PREMIUM';
+      subscriptionSpy.createPayTechPayment.and.returnValue(
+        throwError(() => ({ error: { message: 'PayTech KO' } }))
+      );
+
+      component.payWithPayTech();
+
+      expect(component.payTechLoading).toBe(false);
+      expect(component.paymentError).toBe('PayTech KO');
+    });
+
+    it('erreur sans message → fallback générique', () => {
+      component.selectedPlan = 'PREMIUM';
+      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
+
+      component.payWithPayTech();
+
+      expect(component.paymentError).toBe('Erreur lors de la création du paiement.');
+    });
+
+    it('appelle le service avec planTier + couponCode trimé', () => {
+      component.selectedPlan = 'PREMIUM_PLUS';
+      component.promoCode = '  EARLY50  ';
+      // L'observable next() écrit window.location.href → on coupe avant en levant une erreur
+      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
+
+      component.payWithPayTech();
+
+      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
+        planTier: 'PREMIUM_PLUS',
+        couponCode: 'EARLY50'
+      });
+    });
+
+    it('couponCode vide → null transmis au service', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.promoCode = '   ';
+      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
+
+      component.payWithPayTech();
+
+      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
+        planTier: 'PREMIUM',
+        couponCode: null
+      });
+    });
+  });
+
+  describe('initiatePayment - routing vers les agrégateurs XOF', () => {
+    it('paymentMethod=paytech → appelle payWithPayTech', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentMethod = 'paytech';
+      // Force erreur pour éviter la navigation
+      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
+
+      component.initiatePayment();
+
+      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalled();
+      expect(component.paying).toBe(false);
+    });
+
+    it('paymentMethod=paydunya → appelle payWithPayDunya', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.paymentMethod = 'paydunya';
+      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice')
+        .and.returnValue(throwError(() => ({})));
+
+      component.initiatePayment();
+
+      expect((subscriptionSpy as any).createPayDunyaInvoice).toHaveBeenCalled();
+      expect(component.paying).toBe(false);
+    });
+  });
+
+  describe('providerLabel - PAYTECH', () => {
+    it('PAYTECH → label dédié', () => {
+      expect(component.providerLabel('PAYTECH')).toContain('PayTech');
+    });
+  });
+
+  describe('ngAfterViewChecked early-return branches', () => {
+    it('step != confirm → no-op (early return sans effet de bord)', () => {
+      component.step = 'plan';
+      expect(() => component.ngAfterViewChecked()).not.toThrow();
+    });
+
+    it('step=confirm mais paymentMethod != stripe → no-op', () => {
+      component.step = 'confirm';
+      component.paymentMethod = 'paytech';
+      expect(() => component.ngAfterViewChecked()).not.toThrow();
+    });
+
+    it('step=confirm + stripe + selectedPlan null → no-op', () => {
+      component.step = 'confirm';
+      component.paymentMethod = 'stripe';
+      component.selectedPlan = null;
+      expect(() => component.ngAfterViewChecked()).not.toThrow();
+    });
+  });
+
+  describe('finish + formatXof', () => {
+    it('finish → navigate /dashboard', () => {
+      const router = TestBed.inject(Router);
+      const navSpy = spyOn(router, 'navigate');
+      component.finish();
+      expect(navSpy).toHaveBeenCalledWith(['/dashboard']);
+    });
+
+    it('formatXof formate en XOF sans décimale', () => {
+      const out = component.formatXof(3000);
+      expect(out).toContain('3');
+      // Intl peut ajouter un espace insécable ; on vérifie surtout que la valeur est présente
     });
   });
 });

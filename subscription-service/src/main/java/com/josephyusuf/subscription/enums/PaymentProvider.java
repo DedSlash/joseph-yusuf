@@ -4,5 +4,6 @@ public enum PaymentProvider {
     STRIPE,
     WAVE,
     ORANGE_MONEY,
-    PAYDUNYA
+    PAYDUNYA,
+    PAYTECH
 }
