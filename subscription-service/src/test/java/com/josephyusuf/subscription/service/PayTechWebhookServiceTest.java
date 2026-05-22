@@ -28,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -86,8 +85,8 @@ class PayTechWebhookServiceTest {
         String ref = "JY-12345678-99999";
         Map<String, Object> payload = validPayload(ref, userId, "PREMIUM", null);
         when(transactionRepository.findByTransactionId(ref)).thenReturn(Optional.empty());
-        when(subscriptionService.activateAfterPayment(eq(userId), eq(PlanTier.PREMIUM),
-                eq(PaymentProvider.PAYTECH), eq(ref)))
+        when(subscriptionService.activateAfterPayment(userId, PlanTier.PREMIUM,
+                PaymentProvider.PAYTECH, ref))
                 .thenReturn(Subscription.builder().userId(userId).build());
 
         webhookService.handleIPN(payload);
@@ -115,7 +114,7 @@ class PayTechWebhookServiceTest {
 
     @Test
     @DisplayName("handleIPN signature invalide → SecurityException")
-    void handleIPN_invalidSignature_throws() throws Exception {
+    void handleIPN_invalidSignature_throws() {
         Map<String, Object> payload = new HashMap<>();
         payload.put("type_event", "sale_complete");
         payload.put("api_key_sha256", "deadbeef");

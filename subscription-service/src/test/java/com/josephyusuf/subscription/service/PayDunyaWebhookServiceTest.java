@@ -52,8 +52,8 @@ class PayDunyaWebhookServiceTest {
                         .customData(customData)
                         .build());
 
-        when(subscriptionService.activateAfterPayment(eq(userId), eq(PlanTier.PREMIUM),
-                eq(PaymentProvider.PAYDUNYA), eq(token)))
+        when(subscriptionService.activateAfterPayment(userId, PlanTier.PREMIUM,
+                PaymentProvider.PAYDUNYA, token))
                 .thenReturn(Subscription.builder().userId(userId).build());
 
         Map<String, Object> payload = new HashMap<>();

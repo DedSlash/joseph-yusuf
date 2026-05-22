@@ -20,6 +20,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WebhookController {
 
+    private static final String INVALID_BODY = "invalid";
+
     private final WebhookService webhookService;
     private final PayDunyaWebhookService payDunyaWebhookService;
     private final PayTechWebhookService payTechWebhookService;
@@ -32,7 +34,7 @@ public class WebhookController {
             return ResponseEntity.ok("ok");
         } catch (Exception e) {
             log.error("Erreur traitement webhook Stripe : {}", e.getMessage());
-            return ResponseEntity.badRequest().body("invalid");
+            return ResponseEntity.badRequest().body(INVALID_BODY);
         }
     }
 
@@ -43,7 +45,7 @@ public class WebhookController {
             return ResponseEntity.ok("ok");
         } catch (Exception e) {
             log.error("Erreur traitement webhook PayDunya : {}", e.getMessage());
-            return ResponseEntity.badRequest().body("invalid");
+            return ResponseEntity.badRequest().body(INVALID_BODY);
         }
     }
 
@@ -57,7 +59,7 @@ public class WebhookController {
             return ResponseEntity.status(401).body("invalid signature");
         } catch (Exception e) {
             log.error("Erreur traitement webhook PayTech : {}", e.getMessage());
-            return ResponseEntity.badRequest().body("invalid");
+            return ResponseEntity.badRequest().body(INVALID_BODY);
         }
     }
 }

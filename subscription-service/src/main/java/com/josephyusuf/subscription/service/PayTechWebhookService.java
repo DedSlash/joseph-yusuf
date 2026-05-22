@@ -62,16 +62,11 @@ public class PayTechWebhookService {
         }
 
         Map<String, String> customField = parseCustomField(payload.get("custom_field"));
-        if (customField == null) {
-            log.error("PayTech IPN sans custom_field exploitable ref={}", refCommand);
-            return;
-        }
-
         String userIdStr = customField.get("userId");
         String planTier = customField.get("planTier");
         String couponCode = customField.get("couponCode");
         if (userIdStr == null || planTier == null) {
-            log.error("PayTech IPN custom_field incomplet ref={} : {}", refCommand, customField);
+            log.error("PayTech IPN custom_field absent ou incomplet ref={} : {}", refCommand, customField);
             return;
         }
 
@@ -108,19 +103,19 @@ public class PayTechWebhookService {
     }
 
     private Map<String, String> parseCustomField(Object raw) {
-        if (raw == null) return null;
+        if (raw == null) return Map.of();
         if (raw instanceof Map<?, ?> m) {
             Map<String, String> out = new java.util.HashMap<>();
             m.forEach((k, v) -> out.put(String.valueOf(k), v == null ? null : String.valueOf(v)));
             return out;
         }
         String s = String.valueOf(raw);
-        if (s.isBlank()) return null;
+        if (s.isBlank()) return Map.of();
         try {
             return objectMapper.readValue(s, new TypeReference<Map<String, String>>() {});
         } catch (JsonProcessingException e) {
             log.error("PayTech custom_field illisible : {}", e.getMessage());
-            return null;
+            return Map.of();
         }
     }
 
