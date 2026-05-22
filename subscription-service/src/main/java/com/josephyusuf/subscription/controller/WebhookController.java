@@ -1,6 +1,7 @@
 package com.josephyusuf.subscription.controller;
 
 import com.josephyusuf.subscription.service.PayDunyaWebhookService;
+import com.josephyusuf.subscription.service.PayTechWebhookService;
 import com.josephyusuf.subscription.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +20,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WebhookController {
 
+    private static final String INVALID_BODY = "invalid";
+
     private final WebhookService webhookService;
     private final PayDunyaWebhookService payDunyaWebhookService;
+    private final PayTechWebhookService payTechWebhookService;
 
     @PostMapping("/stripe")
     public ResponseEntity<String> stripe(@RequestBody String payload,
@@ -30,7 +34,7 @@ public class WebhookController {
             return ResponseEntity.ok("ok");
         } catch (Exception e) {
             log.error("Erreur traitement webhook Stripe : {}", e.getMessage());
-            return ResponseEntity.badRequest().body("invalid");
+            return ResponseEntity.badRequest().body(INVALID_BODY);
         }
     }
 
@@ -41,7 +45,21 @@ public class WebhookController {
             return ResponseEntity.ok("ok");
         } catch (Exception e) {
             log.error("Erreur traitement webhook PayDunya : {}", e.getMessage());
-            return ResponseEntity.badRequest().body("invalid");
+            return ResponseEntity.badRequest().body(INVALID_BODY);
+        }
+    }
+
+    @PostMapping("/paytech")
+    public ResponseEntity<String> paytech(@RequestBody Map<String, Object> payload) {
+        try {
+            payTechWebhookService.handleIPN(payload);
+            return ResponseEntity.ok("ok");
+        } catch (SecurityException e) {
+            log.warn("PayTech IPN signature invalide : {}", e.getMessage());
+            return ResponseEntity.status(401).body("invalid signature");
+        } catch (Exception e) {
+            log.error("Erreur traitement webhook PayTech : {}", e.getMessage());
+            return ResponseEntity.badRequest().body(INVALID_BODY);
         }
     }
 }

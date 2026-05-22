@@ -19,7 +19,7 @@ const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
 // ── Types ──────────────────────────────────────────────────────────────────
 type View   = 'loading' | 'manage' | 'upgrade';   // manage = client existant
 type Step   = 'plan' | 'payment' | 'confirm' | 'success';
-type PaymentMethod = 'stripe' | 'wave' | 'orange';
+type PaymentMethod = 'stripe' | 'wave' | 'orange' | 'paydunya' | 'paytech';
 type PlanId = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS';
 
 interface PlanMeta {
@@ -409,6 +409,30 @@ const STRIPE_APPEARANCE = {
               <span class="pm-unavail" *ngIf="!isEnabled('ORANGE_MONEY')">Indisponible</span>
               <span class="pm-check" *ngIf="paymentMethod === 'orange'">✓</span>
             </div>
+
+            <!-- Aggrégateurs XOF (portail sécurisé : Wave / Orange / Free / Carte) -->
+            <div class="pm-card"
+                 [ngClass]="{ selected: paymentMethod === 'paytech', unavailable: !isEnabled('PAYTECH') }"
+                 (click)="isEnabled('PAYTECH') && selectMobile('paytech')">
+              <span class="pm-logo">🌐</span>
+              <div class="pm-info">
+                <strong>PayTech</strong>
+                <span>Wave · Orange Money · Free Money · Carte — XOF</span>
+              </div>
+              <span class="pm-unavail" *ngIf="!isEnabled('PAYTECH')">Indisponible</span>
+              <span class="pm-check" *ngIf="paymentMethod === 'paytech'">✓</span>
+            </div>
+            <div class="pm-card"
+                 [ngClass]="{ selected: paymentMethod === 'paydunya', unavailable: !isEnabled('PAYDUNYA') }"
+                 (click)="isEnabled('PAYDUNYA') && selectMobile('paydunya')">
+              <span class="pm-logo">🛡️</span>
+              <div class="pm-info">
+                <strong>PayDunya</strong>
+                <span>Wave · Orange Money · Carte — XOF</span>
+              </div>
+              <span class="pm-unavail" *ngIf="!isEnabled('PAYDUNYA')">Indisponible</span>
+              <span class="pm-check" *ngIf="paymentMethod === 'paydunya'">✓</span>
+            </div>
           </div>
 
           <div class="phone-group" *ngIf="paymentMethod === 'wave' || paymentMethod === 'orange'">
@@ -420,8 +444,10 @@ const STRIPE_APPEARANCE = {
 
           <div class="step-actions">
             <button class="btn-ghost" (click)="step = 'plan'">← Retour</button>
-            <button class="btn-next" [disabled]="!canPay() || paying" (click)="initiatePayment()">
-              {{ paying ? 'Initialisation…' : 'Continuer →' }}
+            <button class="btn-next"
+                    [disabled]="!canPay() || paying || payDunyaLoading || payTechLoading"
+                    (click)="initiatePayment()">
+              {{ (paying || payDunyaLoading || payTechLoading) ? 'Redirection…' : 'Continuer →' }}
             </button>
           </div>
         </div>
@@ -1056,6 +1082,9 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   // PayDunya
   payDunyaLoading = false;
 
+  // PayTech (Wave/Orange Money/Free Money/Carte via portail sécurisé)
+  payTechLoading = false;
+
   // Stripe
   stripeSubResult: CreateSubscriptionResponse | null = null;
   mobileResult: PaymentProviderResult | null = null;
@@ -1278,6 +1307,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
       case 'WAVE': return 'Wave';
       case 'ORANGE_MONEY': return 'Orange Money';
       case 'PAYDUNYA': return 'PayDunya (Wave/Orange Money)';
+      case 'PAYTECH': return 'PayTech (Wave/Orange Money/Carte)';
       default: return provider;
     }
   }
@@ -1372,24 +1402,36 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     this.paying = true;
     this.paymentError = '';
 
-    if (this.paymentMethod === 'stripe') {
-      // Pattern PM-first : on monte Elements en mode 'subscription' et on appellera
-      // le backend uniquement lors du clic sur "Payer" (createPaymentMethod → /stripe/create).
-      this.stripeSubResult = null;
-      this.stripeMounted = false;
-      this.stripeElements = null;
-      this.paying = false;
-      this.step = 'confirm';
-    } else if (this.paymentMethod === 'wave') {
-      this.subscriptionService.initiateWave(this.selectedPlan, this.phoneNumber.trim()).subscribe({
-        next: res => { this.mobileResult = res; this.paying = false; this.step = 'confirm'; },
-        error: err => { this.paying = false; this.paymentError = err.error?.message ?? 'Erreur Wave.'; }
-      });
-    } else {
-      this.subscriptionService.initiateOrange(this.selectedPlan, this.phoneNumber.trim()).subscribe({
-        next: res => { this.mobileResult = res; this.paying = false; this.step = 'confirm'; },
-        error: err => { this.paying = false; this.paymentError = err.error?.message ?? 'Erreur Orange Money.'; }
-      });
+    switch (this.paymentMethod) {
+      case 'stripe':
+        // Pattern PM-first : on monte Elements en mode 'subscription' et on appellera
+        // le backend uniquement lors du clic sur "Payer" (createPaymentMethod → /stripe/create).
+        this.stripeSubResult = null;
+        this.stripeMounted = false;
+        this.stripeElements = null;
+        this.paying = false;
+        this.step = 'confirm';
+        return;
+      case 'wave':
+        this.subscriptionService.initiateWave(this.selectedPlan, this.phoneNumber.trim()).subscribe({
+          next: res => { this.mobileResult = res; this.paying = false; this.step = 'confirm'; },
+          error: err => { this.paying = false; this.paymentError = err.error?.message ?? 'Erreur Wave.'; }
+        });
+        return;
+      case 'orange':
+        this.subscriptionService.initiateOrange(this.selectedPlan, this.phoneNumber.trim()).subscribe({
+          next: res => { this.mobileResult = res; this.paying = false; this.step = 'confirm'; },
+          error: err => { this.paying = false; this.paymentError = err.error?.message ?? 'Erreur Orange Money.'; }
+        });
+        return;
+      case 'paydunya':
+        this.paying = false;
+        this.payWithPayDunya();
+        return;
+      case 'paytech':
+        this.paying = false;
+        this.payWithPayTech();
+        return;
     }
   }
 
@@ -1530,6 +1572,29 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
       },
       error: err => {
         this.payDunyaLoading = false;
+        this.paymentError = err.error?.message ?? 'Erreur lors de la création du paiement.';
+      }
+    });
+  }
+
+  payWithPayTech(): void {
+    if (!this.selectedPlan) return;
+    this.payTechLoading = true;
+    this.paymentError = '';
+    this.subscriptionService.createPayTechPayment({
+      planTier: this.selectedPlan,
+      couponCode: this.promoCode.trim() || null
+    }).subscribe({
+      next: res => {
+        this.payTechLoading = false;
+        // Mobile : redirection express (deep link Wave/Orange Money) ; desktop : portail web
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        const url = (isMobile && res.mobileRedirectUrl) ? res.mobileRedirectUrl : res.redirectUrl;
+        localStorage.setItem('paytech_ref', res.refCommand);
+        window.location.href = url;
+      },
+      error: err => {
+        this.payTechLoading = false;
         this.paymentError = err.error?.message ?? 'Erreur lors de la création du paiement.';
       }
     });

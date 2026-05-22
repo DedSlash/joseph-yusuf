@@ -227,6 +227,15 @@ export class SuccessComponent implements OnInit {
     const params = this.route.snapshot.queryParams;
     const subId = localStorage.getItem(PENDING_SUB_KEY);
 
+    // Retour PayTech : query param ?ref=JY-... (IPN active l'abo en arrière-plan, on recharge).
+    if (params['ref']) {
+      localStorage.removeItem('paytech_ref');
+      this.confirming = true;
+      this.loadCurrent();
+      this.authService.refreshSession().subscribe();
+      return;
+    }
+
     // Retour PayDunya (paramètre plan présent, pas de redirect_status)
     if (params['plan'] && !params['redirect_status']) {
       this.confirming = true;

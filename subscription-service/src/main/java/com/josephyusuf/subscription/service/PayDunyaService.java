@@ -51,7 +51,7 @@ public class PayDunyaService {
             PromoCodeValidation validation = adminClient.validatePublic(couponCode);
             if (validation.isValid()) {
                 discountPercent = validation.getDiscountPercent();
-                amount = amount.multiply(BigDecimal.valueOf(100 - discountPercent))
+                amount = amount.multiply(BigDecimal.valueOf(100L - discountPercent))
                         .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
             }
         }

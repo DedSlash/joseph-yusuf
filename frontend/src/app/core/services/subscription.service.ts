@@ -7,7 +7,9 @@ import {
   PaymentProviderResult,
   PaymentMethodConfig,
   CreateSubscriptionRequest,
-  CreateSubscriptionResponse
+  CreateSubscriptionResponse,
+  PayTechRequest,
+  PayTechPaymentResponse
 } from '../../shared/models/subscription.model';
 
 @Injectable({ providedIn: 'root' })
@@ -68,6 +70,10 @@ export class SubscriptionService {
 
   confirmPayDunyaPayment(token: string): Observable<{ token: string; status: string }> {
     return this.http.get<{ token: string; status: string }>(`${this.apiUrl}/paydunya/confirm/${token}`);
+  }
+
+  createPayTechPayment(request: PayTechRequest): Observable<PayTechPaymentResponse> {
+    return this.http.post<PayTechPaymentResponse>(`${this.apiUrl}/paytech/create`, request);
   }
 
   joinWaitlist(request: { email: string; planTier: string }): Observable<{ email: string; planTier: string; promoCodeReserved: string; message: string }> {
