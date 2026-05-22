@@ -8,6 +8,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-schemas.sql:/docker-entrypoint-initdb.d/01-schemas.sql:ro
     networks:
       - joseph-network
     healthcheck:
@@ -30,7 +31,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: joseph_redis
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
@@ -101,7 +102,7 @@ services:
     networks:
       - joseph-network
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:29092"]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -119,11 +120,11 @@ services:
         max-file: "3"
 
   discovery-server:
-    image: ${REGISTRY_URL}/joseph-discovery-server:${BUILD_NUMBER}
+    build:
+      context: ./discovery-server
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-discovery-server:${BUILD_NUMBER:-latest}
     container_name: joseph_discovery_server
-    depends_on:
-      postgresql:
-        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseG1GC
@@ -148,7 +149,10 @@ services:
         max-file: "3"
 
   gateway-service:
-    image: ${REGISTRY_URL}/joseph-gateway-service:${BUILD_NUMBER}
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-gateway-service:${BUILD_NUMBER:-latest}
     container_name: joseph_gateway_service
     depends_on:
       discovery-server:
@@ -156,6 +160,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseG1GC
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
     ports:
       - "127.0.0.1:8080:8080"
     networks:
@@ -171,7 +176,7 @@ services:
       resources:
         limits:
           memory: 256m
-          cpus: '0.25'
+          cpus: '0.5'
     logging:
       driver: json-file
       options:
@@ -179,7 +184,10 @@ services:
         max-file: "3"
 
   auth-service:
-    image: ${REGISTRY_URL}/joseph-auth-service:${BUILD_NUMBER}
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-auth-service:${BUILD_NUMBER:-latest}
     container_name: joseph_auth_service
     depends_on:
       discovery-server:
@@ -194,6 +202,13 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_MAIL_HOST=${MAIL_HOST}
+      - SPRING_MAIL_PORT=${MAIL_PORT}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+      - APP_RESET_URL=${RESET_URL}
+      - SUPER_ADMIN_EMAILS=${SUPER_ADMIN_EMAILS}
+      - SUPER_ADMIN_DEFAULT_PASSWORD=${SUPER_ADMIN_DEFAULT_PASSWORD:-}
     networks:
       - joseph-network
     healthcheck:
@@ -215,14 +230,17 @@ services:
         max-file: "3"
 
   income-service:
-    image: ${REGISTRY_URL}/joseph-income-service:${BUILD_NUMBER}
+    build:
+      context: ./income-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-income-service:${BUILD_NUMBER:-latest}
     container_name: joseph_income_service
     depends_on:
       discovery-server:
         condition: service_healthy
       postgresql:
         condition: service_healthy
-      auth-service:
+      kafka:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -232,6 +250,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
     networks:
       - joseph-network
     healthcheck:
@@ -253,14 +272,15 @@ services:
         max-file: "3"
 
   rule-engine-service:
-    image: ${REGISTRY_URL}/joseph-rule-engine-service:${BUILD_NUMBER}
+    build:
+      context: ./rule-engine-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-rule-engine-service:${BUILD_NUMBER:-latest}
     container_name: joseph_rule_engine_service
     depends_on:
       discovery-server:
         condition: service_healthy
       postgresql:
-        condition: service_healthy
-      income-service:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -290,14 +310,273 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  alert-service:
+    build:
+      context: ./alert-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-alert-service:${BUILD_NUMBER:-latest}
+    container_name: joseph_alert_service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME}?currentSchema=joseph_alerts
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  report-service:
+    build:
+      context: ./report-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-report-service:${BUILD_NUMBER:-latest}
+    container_name: joseph_report_service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME}?currentSchema=joseph_reports
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  subscription-service:
+    build:
+      context: ./subscription-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-subscription-service:${BUILD_NUMBER:-latest}
+    container_name: joseph_subscription_service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME}?currentSchema=joseph_subscriptions
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_PRICE_PREMIUM_EUR=${STRIPE_PRICE_PREMIUM_EUR}
+      - STRIPE_PRICE_PREMIUM_XOF=${STRIPE_PRICE_PREMIUM_XOF}
+      - STRIPE_PRICE_PREMIUM_PLUS_EUR=${STRIPE_PRICE_PREMIUM_PLUS_EUR}
+      - STRIPE_PRICE_PREMIUM_PLUS_XOF=${STRIPE_PRICE_PREMIUM_PLUS_XOF}
+      - PAYDUNYA_MASTER_KEY=${PAYDUNYA_MASTER_KEY}
+      - PAYDUNYA_PRIVATE_KEY=${PAYDUNYA_PRIVATE_KEY}
+      - PAYDUNYA_TOKEN=${PAYDUNYA_TOKEN}
+      - PAYDUNYA_MODE=${PAYDUNYA_MODE}
+      - PAYTECH_API_KEY=${PAYTECH_API_KEY}
+      - PAYTECH_API_SECRET=${PAYTECH_API_SECRET}
+      - PAYTECH_ENV=${PAYTECH_ENV}
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  admin-service:
+    build:
+      context: ./admin-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-admin-service:${BUILD_NUMBER:-latest}
+    container_name: joseph_admin_service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME}?currentSchema=joseph_admin
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  support-service:
+    build:
+      context: ./support-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_URL:-local}/joseph-support-service:${BUILD_NUMBER:-latest}
+    container_name: joseph_support_service
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/${DB_NAME}?currentSchema=joseph_support
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_MAIL_HOST=${MAIL_HOST}
+      - SPRING_MAIL_PORT=${MAIL_PORT}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8088/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   frontend:
-    image: ${REGISTRY_URL}/joseph-frontend:${BUILD_NUMBER}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        API_URL: ${API_URL}
+    image: ${REGISTRY_URL:-local}/joseph-frontend:${BUILD_NUMBER:-latest}
     container_name: joseph_frontend
     depends_on:
       gateway-service:
         condition: service_healthy
     ports:
       - "127.0.0.1:4200:80"
+    networks:
+      - joseph-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+      dockerfile: Dockerfile
+      args:
+        API_URL: ${API_URL}
+    image: ${REGISTRY_URL:-local}/joseph-admin-frontend:${BUILD_NUMBER:-latest}
+    container_name: joseph_admin_frontend
+    depends_on:
+      gateway-service:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4201:80"
     networks:
       - joseph-network
     healthcheck:

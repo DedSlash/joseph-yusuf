@@ -1,0 +1,108 @@
+---
+- name: Deploy Joseph·Yusuf Production
+  hosts: joseph-prod
+  become: yes
+  become_user: deploy
+
+  vars:
+    project_dir: /opt/joseph-yusuf
+    repo_url: https://github.com/DedSlash/joseph-yusuf.git
+    branch: main
+
+  tasks:
+    - name: Ensure project directory exists
+      ansible.builtin.file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: deploy
+        group: deploy
+        mode: '0755'
+
+    - name: Pull latest code
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ project_dir }}"
+        version: "{{ branch }}"
+        force: yes
+      register: git_result
+
+    - name: Copy .env.prod
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../.env.prod"
+        dest: "{{ project_dir }}/.env"
+        owner: deploy
+        group: deploy
+        mode: '0600'
+
+    - name: Build Docker images
+      ansible.builtin.shell: |
+        cd {{ project_dir }}
+        docker compose -f docker-compose.prod.yml build {{ services_to_deploy | default('') }}
+      register: build_result
+      changed_when: true
+
+    - name: Start services
+      ansible.builtin.shell: |
+        cd {{ project_dir }}
+        docker compose -f docker-compose.prod.yml up -d --remove-orphans \
+          {{ '--no-deps ' + services_to_deploy if services_to_deploy is defined else '' }}
+      changed_when: true
+
+    - name: Wait for Gateway
+      ansible.builtin.wait_for:
+        port: 8080
+        host: 127.0.0.1
+        timeout: 120
+
+    - name: Wait for Frontend
+      ansible.builtin.wait_for:
+        port: 4200
+        host: 127.0.0.1
+        timeout: 60
+
+    - name: Wait for Auth service
+      ansible.builtin.wait_for:
+        port: 8081
+        host: 127.0.0.1
+        timeout: 120
+
+    - name: Health check Gateway
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8080/actuator/health
+        status_code: 200
+      retries: 5
+      delay: 10
+      register: gateway_health
+
+    - name: Health check Frontend
+      ansible.builtin.uri:
+        url: http://127.0.0.1:4200
+        status_code: 200
+      retries: 5
+      delay: 10
+      register: frontend_health
+
+    - name: Health check Auth
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8081/actuator/health
+        status_code: 200
+      retries: 5
+      delay: 10
+      register: auth_health
+
+    - name: Report deployment status
+      ansible.builtin.debug:
+        msg: |
+          Deployment complete!
+          Git commit: {{ git_result.after | default('unknown') }}
+          Gateway: {{ gateway_health.status | default('unknown') }}
+          Frontend: {{ frontend_health.status | default('unknown') }}
+          Auth: {{ auth_health.status | default('unknown') }}
+
+  handlers:
+    - name: Rollback on failure
+      ansible.builtin.shell: |
+        cd {{ project_dir }}
+        git checkout HEAD~1
+        docker compose -f docker-compose.prod.yml build
+        docker compose -f docker-compose.prod.yml up -d

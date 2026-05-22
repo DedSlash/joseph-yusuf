@@ -1,10 +1,10 @@
 all:
   hosts:
     joseph-prod:
-      ansible_host: "{{ vps_host }}"
+      ansible_host: 178.105.151.226
       ansible_user: deploy
-      ansible_ssh_private_key_file: "{{ lookup('env', 'SSH_KEY_PATH') | default('~/.ssh/id_rsa', true) }}"
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519
       ansible_python_interpreter: /usr/bin/python3
   vars:
     env_name: production
-    domain: "{{ production_domain }}"
+    domain: josephyusuf.com
