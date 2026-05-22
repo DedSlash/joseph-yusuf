@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
@@ -122,31 +122,34 @@ const PLANS: PlanCard[] = [
 
       <!-- Visualisation animée -->
       <div class="hero-visual" aria-hidden="true">
-        <div class="vis-card vis-card-main">
+        <div class="vis-card vis-card-main vis-float-1">
           <div class="vis-label">Mois en cours</div>
-          <div class="vis-amount">425 000 <span>XOF</span></div>
-          <div class="vis-badge abundance">Abondance +18%</div>
+          <div class="vis-amount">{{ heroAmountDisplay }} <span>XOF</span></div>
+          <div class="vis-badge abundance pulse-gold">Abondance +18%</div>
           <div class="vis-bar-row">
             <div class="vis-bar-item">
-              <div class="vis-bar-fill" style="height:70%;background:#C9A84C"></div>
+              <div class="vis-bar-fill vis-bar-animate"
+                   style="--target-h: 70%; background: #C9A84C; animation-delay: 600ms"></div>
               <span>Besoins</span>
             </div>
             <div class="vis-bar-item">
-              <div class="vis-bar-fill" style="height:30%;background:#5cdb6f"></div>
+              <div class="vis-bar-fill vis-bar-animate"
+                   style="--target-h: 30%; background: #5cdb6f; animation-delay: 800ms"></div>
               <span>Épargne</span>
             </div>
             <div class="vis-bar-item">
-              <div class="vis-bar-fill" style="height:20%;background:#5dade2"></div>
+              <div class="vis-bar-fill vis-bar-animate"
+                   style="--target-h: 20%; background: #5dade2; animation-delay: 1000ms"></div>
               <span>Invest.</span>
             </div>
           </div>
         </div>
-        <div class="vis-card vis-card-secondary">
+        <div class="vis-card vis-card-secondary vis-float-2">
           <div class="vis-mini-label">Réserve Joseph</div>
           <div class="vis-mini-amount">92 000 XOF</div>
           <div class="vis-mini-sub">Constituée sur 4 mois d'abondance</div>
         </div>
-        <div class="vis-card vis-card-alert">
+        <div class="vis-card vis-card-alert vis-float-3">
           <span class="vis-alert-icon">✦</span>
           <span class="vis-alert-text">Mois d'abondance détecté — épargnez davantage</span>
         </div>
@@ -698,6 +701,30 @@ const PLANS: PlanCard[] = [
       width: 100%;
       border-radius: 4px 4px 0 0;
       min-height: 6px;
+    }
+
+    /* Bar fill vertical : 0 → --target-h */
+    .vis-bar-animate {
+      height: 0;
+      animation: visBarFill 900ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    }
+    @keyframes visBarFill {
+      from { height: 0; }
+      to   { height: var(--target-h, 50%); }
+    }
+
+    /* Float subtil sur les cartes du hero-visual (3 phases décalées) */
+    .vis-float-1 { animation: visFloat 6s ease-in-out infinite; }
+    .vis-float-2 { animation: visFloat 7s ease-in-out infinite; animation-delay: -2s; }
+    .vis-float-3 { animation: visFloat 8s ease-in-out infinite; animation-delay: -4s; }
+    @keyframes visFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .vis-bar-animate { height: var(--target-h, 50%); animation: none; }
+      .vis-float-1, .vis-float-2, .vis-float-3 { animation: none; }
     }
 
     .vis-bar-item span {
@@ -1312,12 +1339,21 @@ const PLANS: PlanCard[] = [
     }
   `]
 })
-export class LandingComponent implements OnInit {
+export class LandingComponent implements OnInit, OnDestroy {
   scrolled = false;
   mobileMenuOpen = false;
   currency: 'XOF' | 'EUR' = 'XOF';
   year = new Date().getFullYear();
   plans = PLANS;
+
+  // Count-up hero visual
+  private static readonly HERO_TARGET_AMOUNT = 425000;
+  private heroCountRaf = 0;
+  heroAmount = 0;
+
+  get heroAmountDisplay(): string {
+    return this.heroAmount.toLocaleString('fr-FR').replace(/,/g, ' ');
+  }
 
   steps = [
     {
@@ -1389,7 +1425,32 @@ export class LandingComponent implements OnInit {
   ngOnInit(): void {
     if (this.authService.isTokenValid()) {
       this.router.navigate(['/dashboard']);
+      return;
     }
+    // Lance le count-up après un court délai pour synchroniser avec les animations CSS
+    setTimeout(() => this.animateHeroAmount(), 250);
+  }
+
+  ngOnDestroy(): void {
+    if (this.heroCountRaf) cancelAnimationFrame(this.heroCountRaf);
+  }
+
+  private animateHeroAmount(): void {
+    const target = LandingComponent.HERO_TARGET_AMOUNT;
+    const duration = 1100;
+    const startTs = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startTs) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      this.heroAmount = Math.round(target * eased);
+      if (t < 1) {
+        this.heroCountRaf = requestAnimationFrame(step);
+      } else {
+        this.heroAmount = target;
+        this.heroCountRaf = 0;
+      }
+    };
+    this.heroCountRaf = requestAnimationFrame(step);
   }
 
   @HostListener('window:scroll')

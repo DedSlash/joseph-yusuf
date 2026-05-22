@@ -257,6 +257,32 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
       color: #ff7a6c;
       background: rgba(231, 76, 60, 0.08);
     }
+
+    /* Tablet : 768px – 1023px — réduit la largeur du drawer */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .drawer { width: 360px; }
+    }
+
+    /* Mobile : ≤ 767px — drawer ancré en position fixe, plein largeur */
+    @media (max-width: 767px) {
+      .drawer {
+        position: fixed;
+        top: 64px;
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-width: none;
+        max-height: calc(100vh - 80px);
+        border-radius: 14px;
+      }
+      .drawer-header { padding: 14px 16px 12px; }
+      .drawer-header h3 { font-size: 16px; }
+      .header-actions { flex-wrap: wrap; gap: 6px; }
+      .link-btn { font-size: 10.5px; padding: 4px 8px; }
+      .alert-item { padding: 10px 12px; }
+      .alert-title { font-size: 13px; }
+      .alert-message { font-size: 12.5px; }
+    }
   `]
 })
 export class NotificationBellComponent implements OnInit, OnDestroy {
