@@ -111,11 +111,13 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 10000;
-      animation: fadeInOverlay 150ms ease-out;
+      animation: fadeInOverlay 200ms ease-out;
     }
 
     @keyframes fadeInOverlay {
@@ -131,13 +133,18 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       overflow-y: auto;
       background: #1a1a2e;
       border-radius: 12px;
-      color: #F0E8D0;
-      animation: fadeInModal 150ms ease-out;
+      color: var(--text-0);
+      animation: fadeInModal 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+      transform-origin: center;
     }
 
     @keyframes fadeInModal {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    @media (max-width: 767px) {
+      .modal-content { width: 100%; max-width: 100vw; max-height: 100vh; border-radius: 0; }
     }
 
     .btn-close {
@@ -152,7 +159,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       line-height: 1;
       z-index: 1;
     }
-    .btn-close:hover { color: #F0E8D0; }
+    .btn-close:hover { color: var(--text-0); }
 
     .lang-toggle {
       position: absolute;
@@ -177,10 +184,10 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
     }
     .lang-btn.active {
       background: rgba(201, 168, 76, 0.25);
-      color: #C9A84C;
+      color: var(--gold-light);
     }
     .lang-btn:hover:not(.active) {
-      color: #F0E8D0;
+      color: var(--text-0);
     }
 
     .modal-header {
@@ -188,7 +195,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       align-items: center;
       gap: 1rem;
       padding: 2.2rem 1.5rem 1.2rem;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+      border-bottom: 1px solid var(--line-soft);
     }
 
     .modal-header.status-abundance {
@@ -205,7 +212,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
 
     .status-icon { font-size: 2rem; line-height: 1; }
     .header-text { flex: 1; min-width: 0; }
-    .header-title { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; color: #F0E8D0; }
+    .header-title { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; color: var(--text-0); }
 
     .split-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .pill {
@@ -214,7 +221,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       font-size: 0.72rem;
       font-weight: 600;
       background: rgba(255, 255, 255, 0.06);
-      color: #F0E8D0;
+      color: var(--text-0);
       border: 1px solid rgba(201, 168, 76, 0.25);
     }
     .pill-needs { border-color: rgba(93, 173, 226, 0.4); color: #b5d8f1; }
@@ -240,7 +247,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
     }
     .tip-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
     .tip-icon { font-size: 1.3rem; line-height: 1; }
-    .tip-title { font-size: 0.95rem; font-weight: 700; color: #F0E8D0; }
+    .tip-title { font-size: 0.95rem; font-weight: 700; color: var(--text-0); }
     .tip-description { margin: 0; font-size: 0.85rem; line-height: 1.5; color: rgba(240, 232, 208, 0.85); }
 
     .tip-actions { margin-top: 0.7rem; }
@@ -248,7 +255,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
     .btn-outline {
       padding: 0.4rem 0.9rem;
       background: transparent;
-      color: #C9A84C;
+      color: var(--gold-light);
       border: 1px solid rgba(201, 168, 76, 0.5);
       border-radius: 6px;
       font-size: 0.78rem;
@@ -260,8 +267,8 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
 
     .btn-unlock {
       padding: 0.3rem 0.85rem;
-      background: #C9A84C;
-      color: #0D0B07;
+      background: var(--gold-light);
+      color: var(--night-1);
       border: none;
       border-radius: 6px;
       font-size: 0.75rem;
@@ -281,7 +288,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
     .upgrade-title {
       display: block;
       font-size: 0.9rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin-bottom: 0.7rem;
     }
     .upgrade-features {
@@ -293,15 +300,15 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
     }
     .upgrade-features li::before {
       content: '• ';
-      color: #C9A84C;
+      color: var(--gold-light);
     }
     .upgrade-features li {
       margin-bottom: 0.25rem;
     }
     .btn-upgrade {
       padding: 0.55rem 1.3rem;
-      background: #C9A84C;
-      color: #0D0B07;
+      background: var(--gold-light);
+      color: var(--night-1);
       border: none;
       border-radius: 6px;
       font-size: 0.82rem;
@@ -316,7 +323,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.5rem;
-      border-top: 1px solid rgba(201, 168, 76, 0.15);
+      border-top: 1px solid var(--line-soft);
       background: rgba(0, 0, 0, 0.2);
       gap: 1rem;
       flex-wrap: wrap;
@@ -334,7 +341,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
       text-decoration: underline;
       padding: 0.4rem 0.2rem;
     }
-    .btn-link:hover { color: #F0E8D0; }
+    .btn-link:hover { color: var(--text-0); }
 
     @media (max-width: 768px) {
       .modal-content {
