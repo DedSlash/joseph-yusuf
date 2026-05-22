@@ -61,4 +61,18 @@ export class SubscriptionService {
   getPaymentMethods(): Observable<PaymentMethodConfig[]> {
     return this.http.get<PaymentMethodConfig[]>(`${this.apiUrl}/payment-methods`);
   }
+
+  createPayDunyaInvoice(request: { planTier: string; couponCode: string | null }): Observable<{ token: string; invoiceUrl: string }> {
+    return this.http.post<{ token: string; invoiceUrl: string }>(`${this.apiUrl}/paydunya/create`, request);
+  }
+
+  confirmPayDunyaPayment(token: string): Observable<{ token: string; status: string }> {
+    return this.http.get<{ token: string; status: string }>(`${this.apiUrl}/paydunya/confirm/${token}`);
+  }
+
+  joinWaitlist(request: { email: string; planTier: string }): Observable<{ email: string; planTier: string; promoCodeReserved: string; message: string }> {
+    return this.http.post<{ email: string; planTier: string; promoCodeReserved: string; message: string }>(
+      `${environment.apiUrl}/api/auth/waitlist/join`, request
+    );
+  }
 }

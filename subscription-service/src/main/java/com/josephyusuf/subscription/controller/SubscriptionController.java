@@ -4,6 +4,9 @@ import com.josephyusuf.subscription.dto.CancelSubscriptionRequest;
 import com.josephyusuf.subscription.dto.CreateSubscriptionRequest;
 import com.josephyusuf.subscription.dto.CreateSubscriptionResponse;
 import com.josephyusuf.subscription.dto.OrangeMoneyRequest;
+import com.josephyusuf.subscription.dto.PayDunyaInvoiceResponse;
+import com.josephyusuf.subscription.dto.PayDunyaRequest;
+import com.josephyusuf.subscription.dto.PayDunyaStatusResponse;
 import com.josephyusuf.subscription.dto.PaymentProviderResponse;
 import com.josephyusuf.subscription.dto.PendingTransactionParams;
 import com.josephyusuf.subscription.dto.SubscriptionResponse;
@@ -11,6 +14,7 @@ import com.josephyusuf.subscription.dto.TransactionResponse;
 import com.josephyusuf.subscription.dto.WavePaymentRequest;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.service.OrangeMoneyService;
+import com.josephyusuf.subscription.service.PayDunyaService;
 import com.josephyusuf.subscription.service.SubscriptionService;
 import com.josephyusuf.subscription.service.WaveService;
 import jakarta.validation.Valid;
@@ -39,6 +43,7 @@ public class SubscriptionController {
     private final WaveService waveService;
     private final OrangeMoneyService orangeMoneyService;
     private final SubscriptionService subscriptionService;
+    private final PayDunyaService payDunyaService;
 
     @PostMapping("/stripe/create")
     public ResponseEntity<CreateSubscriptionResponse> createStripeSubscription(Authentication auth,
@@ -90,6 +95,21 @@ public class SubscriptionController {
                 .currency(response.getCurrency())
                 .build());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/paydunya/create")
+    public ResponseEntity<PayDunyaInvoiceResponse> createPayDunyaInvoice(
+            Authentication auth, @Valid @RequestBody PayDunyaRequest request) {
+        UUID userId = userIdOf(auth);
+        String email = emailOf(auth);
+        return ResponseEntity.ok(payDunyaService.createInvoice(
+                userId, email, request.getPlanTier(), request.getCouponCode()));
+    }
+
+    @GetMapping("/paydunya/confirm/{token}")
+    public ResponseEntity<PayDunyaStatusResponse> confirmPayDunya(
+            @PathVariable("token") String token) {
+        return ResponseEntity.ok(payDunyaService.checkInvoiceStatus(token));
     }
 
     @GetMapping("/current")

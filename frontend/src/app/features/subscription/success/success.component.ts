@@ -227,17 +227,22 @@ export class SuccessComponent implements OnInit {
     const params = this.route.snapshot.queryParams;
     const subId = localStorage.getItem(PENDING_SUB_KEY);
 
+    // Retour PayDunya (paramètre plan présent, pas de redirect_status)
+    if (params['plan'] && !params['redirect_status']) {
+      this.confirming = true;
+      this.loadCurrent();
+      this.authService.refreshSession().subscribe();
+      return;
+    }
+
     // Retour 3DS depuis Stripe (paramètres redirect_status + payment_intent)
     if (params['redirect_status'] === 'succeeded' || params['redirect_status'] === 'pending') {
       this.confirmAndLoad(subId);
     } else if (params['redirect_status'] && params['redirect_status'] !== 'succeeded') {
-      // Échec 3DS — rediriger vers /subscription pour réessayer
       this.error = "Le paiement n'a pas abouti. Vous allez être redirigé pour réessayer.";
       setTimeout(() => this.router.navigate(['/subscription']), 3000);
       return;
     } else if (subId) {
-      // Sans redirect : appel direct au backend pour confirmer (le confirmStripe l'a déjà fait,
-      // mais idempotent — on rafraîchit les données ici)
       this.confirmAndLoad(subId);
     } else {
       this.loadCurrent();
