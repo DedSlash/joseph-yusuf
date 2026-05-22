@@ -68,71 +68,62 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
     }
     .bell-btn {
       position: relative;
-      background: transparent;
-      border: 1px solid rgba(201, 168, 76, 0.3);
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      display: grid; place-items: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line-soft);
+      color: var(--text-1);
       cursor: pointer;
-      color: #C9A84C;
-      font-size: 1rem;
-      transition: background 0.2s;
+      transition: 0.15s;
     }
     .bell-btn:hover {
-      background: rgba(201, 168, 76, 0.1);
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-0);
     }
     .bell-icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: rgba(201, 168, 76, 0.55);
+      color: var(--text-2);
       transition: color 0.2s;
     }
     .bell-icon.has-unread {
-      color: #C9A84C;
-      animation: bell-ring 0.6s ease-in-out;
+      color: var(--gold-light);
+      animation: bell-shake 1.6s ease-in-out 1s 2;
     }
-    @keyframes bell-ring {
-      0%   { transform: rotate(0); }
-      15%  { transform: rotate(10deg); }
-      30%  { transform: rotate(-10deg); }
-      45%  { transform: rotate(6deg); }
-      60%  { transform: rotate(-6deg); }
-      75%  { transform: rotate(3deg); }
-      100% { transform: rotate(0); }
+    @keyframes bell-shake {
+      0%,100% { transform: rotate(0); }
+      20% { transform: rotate(-12deg); }
+      40% { transform: rotate(10deg); }
+      60% { transform: rotate(-6deg); }
+      80% { transform: rotate(4deg); }
     }
     .bell-btn:hover .bell-icon {
-      color: #C9A84C;
+      color: var(--text-0);
     }
     .badge {
       position: absolute;
-      top: -4px;
-      right: -4px;
-      background: #C9A84C;
-      color: #0D0B07;
-      font-size: 0.65rem;
-      font-weight: 700;
-      min-width: 18px;
-      height: 18px;
-      border-radius: 9px;
-      padding: 0 5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      top: 4px; right: 4px;
+      min-width: 16px; height: 16px;
+      padding: 0 4px;
+      border-radius: 8px;
+      background: var(--gold);
+      color: #1b1500;
+      font-size: 10px; font-weight: 700;
+      display: grid; place-items: center;
+      border: 2px solid var(--night-1);
     }
     .drawer {
       position: absolute;
       top: calc(100% + 10px);
       right: 0;
-      width: 380px;
-      max-height: 480px;
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.2);
-      border-radius: 10px;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+      width: 400px;
+      max-height: 500px;
+      background: linear-gradient(180deg, var(--night-2), var(--night-1));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: -20px 0 60px -15px rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -142,121 +133,155 @@ import { AlertDto, AlertSeverity } from '../../models/alert.model';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line-soft);
     }
     .drawer-header h3 {
       margin: 0;
-      font-size: 0.95rem;
-      color: #F0E8D0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-0);
     }
     .header-actions {
       display: flex;
-      gap: 0.6rem;
+      gap: 8px;
       align-items: center;
     }
     .link-btn {
-      background: none;
-      border: none;
-      color: #C9A84C;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 5px 10px;
+      color: var(--text-1);
       cursor: pointer;
-      font-size: 0.75rem;
+      font-size: 11px;
+      font-weight: 500;
+      transition: 0.15s;
     }
-    .delete-all-btn {
-      color: #f87171;
+    .link-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-0);
     }
-    .delete-all-btn:hover {
-      color: #fca5a5;
-    }
+    .delete-all-btn { color: #ff7a6c; border-color: rgba(231, 76, 60, 0.2); }
+    .delete-all-btn:hover { color: #ff9f93; background: rgba(231, 76, 60, 0.08); }
     .confirm-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.5rem 1rem;
-      background: rgba(248, 113, 113, 0.08);
-      border-bottom: 1px solid rgba(248, 113, 113, 0.2);
-      font-size: 0.78rem;
-      color: #fca5a5;
+      padding: 10px 20px;
+      background: rgba(231, 76, 60, 0.06);
+      border-bottom: 1px solid rgba(231, 76, 60, 0.15);
+      font-size: 12px;
+      color: #ff7a6c;
     }
-    .confirm-actions {
-      display: flex;
-      gap: 0.4rem;
-    }
+    .confirm-actions { display: flex; gap: 6px; }
     .confirm-yes {
-      padding: 0.2rem 0.6rem;
-      background: #f87171;
-      color: #0D0B07;
+      padding: 4px 10px;
+      background: #E74C3C;
+      color: #fff;
       border: none;
-      border-radius: 4px;
-      font-size: 0.72rem;
-      font-weight: 700;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
       cursor: pointer;
     }
     .confirm-no {
-      padding: 0.2rem 0.6rem;
+      padding: 4px 10px;
       background: transparent;
-      color: rgba(240, 232, 208, 0.6);
-      border: 1px solid rgba(240, 232, 208, 0.2);
-      border-radius: 4px;
-      font-size: 0.72rem;
+      color: var(--text-2);
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+      font-size: 11px;
       cursor: pointer;
     }
     .drawer-body {
       overflow-y: auto;
       flex: 1;
+      padding: 8px;
     }
     .empty {
-      padding: 2rem 1rem;
+      padding: 48px 20px;
       text-align: center;
-      color: rgba(240, 232, 208, 0.5);
-      font-size: 0.85rem;
+      color: var(--text-2);
+      font-size: 14px;
     }
     .alert-item {
       display: flex;
-      gap: 0.5rem;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.08);
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin: 2px 0;
       border-left: 3px solid transparent;
-      transition: background 0.2s;
+      transition: background 0.15s;
+      cursor: default;
     }
-    .alert-item.unread {
-      background: rgba(201, 168, 76, 0.04);
-    }
-    .alert-item.sev-success { border-left-color: #4ade80; }
-    .alert-item.sev-warning { border-left-color: #fbbf24; }
-    .alert-item.sev-danger  { border-left-color: #f87171; }
-    .alert-item.sev-info    { border-left-color: #60a5fa; }
-    .alert-content {
-      flex: 1;
-      cursor: pointer;
-    }
+    .alert-item:hover { background: rgba(255, 255, 255, 0.03); }
+    .alert-item.unread { background: rgba(201, 168, 76, 0.05); }
+    .alert-item.sev-success { border-left-color: #5cdb83; }
+    .alert-item.sev-warning { border-left-color: #f5b041; }
+    .alert-item.sev-danger  { border-left-color: #ff7a6c; }
+    .alert-item.sev-info    { border-left-color: #7fc1ea; }
+    .alert-content { flex: 1; cursor: pointer; min-width: 0; }
     .alert-title {
-      font-size: 0.85rem;
+      font-size: 13.5px;
       font-weight: 600;
-      color: #F0E8D0;
-      margin-bottom: 0.2rem;
+      color: var(--text-0);
+      margin-bottom: 2px;
     }
     .alert-message {
-      font-size: 0.78rem;
-      color: rgba(240, 232, 208, 0.75);
-      line-height: 1.35;
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.45;
     }
     .alert-date {
-      font-size: 0.7rem;
-      color: rgba(240, 232, 208, 0.45);
-      margin-top: 0.3rem;
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .delete-btn {
       background: transparent;
       border: none;
-      color: rgba(240, 232, 208, 0.4);
+      color: var(--text-3);
       cursor: pointer;
-      font-size: 1.1rem;
-      padding: 0 0.25rem;
+      font-size: 16px;
+      padding: 0 4px;
       align-self: flex-start;
+      border-radius: 6px;
+      width: 28px; height: 28px;
+      display: grid; place-items: center;
+      transition: 0.15s;
     }
     .delete-btn:hover {
-      color: #f87171;
+      color: #ff7a6c;
+      background: rgba(231, 76, 60, 0.08);
+    }
+
+    /* Tablet : 768px – 1023px — réduit la largeur du drawer */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .drawer { width: 360px; }
+    }
+
+    /* Mobile : ≤ 767px — drawer ancré en position fixe, plein largeur */
+    @media (max-width: 767px) {
+      .drawer {
+        position: fixed;
+        top: 64px;
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-width: none;
+        max-height: calc(100vh - 80px);
+        border-radius: 14px;
+      }
+      .drawer-header { padding: 14px 16px 12px; }
+      .drawer-header h3 { font-size: 16px; }
+      .header-actions { flex-wrap: wrap; gap: 6px; }
+      .link-btn { font-size: 10.5px; padding: 4px 8px; }
+      .alert-item { padding: 10px 12px; }
+      .alert-title { font-size: 13px; }
+      .alert-message { font-size: 12.5px; }
     }
   `]
 })
