@@ -13,7 +13,7 @@ import { RouterModule } from '@angular/router';
         <a routerLink="/" class="legal-back">&larr; Retour &agrave; l'accueil</a>
       </header>
 
-      <main class="legal-content">
+      <main class="legal-content fade-in-up">
         <span class="legal-eyebrow">{{ eyebrow }}</span>
         <h1>{{ title }}</h1>
         <p class="legal-meta" *ngIf="updatedAt">Derni&egrave;re mise &agrave; jour : {{ updatedAt }}</p>

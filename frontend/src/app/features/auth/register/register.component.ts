@@ -158,7 +158,7 @@ interface RegisterForm {
 
     .auth-left {
       flex: 1;
-      background: #0D0B07;
+      background: var(--night-1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -171,23 +171,23 @@ interface RegisterForm {
     }
 
     .logo {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 2.5rem;
       font-weight: 600;
-      color: #C9A84C;
+      color: var(--gold);
       margin-bottom: 1rem;
     }
 
     .tagline {
       font-size: 1.1rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.8;
       margin-bottom: 2rem;
     }
 
     .verse {
       font-style: italic;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.6;
       font-size: 0.9rem;
       line-height: 1.6;
@@ -201,13 +201,13 @@ interface RegisterForm {
       margin-top: 0.75rem;
       font-style: normal;
       font-weight: 600;
-      color: #C9A84C;
+      color: var(--gold);
       opacity: 0.8;
     }
 
     .auth-right {
       flex: 1;
-      background: #1A1710;
+      background: var(--night-2);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -220,14 +220,14 @@ interface RegisterForm {
     }
 
     .form-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.8rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin-bottom: 0.5rem;
     }
 
     .form-subtitle {
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.6;
       font-size: 0.9rem;
       margin-bottom: 2rem;
@@ -258,7 +258,7 @@ interface RegisterForm {
 
     .form-group label {
       display: block;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.85rem;
       font-weight: 500;
       margin-bottom: 0.5rem;
@@ -269,9 +269,9 @@ interface RegisterForm {
       width: 100%;
       padding: 0.75rem 1rem;
       background: rgba(13, 11, 7, 0.6);
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
-      color: #F0E8D0;
+      color: var(--text-0);
       font-size: 0.9rem;
       transition: border-color 0.2s;
       outline: none;
@@ -279,18 +279,18 @@ interface RegisterForm {
     }
 
     .form-input:focus {
-      border-color: #C9A84C;
+      border-color: var(--gold);
     }
 
     .form-input::placeholder {
-      color: rgba(240, 232, 208, 0.3);
+      color: var(--text-3);
     }
 
     .btn-submit {
       width: 100%;
       padding: 0.85rem;
-      background: #C9A84C;
-      color: #0D0B07;
+      background: var(--gold);
+      color: var(--night-1);
       border: none;
       border-radius: 8px;
       font-size: 0.95rem;
@@ -301,7 +301,7 @@ interface RegisterForm {
     }
 
     .btn-submit:hover:not(:disabled) {
-      background: #DAC372;
+      background: var(--gold-light);
       transform: translateY(-1px);
     }
 
@@ -313,13 +313,13 @@ interface RegisterForm {
     .form-footer {
       margin-top: 1.5rem;
       text-align: center;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.7;
       font-size: 0.85rem;
     }
 
     .link-gold {
-      color: #C9A84C;
+      color: var(--gold);
       text-decoration: none;
       font-weight: 500;
     }
@@ -353,7 +353,7 @@ interface RegisterForm {
     .promo-toggle-link {
       background: transparent;
       border: none;
-      color: #C9A84C;
+      color: var(--gold);
       font-size: 0.8rem;
       cursor: pointer;
       padding: 0;
@@ -367,7 +367,7 @@ interface RegisterForm {
 
     .promo-hint {
       font-size: 0.72rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       opacity: 0.45;
       margin: 0.4rem 0 0;
     }

@@ -14,6 +14,9 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
   template: `
     <nav class="navbar" *ngIf="currentUser$ | async as user">
       <div class="navbar-left">
+        <button class="nav-burger" (click)="toggleDrawer($event)" [class.open]="drawerOpen" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
         <a routerLink="/dashboard" class="logo">Joseph &middot; Yusuf</a>
         <div class="nav-links">
           <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
@@ -54,6 +57,18 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
         </div>
       </div>
     </nav>
+
+    <!-- Drawer mobile -->
+    <div class="nav-drawer-overlay" *ngIf="drawerOpen" (click)="drawerOpen = false"></div>
+    <aside class="nav-drawer" [class.open]="drawerOpen">
+      <a routerLink="/dashboard" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Dashboard</a>
+      <a routerLink="/incomes" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Mes Revenus</a>
+      <a routerLink="/account" class="drawer-link" (click)="drawerOpen = false">Mon compte</a>
+      <a routerLink="/subscription" class="drawer-link" (click)="drawerOpen = false">Mon abonnement</a>
+      <a routerLink="/support" class="drawer-link" (click)="drawerOpen = false">Support</a>
+      <div class="drawer-divider"></div>
+      <button class="drawer-link drawer-logout" (click)="drawerOpen = false; logout()">Déconnexion</button>
+    </aside>
 
     <!-- Modale d'aide — Principe de Joseph -->
     <p-dialog
@@ -119,120 +134,142 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       top: 0;
       left: 0;
       right: 0;
-      height: 64px;
-      background: #0D0B07;
-      border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+      height: 60px;
+      background: rgba(8, 8, 15, 0.7);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 2rem;
+      padding: 0 28px;
       z-index: 1000;
     }
 
     .navbar-left {
       display: flex;
       align-items: center;
-      gap: 2.5rem;
+      gap: 2rem;
     }
 
     .logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.5rem;
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
       font-weight: 600;
-      color: #C9A84C;
+      color: var(--text-0);
       text-decoration: none;
-      letter-spacing: 0.5px;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
+
+    .logo:hover { color: var(--gold-light); }
 
     .nav-links {
       display: flex;
-      gap: 1.5rem;
+      gap: 4px;
     }
 
     .nav-link {
-      color: #F0E8D0;
+      position: relative;
+      padding: 8px 14px;
+      border-radius: 8px;
+      color: var(--text-2);
       text-decoration: none;
-      font-size: 0.9rem;
+      font-size: 13.5px;
       font-weight: 500;
-      opacity: 0.7;
-      transition: opacity 0.2s, color 0.2s;
+      transition: color 0.15s, background 0.15s;
     }
 
-    .nav-link:hover,
+    .nav-link:hover {
+      color: var(--text-0);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
     .nav-link.active {
-      opacity: 1;
-      color: #C9A84C;
+      color: var(--gold-light);
+    }
+
+    .nav-link.active::after {
+      content: "";
+      position: absolute;
+      left: 14px; right: 14px; bottom: 2px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 2px;
     }
 
     .navbar-right {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 10px;
     }
 
     .plan-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.06em;
     }
 
     .plan-free {
-      background: rgba(128, 128, 128, 0.2);
-      color: #aaa;
-      border: 1px solid rgba(128, 128, 128, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-2);
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .plan-premium {
-      background: rgba(201, 168, 76, 0.15);
-      color: #C9A84C;
-      border: 1px solid rgba(201, 168, 76, 0.4);
+      background: var(--gold-tint);
+      color: var(--gold-light);
+      border: 1px solid rgba(201, 168, 76, 0.32);
     }
 
     .plan-premium-plus {
-      background: linear-gradient(135deg, rgba(201, 168, 76, 0.2), rgba(218, 195, 114, 0.2));
-      color: #DAC372;
-      border: 1px solid rgba(218, 195, 114, 0.5);
+      background: linear-gradient(135deg, rgba(232, 200, 118, 0.2), rgba(157, 130, 53, 0.1));
+      color: var(--gold-light);
+      border: 1px solid var(--gold);
     }
 
     .btn-help {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.3rem 0.75rem;
-      background: rgba(201, 168, 76, 0.08);
-      border: 1px solid rgba(201, 168, 76, 0.35);
-      border-radius: 20px;
-      color: #C9A84C;
-      font-size: 0.75rem;
-      font-weight: 600;
+      gap: 6px;
+      padding: 7px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      color: var(--text-1);
+      font-size: 12.5px;
+      font-weight: 500;
       cursor: pointer;
-      letter-spacing: 0.02em;
-      transition: background 0.2s, border-color 0.2s;
+      transition: background 0.15s, color 0.15s;
       white-space: nowrap;
     }
 
     .btn-help:hover {
-      background: rgba(201, 168, 76, 0.18);
-      border-color: rgba(201, 168, 76, 0.6);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-0);
     }
 
     .btn-upgrade-nav {
-      padding: 0.3rem 0.85rem;
-      background: rgba(201, 168, 76, 0.12);
-      border: 1px solid rgba(201, 168, 76, 0.4);
-      border-radius: 20px;
-      color: #C9A84C;
-      font-size: 0.75rem;
+      padding: 7px 14px;
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
+      border-radius: 8px;
+      color: #1b1500;
+      font-size: 12px;
       font-weight: 700;
       text-decoration: none;
-      transition: background 0.2s;
+      transition: box-shadow 0.2s;
       white-space: nowrap;
+      box-shadow: 0 4px 12px -4px var(--gold-glow);
     }
 
-    .btn-upgrade-nav:hover { background: rgba(201, 168, 76, 0.22); }
+    .btn-upgrade-nav:hover { box-shadow: 0 8px 20px -4px var(--gold-glow); }
 
     .avatar-container {
       position: relative;
@@ -243,50 +280,52 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: rgba(201, 168, 76, 0.15);
-      border: 1px solid rgba(201, 168, 76, 0.4);
-      color: #C9A84C;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold-deep));
+      color: #1b1500;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.8rem;
+      font-size: 13px;
       font-weight: 600;
+      letter-spacing: 0.02em;
     }
 
     .dropdown {
       position: absolute;
       top: calc(100% + 8px);
       right: 0;
-      background: #1A1710;
-      border: 1px solid rgba(201, 168, 76, 0.2);
-      border-radius: 8px;
-      min-width: 160px;
-      padding: 0.5rem 0;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      background: var(--night-2);
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      min-width: 180px;
+      padding: 6px;
+      box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.6);
     }
 
     .dropdown-item {
       display: block;
       width: 100%;
-      padding: 0.6rem 1rem;
-      color: #F0E8D0;
+      padding: 10px 14px;
+      color: var(--text-1);
       text-decoration: none;
-      font-size: 0.85rem;
+      font-size: 13.5px;
       border: none;
       background: none;
       text-align: left;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.15s, color 0.15s;
+      border-radius: 8px;
     }
 
     .dropdown-item:hover {
-      background: rgba(201, 168, 76, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-0);
     }
 
     .dropdown-divider {
       height: 1px;
-      background: rgba(201, 168, 76, 0.12);
-      margin: 0.3rem 0;
+      background: var(--line-soft);
+      margin: 4px 8px;
     }
 
     /* ── Modale d'aide ── */
@@ -297,21 +336,20 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
 
     .help-icon {
       font-size: 2rem;
-      color: #C9A84C;
+      color: var(--gold);
       margin-bottom: 0.75rem;
     }
 
     .help-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif);
       font-size: 1.7rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin: 0 0 1rem;
     }
 
     .help-intro {
-      color: #F0E8D0;
-      opacity: 0.75;
+      color: var(--text-1);
       font-size: 0.92rem;
       line-height: 1.7;
       max-width: 500px;
@@ -319,8 +357,7 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
     }
 
     .help-intro strong {
-      color: #C9A84C;
-      opacity: 1;
+      color: var(--gold-light);
     }
 
     .help-steps {
@@ -336,16 +373,20 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       display: flex;
       gap: 1rem;
       align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--line-soft);
     }
 
     .help-step-num {
       flex-shrink: 0;
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
-      background: rgba(201, 168, 76, 0.12);
-      border: 1px solid rgba(201, 168, 76, 0.4);
-      color: #C9A84C;
+      background: var(--gold-tint);
+      border: 1px solid var(--line-strong);
+      color: var(--gold-light);
       font-size: 0.75rem;
       font-weight: 700;
       display: flex;
@@ -357,20 +398,19 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
     .help-step strong {
       display: block;
       font-size: 0.88rem;
-      color: #F0E8D0;
+      color: var(--text-0);
       margin-bottom: 0.2rem;
     }
 
     .help-step p {
       font-size: 0.82rem;
-      color: #F0E8D0;
-      opacity: 0.6;
+      color: var(--text-2);
       line-height: 1.55;
       margin: 0;
     }
 
     .help-step em {
-      color: #C9A84C;
+      color: var(--gold-light);
       font-style: normal;
       font-weight: 500;
     }
@@ -380,27 +420,129 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
     }
 
     .btn-help-start {
-      display: inline-block;
-      padding: 0.65rem 1.75rem;
-      background: rgba(201, 168, 76, 0.12);
-      border: 1px solid rgba(201, 168, 76, 0.5);
-      border-radius: 8px;
-      color: #C9A84C;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 24px;
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
+      border-radius: 10px;
+      color: #1b1500;
       font-size: 0.88rem;
       font-weight: 600;
       text-decoration: none;
-      transition: background 0.2s;
+      transition: box-shadow 0.2s;
+      box-shadow: 0 8px 24px -8px var(--gold-glow);
     }
 
     .btn-help-start:hover {
-      background: rgba(201, 168, 76, 0.22);
+      box-shadow: 0 12px 32px -8px var(--gold-glow);
+    }
+
+    /* ── Burger button ── */
+    .nav-burger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      margin-right: 4px;
+    }
+    .nav-burger span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text-0);
+      border-radius: 2px;
+      transition: transform 0.25s, opacity 0.25s;
+    }
+    .nav-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-burger.open span:nth-child(2) { opacity: 0; }
+    .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── Drawer ── */
+    .nav-drawer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 998;
+      animation: fade-in 0.2s ease-out;
+    }
+    .nav-drawer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 270px;
+      max-width: 80vw;
+      height: 100vh;
+      background: rgba(13, 14, 28, 0.98);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-right: 1px solid rgba(201, 168, 76, 0.18);
+      padding: 76px 1rem 1.5rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    .nav-drawer.open { transform: translateX(0); }
+    .drawer-link {
+      padding: 0.85rem 1rem;
+      color: var(--text-1);
+      text-decoration: none;
+      font-size: 0.95rem;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .drawer-link:hover, .drawer-link.active {
+      background: rgba(201,168,76,0.1);
+      color: var(--gold-light);
+    }
+    .drawer-divider { height: 1px; background: var(--line-soft); margin: 0.5rem 0; }
+    .drawer-logout { color: #ff7a6c; }
+    .drawer-logout:hover { background: rgba(255, 122, 108, 0.08); color: #ff7a6c; }
+
+    /* Tablet : 768px – 1023px */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .navbar { padding: 0 20px; }
+      .navbar-right { gap: 8px; }
+      .btn-help span { display: none; }
+    }
+
+    /* Mobile : ≤ 767px */
+    @media (max-width: 767px) {
+      .navbar { padding: 0 12px; height: 56px; }
+      .nav-burger { display: flex; }
+      .nav-links { display: none; }
+      .btn-help span { display: none; }
+      .btn-upgrade-nav { padding: 6px 10px; font-size: 11px; }
+      .plan-badge { padding: 3px 8px; font-size: 10px; }
+      .logo { font-size: 1rem; }
+      .navbar-right { gap: 6px; }
     }
   `]
 })
 export class NavbarComponent implements OnInit {
   currentUser$: Observable<User | null>;
   dropdownOpen = false;
+  drawerOpen = false;
   showHelp = false;
+
+  toggleDrawer(event: Event): void {
+    event.stopPropagation();
+    this.drawerOpen = !this.drawerOpen;
+  }
 
   constructor(private readonly authService: AuthService, private readonly elRef: ElementRef) {
     this.currentUser$ = this.authService.currentUser$;
