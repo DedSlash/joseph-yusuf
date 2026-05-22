@@ -17,6 +17,16 @@
     margin-bottom: 2.5rem;
   }
 
+  .error-card {
+    padding: 3rem 2.5rem;
+    max-width: 520px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeInUp 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
   .error-icon {
     font-size: 4rem;
     margin-bottom: 1rem;

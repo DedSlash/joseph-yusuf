@@ -9,13 +9,15 @@ import { Router } from '@angular/router';
   template: `
     <div class="error-page">
       <div class="error-brand">Joseph &middot; Yusuf</div>
-      <div class="error-icon" aria-hidden="true">&#x1F4E1;</div>
-      <h1 class="error-title">Pas de connexion internet</h1>
-      <p class="error-subtitle">
-        V&eacute;rifiez votre connexion et r&eacute;essayez.
-      </p>
-      <div class="error-actions">
-        <button type="button" class="btn-primary" (click)="retry()">R&eacute;essayer</button>
+      <div class="error-card card">
+        <div class="error-icon" aria-hidden="true">&#x1F4E1;</div>
+        <h1 class="error-title">Pas de connexion internet</h1>
+        <p class="error-subtitle">
+          V&eacute;rifiez votre connexion et r&eacute;essayez.
+        </p>
+        <div class="error-actions">
+          <button type="button" class="btn-primary" (click)="retry()">R&eacute;essayer</button>
+        </div>
       </div>
     </div>
   `,
