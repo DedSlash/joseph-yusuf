@@ -1,7 +1,8 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnimateOnScrollDirective } from '../../shared/directives/animate-on-scroll.directive';
 
 interface PlanCard {
   id: string;
@@ -66,7 +67,7 @@ const PLANS: PlanCard[] = [
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AnimateOnScrollDirective],
   template: `
     <!-- ── Navbar ─────────────────────────────────────────────────────── -->
     <header class="lp-nav" [class.scrolled]="scrolled">
@@ -80,58 +81,75 @@ const PLANS: PlanCard[] = [
         <a routerLink="/login"    class="btn-ghost">Se connecter</a>
         <a routerLink="/register" class="btn-gold">Créer un compte</a>
       </div>
+      <button class="lp-burger" (click)="mobileMenuOpen = !mobileMenuOpen" [class.open]="mobileMenuOpen" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </header>
+
+    <!-- ── Drawer mobile ─────────────────────────────────────────────── -->
+    <div class="lp-drawer-overlay" *ngIf="mobileMenuOpen" (click)="mobileMenuOpen = false"></div>
+    <aside class="lp-drawer" [class.open]="mobileMenuOpen">
+      <a href="#principe" class="lp-drawer-link" (click)="scrollTo($event,'principe'); mobileMenuOpen = false">Le Principe</a>
+      <a href="#fonctionnalites" class="lp-drawer-link" (click)="scrollTo($event,'fonctionnalites'); mobileMenuOpen = false">Fonctionnalités</a>
+      <a href="#tarifs" class="lp-drawer-link" (click)="scrollTo($event,'tarifs'); mobileMenuOpen = false">Tarifs</a>
+      <div class="lp-drawer-divider"></div>
+      <a routerLink="/login" class="lp-drawer-link" (click)="mobileMenuOpen = false">Se connecter</a>
+      <a routerLink="/register" class="lp-drawer-cta" (click)="mobileMenuOpen = false">Créer un compte</a>
+    </aside>
 
     <!-- ── Hero ───────────────────────────────────────────────────────── -->
     <section class="hero">
       <div class="hero-glow hero-glow-1"></div>
       <div class="hero-glow hero-glow-2"></div>
       <div class="hero-content">
-        <span class="hero-eyebrow">Gestion des revenus variables</span>
-        <h1 class="hero-title">
+        <span class="hero-eyebrow fade-in-up" style="animation-delay: 0ms">Gestion des revenus variables</span>
+        <h1 class="hero-title fade-in-up" style="animation-delay: 100ms">
           Épargner pendant<br>
           <span class="hero-accent">l'abondance.</span><br>
           Tenir pendant<br>
           <span class="hero-accent">la disette.</span>
         </h1>
-        <p class="hero-sub">
+        <p class="hero-sub fade-in-up" style="animation-delay: 200ms">
           Joseph · Yusuf applique un principe millénaire à votre situation financière.
           Saisissez vos revenus, l'outil fait le reste — alertes, répartitions, réserves.
         </p>
-        <div class="hero-cta">
+        <div class="hero-cta fade-in-up" style="animation-delay: 300ms">
           <a routerLink="/register" class="btn-hero-primary">Commencer gratuitement</a>
           <a href="#principe"       class="btn-hero-ghost"   (click)="scrollTo($event,'principe')">Voir comment ça marche ↓</a>
         </div>
-        <p class="hero-caption">Gratuit · Sans carte bancaire · Idéal pour l'Afrique francophone &amp; la diaspora</p>
+        <p class="hero-caption fade-in-up" style="animation-delay: 400ms">Gratuit · Sans carte bancaire · Idéal pour l'Afrique francophone &amp; la diaspora</p>
       </div>
 
       <!-- Visualisation animée -->
       <div class="hero-visual" aria-hidden="true">
-        <div class="vis-card vis-card-main">
+        <div class="vis-card vis-card-main vis-float-1">
           <div class="vis-label">Mois en cours</div>
-          <div class="vis-amount">425 000 <span>XOF</span></div>
-          <div class="vis-badge abundance">Abondance +18%</div>
+          <div class="vis-amount">{{ heroAmountDisplay }} <span>XOF</span></div>
+          <div class="vis-badge abundance pulse-gold">Abondance +18%</div>
           <div class="vis-bar-row">
             <div class="vis-bar-item">
-              <div class="vis-bar-fill" style="height:70%;background:#C9A84C"></div>
+              <div class="vis-bar-fill vis-bar-animate"
+                   style="--target-h: 70%; background: #C9A84C; animation-delay: 600ms"></div>
               <span>Besoins</span>
             </div>
             <div class="vis-bar-item">
-              <div class="vis-bar-fill" style="height:30%;background:#5cdb6f"></div>
+              <div class="vis-bar-fill vis-bar-animate"
+                   style="--target-h: 30%; background: #5cdb6f; animation-delay: 800ms"></div>
               <span>Épargne</span>
             </div>
             <div class="vis-bar-item">
-              <div class="vis-bar-fill" style="height:20%;background:#5dade2"></div>
+              <div class="vis-bar-fill vis-bar-animate"
+                   style="--target-h: 20%; background: #5dade2; animation-delay: 1000ms"></div>
               <span>Invest.</span>
             </div>
           </div>
         </div>
-        <div class="vis-card vis-card-secondary">
+        <div class="vis-card vis-card-secondary vis-float-2">
           <div class="vis-mini-label">Réserve Joseph</div>
           <div class="vis-mini-amount">92 000 XOF</div>
           <div class="vis-mini-sub">Constituée sur 4 mois d'abondance</div>
         </div>
-        <div class="vis-card vis-card-alert">
+        <div class="vis-card vis-card-alert vis-float-3">
           <span class="vis-alert-icon">✦</span>
           <span class="vis-alert-text">Mois d'abondance détecté — épargnez davantage</span>
         </div>
@@ -150,17 +168,17 @@ const PLANS: PlanCard[] = [
         </p>
 
         <div class="principle-grid">
-          <div class="principle-card abundance-card">
+          <div class="principle-card abundance-card" appAnimateOnScroll [animationDelay]="0">
             <div class="principle-icon">🌿</div>
             <h3>Période d'abondance</h3>
             <p>Votre revenu dépasse votre moyenne de 15% ou plus. C'est le moment de constituer une réserve plutôt que d'augmenter vos dépenses.</p>
           </div>
-          <div class="principle-card normal-card">
+          <div class="principle-card normal-card" appAnimateOnScroll [animationDelay]="100">
             <div class="principle-icon">⚖️</div>
             <h3>Période normale</h3>
             <p>Votre revenu reste dans une fourchette de ±15% par rapport à votre moyenne. Continuez à appliquer votre règle de répartition sans changement.</p>
           </div>
-          <div class="principle-card lean-card">
+          <div class="principle-card lean-card" appAnimateOnScroll [animationDelay]="200">
             <div class="principle-icon">⚠️</div>
             <h3>Période de disette</h3>
             <p>Votre revenu est inférieur de 15% ou plus à votre moyenne. Puisez dans la réserve constituée. Ne vous endettez pas.</p>
@@ -191,7 +209,10 @@ const PLANS: PlanCard[] = [
 
         <!-- Feature cards -->
         <div class="features-grid">
-          <div class="feature-card" *ngFor="let f of features">
+          <div class="feature-card"
+               *ngFor="let f of features; let i = index"
+               appAnimateOnScroll
+               [animationDelay]="i * 100">
             <div class="feature-icon">{{ f.icon }}</div>
             <h4 class="feature-title">{{ f.title }}</h4>
             <p class="feature-desc">{{ f.desc }}</p>
@@ -215,8 +236,10 @@ const PLANS: PlanCard[] = [
         <div class="pricing-grid">
           <div
             class="pricing-card"
-            *ngFor="let plan of plans"
+            *ngFor="let plan of plans; let i = index"
             [class.highlighted]="plan.highlight"
+            appAnimateOnScroll
+            [animationDelay]="i * 100"
           >
             <div class="pricing-badge" *ngIf="plan.highlight">Le plus populaire</div>
             <h3 class="pricing-name">{{ plan.name }}</h3>
@@ -250,7 +273,10 @@ const PLANS: PlanCard[] = [
       <div class="container">
         <h2 class="section-title">Fait pour vous si…</h2>
         <div class="audience-grid">
-          <div class="audience-card" *ngFor="let a of audiences">
+          <div class="audience-card"
+               *ngFor="let a of audiences; let i = index"
+               appAnimateOnScroll
+               [animationDelay]="i * 80">
             <div class="audience-icon">{{ a.icon }}</div>
             <p>{{ a.text }}</p>
           </div>
@@ -309,9 +335,9 @@ const PLANS: PlanCard[] = [
     /* ── Reset & tokens ── */
     :host {
       display: block;
-      background: #0D0B07;
-      color: #F0E8D0;
-      font-family: 'DM Sans', sans-serif;
+      background: var(--night-1, #0d0e1c);
+      color: var(--text-0, #F5F5F5);
+      font-family: var(--font-sans, 'DM Sans', sans-serif);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -327,17 +353,21 @@ const PLANS: PlanCard[] = [
       padding: 0 2.5rem;
       z-index: 1000;
       transition: background 0.3s, border-color 0.3s;
-      border-bottom: 1px solid transparent;
+      background: rgba(8, 8, 15, 0.55);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .lp-nav.scrolled {
-      background: rgba(13, 11, 7, 0.95);
-      backdrop-filter: blur(12px);
-      border-color: rgba(201, 168, 76, 0.15);
+      background: rgba(8, 8, 15, 0.85);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-color: rgba(255, 255, 255, 0.06);
     }
 
     .lp-logo {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 1.4rem;
       font-weight: 600;
       color: #C9A84C;
@@ -352,14 +382,14 @@ const PLANS: PlanCard[] = [
     }
 
     .lp-nav-link {
-      color: rgba(240, 232, 208, 0.65);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       text-decoration: none;
       font-size: 0.88rem;
       font-weight: 500;
       transition: color 0.2s;
     }
 
-    .lp-nav-link:hover { color: #F0E8D0; }
+    .lp-nav-link:hover { color: var(--text-0, #F5F5F5); }
 
     .lp-nav-actions {
       display: flex;
@@ -369,8 +399,8 @@ const PLANS: PlanCard[] = [
 
     .btn-ghost {
       padding: 0.4rem 1rem;
-      color: #F0E8D0;
-      border: 1px solid rgba(240, 232, 208, 0.2);
+      color: var(--text-0, #F5F5F5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       font-size: 0.85rem;
       text-decoration: none;
@@ -378,23 +408,106 @@ const PLANS: PlanCard[] = [
     }
 
     .btn-ghost:hover {
-      border-color: rgba(240, 232, 208, 0.4);
-      background: rgba(240, 232, 208, 0.05);
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .btn-gold {
       padding: 0.4rem 1rem;
-      background: #C9A84C;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
       color: #0D0B07;
       border: none;
       border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 700;
       text-decoration: none;
-      transition: background 0.2s;
+      transition: background 0.2s, box-shadow 0.2s;
     }
 
-    .btn-gold:hover { background: #DAC372; }
+    .btn-gold:hover { background: linear-gradient(180deg, #F0D88A, #DAC372); box-shadow: 0 10px 28px -8px rgba(201,168,76,0.55); }
+
+    /* ── Burger button (hidden on desktop) ── */
+    .lp-burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+    }
+    .lp-burger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text-0, #F5F5F5);
+      border-radius: 2px;
+      transition: transform 0.25s, opacity 0.25s;
+      transform-origin: center;
+    }
+    .lp-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .lp-burger.open span:nth-child(2) { opacity: 0; }
+    .lp-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── Drawer mobile ── */
+    .lp-drawer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 998;
+      animation: fade-in 0.2s ease-out;
+    }
+    .lp-drawer {
+      position: fixed;
+      top: 0; right: 0;
+      width: 280px;
+      max-width: 85vw;
+      height: 100vh;
+      background: rgba(13, 14, 28, 0.98);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-left: 1px solid rgba(201, 168, 76, 0.2);
+      padding: 80px 1.5rem 2rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    .lp-drawer.open { transform: translateX(0); }
+    .lp-drawer-link {
+      padding: 0.85rem 1rem;
+      color: var(--text-1, #D9D9DE);
+      text-decoration: none;
+      font-size: 0.95rem;
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .lp-drawer-link:hover { background: rgba(201,168,76,0.08); color: #C9A84C; }
+    .lp-drawer-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 0.5rem 0;
+    }
+    .lp-drawer-cta {
+      margin-top: 0.5rem;
+      padding: 0.85rem 1rem;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      color: #0D0B07;
+      text-align: center;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
+    }
 
     /* ── Hero ── */
     .hero {
@@ -419,13 +532,13 @@ const PLANS: PlanCard[] = [
 
     .hero-glow-1 {
       width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(201,168,76,0.1) 0%, rgba(30,60,120,0.08) 40%, transparent 70%);
       top: -100px; left: -100px;
     }
 
     .hero-glow-2 {
       width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(92,219,111,0.06) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(40,80,160,0.1) 0%, rgba(92,219,111,0.04) 50%, transparent 70%);
       bottom: 0; right: 100px;
     }
 
@@ -436,18 +549,19 @@ const PLANS: PlanCard[] = [
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: #C9A84C;
-      border: 1px solid rgba(201, 168, 76, 0.35);
+      border: 1px solid rgba(201, 168, 76, 0.3);
       padding: 0.25rem 0.75rem;
       border-radius: 20px;
       margin-bottom: 1.5rem;
     }
 
     .hero-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: clamp(2.6rem, 5vw, 4rem);
       font-weight: 600;
       line-height: 1.15;
-      color: #F0E8D0;
+      letter-spacing: -0.025em;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 1.5rem;
     }
 
@@ -458,7 +572,7 @@ const PLANS: PlanCard[] = [
 
     .hero-sub {
       font-size: 1rem;
-      color: rgba(240, 232, 208, 0.65);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.75;
       max-width: 480px;
       margin-bottom: 2.5rem;
@@ -473,25 +587,27 @@ const PLANS: PlanCard[] = [
 
     .btn-hero-primary {
       padding: 0.85rem 2rem;
-      background: #C9A84C;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
       color: #0D0B07;
       border: none;
       border-radius: 10px;
       font-size: 0.95rem;
       font-weight: 700;
       text-decoration: none;
-      transition: background 0.2s, transform 0.15s;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     }
 
     .btn-hero-primary:hover {
-      background: #DAC372;
+      background: linear-gradient(180deg, #F0D88A, #DAC372);
+      box-shadow: 0 10px 28px -8px rgba(201,168,76,0.55);
       transform: translateY(-1px);
     }
 
     .btn-hero-ghost {
       padding: 0.85rem 1.75rem;
-      color: rgba(240, 232, 208, 0.75);
-      border: 1px solid rgba(240, 232, 208, 0.2);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 10px;
       font-size: 0.95rem;
       text-decoration: none;
@@ -499,13 +615,13 @@ const PLANS: PlanCard[] = [
     }
 
     .btn-hero-ghost:hover {
-      border-color: rgba(240, 232, 208, 0.4);
-      color: #F0E8D0;
+      border-color: rgba(255, 255, 255, 0.18);
+      color: var(--text-0, #F5F5F5);
     }
 
     .hero-caption {
       font-size: 0.75rem;
-      color: rgba(240, 232, 208, 0.35);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     /* Hero visual */
@@ -518,14 +634,16 @@ const PLANS: PlanCard[] = [
     }
 
     .vis-card {
-      background: #1A1710;
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
       border-radius: 14px;
       padding: 1.25rem 1.5rem;
-      border: 1px solid rgba(201, 168, 76, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .vis-card-main {
-      border-color: rgba(201, 168, 76, 0.3);
+      border-color: rgba(255, 255, 255, 0.12);
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
 
@@ -533,15 +651,15 @@ const PLANS: PlanCard[] = [
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: rgba(240,232,208,0.45);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
       margin-bottom: 0.5rem;
     }
 
     .vis-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 2rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.5rem;
     }
 
@@ -585,9 +703,33 @@ const PLANS: PlanCard[] = [
       min-height: 6px;
     }
 
+    /* Bar fill vertical : 0 → --target-h */
+    .vis-bar-animate {
+      height: 0;
+      animation: visBarFill 900ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    }
+    @keyframes visBarFill {
+      from { height: 0; }
+      to   { height: var(--target-h, 50%); }
+    }
+
+    /* Float subtil sur les cartes du hero-visual (3 phases décalées) */
+    .vis-float-1 { animation: visFloat 6s ease-in-out infinite; }
+    .vis-float-2 { animation: visFloat 7s ease-in-out infinite; animation-delay: -2s; }
+    .vis-float-3 { animation: visFloat 8s ease-in-out infinite; animation-delay: -4s; }
+    @keyframes visFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .vis-bar-animate { height: var(--target-h, 50%); animation: none; }
+      .vis-float-1, .vis-float-2, .vis-float-3 { animation: none; }
+    }
+
     .vis-bar-item span {
       font-size: 0.62rem;
-      color: rgba(240,232,208,0.45);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     .vis-card-secondary {
@@ -599,12 +741,12 @@ const PLANS: PlanCard[] = [
       font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: rgba(240,232,208,0.4);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
       margin-bottom: 0.3rem;
     }
 
     .vis-mini-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 1.35rem;
       color: #5cdb6f;
       font-weight: 600;
@@ -612,7 +754,7 @@ const PLANS: PlanCard[] = [
 
     .vis-mini-sub {
       font-size: 0.68rem;
-      color: rgba(240,232,208,0.4);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
       margin-top: 0.2rem;
     }
 
@@ -622,11 +764,11 @@ const PLANS: PlanCard[] = [
       gap: 0.65rem;
       padding: 0.85rem 1.1rem;
       background: rgba(201,168,76,0.07);
-      border-color: rgba(201,168,76,0.3);
+      border-color: rgba(201,168,76,0.25);
     }
 
     .vis-alert-icon { color: #C9A84C; font-size: 0.9rem; flex-shrink: 0; }
-    .vis-alert-text { font-size: 0.78rem; color: rgba(240,232,208,0.75); line-height: 1.4; }
+    .vis-alert-text { font-size: 0.78rem; color: var(--text-2, rgba(245, 245, 245, 0.65)); line-height: 1.4; }
 
     /* ── Sections communes ── */
     .section {
@@ -649,17 +791,17 @@ const PLANS: PlanCard[] = [
     }
 
     .section-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: clamp(1.8rem, 3.5vw, 2.6rem);
       font-weight: 600;
       line-height: 1.25;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 1.25rem;
     }
 
     .section-sub {
       font-size: 0.95rem;
-      color: rgba(240,232,208,0.6);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.75;
       max-width: 600px;
       margin-bottom: 3.5rem;
@@ -667,7 +809,7 @@ const PLANS: PlanCard[] = [
 
     /* ── Section Principe ── */
     .section-principe {
-      background: linear-gradient(180deg, #0D0B07 0%, #121007 100%);
+      background: linear-gradient(180deg, #0d0e1c 0%, #101325 100%);
     }
 
     .principle-grid {
@@ -706,13 +848,13 @@ const PLANS: PlanCard[] = [
     .principle-card h3 {
       font-size: 1rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.75rem;
     }
 
     .principle-card p {
       font-size: 0.85rem;
-      color: rgba(240,232,208,0.6);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.65;
       margin-bottom: 1.25rem;
     }
@@ -720,8 +862,8 @@ const PLANS: PlanCard[] = [
 
     /* ── Steps ── */
     .section-steps {
-      border-top: 1px solid rgba(201,168,76,0.08);
-      border-bottom: 1px solid rgba(201,168,76,0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .steps-timeline {
@@ -764,7 +906,7 @@ const PLANS: PlanCard[] = [
       width: 1px;
       flex: 1;
       min-height: 32px;
-      background: rgba(201,168,76,0.15);
+      background: rgba(255, 255, 255, 0.08);
       margin: 6px 0;
     }
 
@@ -777,13 +919,13 @@ const PLANS: PlanCard[] = [
     .step-title {
       font-size: 1rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.35rem;
     }
 
     .step-desc {
       font-size: 0.875rem;
-      color: rgba(240,232,208,0.6);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.65;
     }
 
@@ -797,14 +939,16 @@ const PLANS: PlanCard[] = [
 
     .feature-card {
       padding: 1.5rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.1);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
       transition: border-color 0.2s, transform 0.2s;
     }
 
     .feature-card:hover {
-      border-color: rgba(201,168,76,0.3);
+      border-color: rgba(255, 255, 255, 0.18);
       transform: translateY(-2px);
     }
 
@@ -813,23 +957,23 @@ const PLANS: PlanCard[] = [
     .feature-title {
       font-size: 0.9rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 0.4rem;
     }
 
     .feature-desc {
       font-size: 0.8rem;
-      color: rgba(240,232,208,0.55);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.6;
     }
 
     /* ── Pricing ── */
-    .section-pricing { background: #0D0B07; }
+    .section-pricing { background: #0d0e1c; }
 
     .currency-toggle {
       display: inline-flex;
       gap: 0;
-      border: 1px solid rgba(201,168,76,0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       overflow: hidden;
       margin-bottom: 3rem;
@@ -839,7 +983,7 @@ const PLANS: PlanCard[] = [
       padding: 0.45rem 1.25rem;
       background: transparent;
       border: none;
-      color: rgba(240,232,208,0.5);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
@@ -861,8 +1005,10 @@ const PLANS: PlanCard[] = [
     .pricing-card {
       position: relative;
       padding: 2rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.12);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 16px;
       display: flex;
       flex-direction: column;
@@ -870,12 +1016,15 @@ const PLANS: PlanCard[] = [
       transition: transform 0.2s;
     }
 
-    .pricing-card:hover { transform: translateY(-4px); }
+    .pricing-card { transform: scale(0.98); transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; }
+    .pricing-card:hover { transform: scale(1); border-color: rgba(201, 168, 76, 0.4); }
+    .pricing-card.highlighted { transform: scale(1); }
+    .pricing-card.highlighted:hover { transform: scale(1.02); }
 
     .pricing-card.highlighted {
-      border-color: #C9A84C;
-      background: linear-gradient(160deg, rgba(201,168,76,0.08) 0%, #1A1710 100%);
-      box-shadow: 0 0 0 1px rgba(201,168,76,0.3), 0 16px 48px rgba(201,168,76,0.08);
+      border-color: var(--gold, #C9A84C);
+      background: linear-gradient(160deg, rgba(201,168,76,0.06) 0%, rgba(19, 22, 42, 0.7) 100%);
+      box-shadow: 0 0 0 1px rgba(201,168,76,0.25) inset, 0 30px 60px -20px rgba(201,168,76,0.18);
     }
 
     .pricing-badge {
@@ -895,15 +1044,15 @@ const PLANS: PlanCard[] = [
     }
 
     .pricing-name {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 1.5rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
     }
 
     .pricing-tagline {
       font-size: 0.8rem;
-      color: rgba(240,232,208,0.5);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       margin-top: -1rem;
     }
 
@@ -914,15 +1063,15 @@ const PLANS: PlanCard[] = [
     }
 
     .price-amount {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: 2rem;
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
     }
 
     .price-period {
       font-size: 0.8rem;
-      color: rgba(240,232,208,0.4);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     .pricing-features {
@@ -935,7 +1084,7 @@ const PLANS: PlanCard[] = [
 
     .pricing-features li {
       font-size: 0.83rem;
-      color: rgba(240,232,208,0.7);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       display: flex;
       gap: 0.5rem;
       align-items: flex-start;
@@ -951,7 +1100,7 @@ const PLANS: PlanCard[] = [
       display: block;
       text-align: center;
       padding: 0.75rem;
-      border: 1px solid rgba(201,168,76,0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       color: #C9A84C;
       text-decoration: none;
@@ -960,19 +1109,20 @@ const PLANS: PlanCard[] = [
       transition: background 0.2s, border-color 0.2s;
     }
 
-    .btn-plan:hover { background: rgba(201,168,76,0.1); border-color: #C9A84C; }
+    .btn-plan:hover { background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.4); }
 
     .btn-plan-gold {
-      background: #C9A84C;
+      background: linear-gradient(180deg, #E8C876, #C9A84C);
+      box-shadow: 0 8px 24px -8px rgba(201,168,76,0.45);
       color: #0D0B07;
       border-color: #C9A84C;
     }
 
-    .btn-plan-gold:hover { background: #DAC372; border-color: #DAC372; }
+    .btn-plan-gold:hover { background: linear-gradient(180deg, #F0D88A, #DAC372); border-color: #DAC372; }
 
     /* ── Audience ── */
     .section-audience {
-      border-top: 1px solid rgba(201,168,76,0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .audience-grid {
@@ -984,8 +1134,10 @@ const PLANS: PlanCard[] = [
 
     .audience-card {
       padding: 1.5rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.1);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
       text-align: center;
     }
@@ -994,7 +1146,7 @@ const PLANS: PlanCard[] = [
 
     .audience-card p {
       font-size: 0.85rem;
-      color: rgba(240,232,208,0.65);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       line-height: 1.6;
     }
 
@@ -1008,8 +1160,10 @@ const PLANS: PlanCard[] = [
       overflow: hidden;
       text-align: center;
       padding: 5rem 2rem;
-      background: #1A1710;
-      border: 1px solid rgba(201,168,76,0.25);
+      background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 20px;
     }
 
@@ -1030,17 +1184,17 @@ const PLANS: PlanCard[] = [
     }
 
     .final-cta-title {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       font-size: clamp(1.8rem, 3.5vw, 2.8rem);
       font-weight: 600;
-      color: #F0E8D0;
+      color: var(--text-0, #F5F5F5);
       margin-bottom: 1rem;
       position: relative;
     }
 
     .final-cta-sub {
       font-size: 0.95rem;
-      color: rgba(240,232,208,0.55);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       margin-bottom: 2.5rem;
       position: relative;
     }
@@ -1055,7 +1209,7 @@ const PLANS: PlanCard[] = [
 
     /* ── Footer ── */
     .lp-footer {
-      border-top: 1px solid rgba(201,168,76,0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       padding: 2.5rem 2.5rem 2rem;
     }
 
@@ -1075,14 +1229,14 @@ const PLANS: PlanCard[] = [
     }
 
     .footer-logo {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: var(--font-serif, 'Cormorant Garamond', serif);
       color: rgba(201,168,76,0.85);
       font-size: 1.1rem;
     }
 
     .footer-copy {
       font-size: 0.78rem;
-      color: rgba(240,232,208,0.35);
+      color: var(--text-3, rgba(245, 245, 245, 0.4));
     }
 
     .footer-columns {
@@ -1108,7 +1262,7 @@ const PLANS: PlanCard[] = [
 
     .footer-col a {
       font-size: 0.83rem;
-      color: rgba(240,232,208,0.5);
+      color: var(--text-2, rgba(245, 245, 245, 0.65));
       text-decoration: none;
       transition: color 0.2s;
     }
@@ -1116,33 +1270,90 @@ const PLANS: PlanCard[] = [
     .footer-col a:hover { color: #C9A84C; }
 
     /* ── Responsive ── */
-    @media (max-width: 900px) {
-      .hero { grid-template-columns: 1fr; padding-top: 6rem; }
-      .hero-visual { display: none; }
-      .principle-grid { grid-template-columns: 1fr; }
-      .pricing-grid { grid-template-columns: 1fr; }
-      .lp-nav-links { display: none; }
-    }
-
-    @media (max-width: 900px) {
+    /* Tablet : 768px – 1023px */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .hero { grid-template-columns: 1fr; padding: 6rem 2rem 4rem; }
+      .hero-title { font-size: 2.5rem; }
+      .hero-visual { max-width: 520px; margin: 0 auto; }
+      .principle-grid { grid-template-columns: repeat(2, 1fr); }
+      .principle-card:last-child { grid-column: 1 / -1; max-width: 50%; margin: 0 auto; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+      .pricing-card.highlighted { grid-column: 1 / -1; max-width: 55%; margin: 0 auto; }
       .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
-      .footer-columns { grid-template-columns: repeat(3, 1fr); }
     }
 
-    @media (max-width: 600px) {
-      .section { padding: 4rem 1.25rem; }
+    /* Mobile : ≤ 767px */
+    @media (max-width: 767px) {
       .lp-nav { padding: 0 1.25rem; }
-      .hero { padding: 5rem 1.25rem 3rem; }
+      .lp-nav-links { display: none; }
+      .lp-nav-actions { display: none; }
+      .lp-burger { display: flex; }
+
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 5rem 1.25rem 3rem;
+        gap: 2.5rem;
+        min-height: auto;
+      }
+      .hero-title { font-size: 2rem; line-height: 1.2; }
+      .hero-sub { font-size: 0.92rem; }
+      .hero-cta { flex-direction: column; gap: 0.65rem; }
+      .hero-cta a { width: 100%; text-align: center; }
+      .hero-visual { display: none; }
+
+      .section { padding: 4rem 1.25rem; }
+      .section-title { font-size: 1.7rem; }
+
+      .principle-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .features-grid { grid-template-columns: 1fr; gap: 1rem; }
+
+      /* Pricing : scroll horizontal pour permettre la comparaison */
+      .pricing-grid {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 1rem 0.5rem;
+        margin: 0 -1.25rem;
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+        -webkit-overflow-scrolling: touch;
+      }
+      .pricing-card {
+        flex: 0 0 85%;
+        scroll-snap-align: center;
+      }
+
+      .audience-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+      .audience-card { padding: 1rem; }
+      .audience-card p { font-size: 0.8rem; }
+
+      .final-cta-card { padding: 3rem 1.25rem; }
+      .final-cta-actions { flex-direction: column; gap: 0.65rem; width: 100%; }
+      .final-cta-actions a { width: 100%; text-align: center; }
+
       .lp-footer { padding: 2rem 1.25rem 1.5rem; }
+      .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
       .footer-columns { grid-template-columns: 1fr; gap: 1.5rem; }
     }
   `]
 })
-export class LandingComponent implements OnInit {
+export class LandingComponent implements OnInit, OnDestroy {
   scrolled = false;
+  mobileMenuOpen = false;
   currency: 'XOF' | 'EUR' = 'XOF';
   year = new Date().getFullYear();
   plans = PLANS;
+
+  // Count-up hero visual
+  private static readonly HERO_TARGET_AMOUNT = 425000;
+  private heroCountRaf = 0;
+  heroAmount = 0;
+
+  get heroAmountDisplay(): string {
+    return this.heroAmount.toLocaleString('fr-FR').replace(/,/g, ' ');
+  }
 
   steps = [
     {
@@ -1214,7 +1425,32 @@ export class LandingComponent implements OnInit {
   ngOnInit(): void {
     if (this.authService.isTokenValid()) {
       this.router.navigate(['/dashboard']);
+      return;
     }
+    // Lance le count-up après un court délai pour synchroniser avec les animations CSS
+    setTimeout(() => this.animateHeroAmount(), 250);
+  }
+
+  ngOnDestroy(): void {
+    if (this.heroCountRaf) cancelAnimationFrame(this.heroCountRaf);
+  }
+
+  private animateHeroAmount(): void {
+    const target = LandingComponent.HERO_TARGET_AMOUNT;
+    const duration = 1100;
+    const startTs = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startTs) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      this.heroAmount = Math.round(target * eased);
+      if (t < 1) {
+        this.heroCountRaf = requestAnimationFrame(step);
+      } else {
+        this.heroAmount = target;
+        this.heroCountRaf = 0;
+      }
+    };
+    this.heroCountRaf = requestAnimationFrame(step);
   }
 
   @HostListener('window:scroll')
