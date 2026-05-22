@@ -43,4 +43,32 @@ public class EmailService {
                     to, e.getMessage(), link);
         }
     }
+
+    public void sendWaitlistConfirmationEmail(String to, String planTier, String promoCode) {
+        String body = "Bonjour,\n\n"
+                + "Merci de votre intérêt pour Joseph·Yusuf — la plateforme qui applique le Principe de Joseph "
+                + "(épargner pendant l'abondance, tenir pendant la disette) à vos revenus.\n\n"
+                + "Vous êtes inscrit sur la liste d'attente pour le plan " + planTier + ".\n\n"
+                + (promoCode != null && !promoCode.isBlank()
+                    ? "✦ Avantage anticipateur : le code promo " + promoCode + " vous est réservé. "
+                      + "Il vous accordera une remise dès l'ouverture des paiements.\n\n"
+                    : "")
+                + "Nous vous notifierons par email dès que les paiements seront disponibles "
+                + "(Wave, Orange Money, Free Money et carte bancaire via PayDunya).\n\n"
+                + "À très bientôt,\n"
+                + "L'équipe Joseph·Yusuf";
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(from);
+            message.setTo(to);
+            message.setSubject("Joseph·Yusuf — Inscription confirmée sur la liste d'attente");
+            message.setText(body);
+            mailSender.send(message);
+            log.info("Email waitlist envoyé à {} (plan={})", to, planTier);
+        } catch (Exception e) {
+            log.warn("Échec envoi email waitlist à {} : {} (plan={})",
+                    to, e.getMessage(), planTier);
+        }
+    }
 }

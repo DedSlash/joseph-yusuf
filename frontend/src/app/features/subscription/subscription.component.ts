@@ -351,7 +351,7 @@ const STRIPE_APPEARANCE = {
         </div>
 
         <!-- ── Étape 2 : méthode de paiement ── -->
-        <div class="step-content" *ngIf="step === 'payment'">
+        <div class="step-content" *ngIf="step === 'payment' && paymentsEnabled">
           <div class="payment-summary">
             <div class="summary-row"><span>Plan</span><strong>{{ planLabel(selectedPlan!) }}</strong></div>
             <div class="summary-row" *ngIf="promoApplied">
@@ -423,6 +423,53 @@ const STRIPE_APPEARANCE = {
             <button class="btn-next" [disabled]="!canPay() || paying" (click)="initiatePayment()">
               {{ paying ? 'Initialisation…' : 'Continuer →' }}
             </button>
+          </div>
+        </div>
+
+        <!-- ── Étape 2 : LISTE D'ATTENTE (paiements désactivés) ── -->
+        <div class="step-content" *ngIf="step === 'payment' && !paymentsEnabled">
+          <div class="waitlist-card" *ngIf="!waitlistSuccess">
+            <div class="waitlist-header">
+              <span class="waitlist-icon">&#10024;</span>
+              <h3>Paiements disponibles tres bientot !</h3>
+            </div>
+            <p class="waitlist-desc">
+              Nous finalisons l'integration de nos systemes de paiement (Wave, Orange Money, Carte bancaire).
+              Inscrivez-vous a la liste d'attente pour etre notifie des l'ouverture.
+            </p>
+            <div class="waitlist-plan-badge">
+              Plan selectionne : <strong>{{ planLabel(selectedPlan!) }}</strong>
+              &mdash; {{ getPriceDisplay() }} / mois
+            </div>
+            <div class="waitlist-form">
+              <label>Votre email</label>
+              <input type="email" [(ngModel)]="waitlistEmail" placeholder="votre@email.com"
+                     class="form-input" />
+            </div>
+            <div class="error-banner" *ngIf="waitlistError">{{ waitlistError }}</div>
+            <div class="step-actions">
+              <button class="btn-ghost" (click)="step = 'plan'">&#8592; Retour</button>
+              <button class="btn-next" [disabled]="waitlistSubmitting || !waitlistEmail.trim()"
+                      (click)="submitWaitlist()">
+                {{ waitlistSubmitting ? 'Inscription...' : 'Me notifier' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="waitlist-success-card" *ngIf="waitlistSuccess">
+            <div class="waitlist-success-icon">&#9989;</div>
+            <h3>Vous etes inscrit !</h3>
+            <p>
+              Vous serez notifie des que le paiement sera disponible.
+            </p>
+            <div class="waitlist-promo-card">
+              <span class="waitlist-promo-label">Code promo reserve pour vous :</span>
+              <code class="waitlist-promo-code">{{ waitlistPromoCode }}</code>
+              <span class="waitlist-promo-hint">-50% sur votre premier mois</span>
+            </div>
+            <div class="step-actions">
+              <button class="btn-next" (click)="finish()">Retour au tableau de bord</button>
+            </div>
           </div>
         </div>
 
@@ -914,6 +961,49 @@ const STRIPE_APPEARANCE = {
     .success-step p { color: #F0E8D0; opacity: 0.7; margin-bottom: 2rem; }
     .success-step .btn-next { display: inline-block; }
 
+    /* ── Waitlist ── */
+    .waitlist-card, .waitlist-success-card {
+      background: #1A1710;
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 14px;
+      padding: 2rem;
+      text-align: center;
+    }
+    .waitlist-header { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1rem; }
+    .waitlist-icon { font-size: 1.5rem; }
+    .waitlist-header h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: #F0E8D0; margin: 0; }
+    .waitlist-desc { font-size: 0.88rem; color: #F0E8D0; opacity: 0.65; line-height: 1.6; margin: 0 0 1.25rem; }
+    .waitlist-plan-badge {
+      display: inline-block;
+      background: rgba(201,168,76,0.08);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      color: #F0E8D0;
+      margin-bottom: 1.5rem;
+    }
+    .waitlist-plan-badge strong { color: #C9A84C; }
+    .waitlist-form { text-align: left; max-width: 360px; margin: 0 auto 1rem; }
+    .waitlist-form label { display: block; font-size: 0.83rem; color: #F0E8D0; opacity: 0.7; margin-bottom: 0.4rem; }
+    .waitlist-success-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .waitlist-success-card h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: #F0E8D0; margin: 0 0 0.5rem; }
+    .waitlist-success-card p { font-size: 0.88rem; color: #F0E8D0; opacity: 0.65; margin: 0 0 1.5rem; }
+    .waitlist-promo-card {
+      background: rgba(92,219,111,0.06);
+      border: 1px solid rgba(92,219,111,0.2);
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      align-items: center;
+    }
+    .waitlist-promo-label { font-size: 0.8rem; color: #F0E8D0; opacity: 0.7; }
+    .waitlist-promo-code { font-size: 1.5rem; font-weight: 700; color: #5cdb6f; letter-spacing: 2px; }
+    .waitlist-promo-hint { font-size: 0.75rem; color: #5cdb6f; opacity: 0.8; }
+
     @media (max-width: 600px) {
       .plans-grid-2 { grid-template-columns: 1fr; }
       .current-plan-card { flex-direction: column; }
@@ -955,6 +1045,17 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   promoDiscount: number | null = null;   // % de remise validé
   promoValidating = false;
 
+  // Waitlist
+  paymentsEnabled = environment.paymentsEnabled;
+  waitlistEmail = '';
+  waitlistSubmitting = false;
+  waitlistSuccess = false;
+  waitlistError = '';
+  waitlistPromoCode = '';
+
+  // PayDunya
+  payDunyaLoading = false;
+
   // Stripe
   stripeSubResult: CreateSubscriptionResponse | null = null;
   mobileResult: PaymentProviderResult | null = null;
@@ -985,6 +1086,17 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
 
     this.applyStoredPromoCode();
     this.loadSubscription();
+    this.prefillWaitlistEmail();
+  }
+
+  private prefillWaitlistEmail(): void {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      try {
+        const user = JSON.parse(stored);
+        if (user.email) this.waitlistEmail = user.email;
+      } catch (_) {}
+    }
   }
 
   private applyStoredPromoCode(): void {
@@ -1165,6 +1277,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
       case 'STRIPE': return 'Carte bancaire';
       case 'WAVE': return 'Wave';
       case 'ORANGE_MONEY': return 'Orange Money';
+      case 'PAYDUNYA': return 'PayDunya (Wave/Orange Money)';
       default: return provider;
     }
   }
@@ -1377,6 +1490,50 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   }
 
   finish(): void { this.router.navigate(['/dashboard']); }
+
+  submitWaitlist(): void {
+    if (!this.waitlistEmail.trim() || !this.selectedPlan) return;
+    this.waitlistSubmitting = true;
+    this.waitlistError = '';
+    this.subscriptionService.joinWaitlist({
+      email: this.waitlistEmail.trim(),
+      planTier: this.selectedPlan
+    }).subscribe({
+      next: res => {
+        this.waitlistSubmitting = false;
+        this.waitlistSuccess = true;
+        this.waitlistPromoCode = res.promoCodeReserved || 'EARLY50';
+      },
+      error: err => {
+        this.waitlistSubmitting = false;
+        if (err.status === 409 || err.error?.alreadyRegistered) {
+          this.waitlistSuccess = true;
+          this.waitlistPromoCode = 'EARLY50';
+        } else {
+          this.waitlistError = err.error?.message ?? 'Erreur lors de l\'inscription.';
+        }
+      }
+    });
+  }
+
+  payWithPayDunya(): void {
+    if (!this.selectedPlan) return;
+    this.payDunyaLoading = true;
+    this.paymentError = '';
+    this.subscriptionService.createPayDunyaInvoice({
+      planTier: this.selectedPlan,
+      couponCode: this.promoCode.trim() || null
+    }).subscribe({
+      next: res => {
+        this.payDunyaLoading = false;
+        window.location.href = res.invoiceUrl;
+      },
+      error: err => {
+        this.payDunyaLoading = false;
+        this.paymentError = err.error?.message ?? 'Erreur lors de la création du paiement.';
+      }
+    });
+  }
 
   formatXof(amount: number): string {
     return new Intl.NumberFormat('fr-SN', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(amount);

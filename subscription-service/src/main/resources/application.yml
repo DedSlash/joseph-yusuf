@@ -45,6 +45,15 @@ stripe:
     premium-plus-monthly-eur: ${STRIPE_PRICE_PREMIUM_PLUS_EUR:price_premium_plus_eur_placeholder}
     premium-plus-monthly-xof: ${STRIPE_PRICE_PREMIUM_PLUS_XOF:price_premium_plus_xof_placeholder}
 
+paydunya:
+  master-key: ${PAYDUNYA_MASTER_KEY:test_master_key}
+  private-key: ${PAYDUNYA_PRIVATE_KEY:test_private_key}
+  token: ${PAYDUNYA_TOKEN:test_token}
+  mode: ${PAYDUNYA_MODE:test}
+  callback-url: ${PAYDUNYA_CALLBACK_URL:http://localhost:8080/api/webhooks/paydunya}
+  return-url: ${PAYDUNYA_RETURN_URL:http://localhost:4200/subscription/success}
+  cancel-url: ${PAYDUNYA_CANCEL_URL:http://localhost:4200/subscription}
+
 eureka:
   client:
     register-with-eureka: true

@@ -1,5 +1,6 @@
 package com.josephyusuf.subscription.controller;
 
+import com.josephyusuf.subscription.service.PayDunyaWebhookService;
 import com.josephyusuf.subscription.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/webhooks")
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WebhookController {
 
     private final WebhookService webhookService;
+    private final PayDunyaWebhookService payDunyaWebhookService;
 
     @PostMapping("/stripe")
     public ResponseEntity<String> stripe(@RequestBody String payload,
@@ -26,6 +30,17 @@ public class WebhookController {
             return ResponseEntity.ok("ok");
         } catch (Exception e) {
             log.error("Erreur traitement webhook Stripe : {}", e.getMessage());
+            return ResponseEntity.badRequest().body("invalid");
+        }
+    }
+
+    @PostMapping("/paydunya")
+    public ResponseEntity<String> paydunya(@RequestBody Map<String, Object> payload) {
+        try {
+            payDunyaWebhookService.handleCallback(payload);
+            return ResponseEntity.ok("ok");
+        } catch (Exception e) {
+            log.error("Erreur traitement webhook PayDunya : {}", e.getMessage());
             return ResponseEntity.badRequest().body("invalid");
         }
     }
