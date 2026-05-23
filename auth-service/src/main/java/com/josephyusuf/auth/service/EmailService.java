@@ -1,11 +1,13 @@
 package com.josephyusuf.auth.service;
 
 import com.josephyusuf.auth.entity.User;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
@@ -20,8 +22,16 @@ public class EmailService {
     @Value("${spring.mail.from}")
     private String from;
 
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
     @Value("${app.reset-url}")
     private String resetUrl;
+
+    private InternetAddress getSender() throws Exception {
+        String address = (mailUsername != null && !mailUsername.isBlank()) ? mailUsername : from;
+        return new InternetAddress(address, "Joseph·Yusuf", "UTF-8");
+    }
 
     public void sendPasswordResetEmail(String to, String token) {
         String link = resetUrl + "?token=" + token;
@@ -33,15 +43,15 @@ public class EmailService {
                 + "🌾 L'équipe Joseph·Yusuf";
 
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(from);
-            message.setTo(to);
-            message.setSubject("🌾 Joseph·Yusuf — Réinitialisation de mot de passe");
-            message.setText(body);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+            helper.setFrom(getSender());
+            helper.setTo(to);
+            helper.setSubject("🌾 Joseph·Yusuf — Réinitialisation de mot de passe");
+            helper.setText(body);
             mailSender.send(message);
             log.info("Email de reset envoyé à {}", to);
         } catch (Exception e) {
-            // En dev sans serveur mail, on log le lien pour permettre les tests manuels
             log.warn("Échec envoi email à {} : {}. Lien de reset (dev only) : {}",
                     to, e.getMessage(), link);
         }
@@ -66,7 +76,7 @@ public class EmailService {
                 + "Bonne découverte !\n"
                 + "🌾 L'équipe Joseph·Yusuf";
 
-        sendSimpleEmail(user.getEmail(),
+        sendEmail(user.getEmail(),
                 "🌟 Votre accès PREMIUM_PLUS est activé — 7 jours gratuits !",
                 body);
     }
@@ -83,7 +93,7 @@ public class EmailService {
                 + "Nous vous préviendrons dès l'ouverture des paiements.\n\n"
                 + "🌾 L'équipe Joseph·Yusuf";
 
-        sendSimpleEmail(user.getEmail(),
+        sendEmail(user.getEmail(),
                 "⏰ Votre accès PREMIUM_PLUS expire demain",
                 body);
     }
@@ -98,18 +108,19 @@ public class EmailService {
                 + "Nous vous préviendrons par email dès l'ouverture des paiements.\n\n"
                 + "🌾 L'équipe Joseph·Yusuf";
 
-        sendSimpleEmail(user.getEmail(),
+        sendEmail(user.getEmail(),
                 "Votre essai PREMIUM_PLUS est terminé",
                 body);
     }
 
-    private void sendSimpleEmail(String to, String subject, String body) {
+    private void sendEmail(String to, String subject, String body) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(from);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+            helper.setFrom(getSender());
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body);
             mailSender.send(message);
             log.info("Email envoyé à {} : {}", to, subject);
         } catch (Exception e) {

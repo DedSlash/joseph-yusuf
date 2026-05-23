@@ -330,6 +330,7 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
       min-width: 180px;
       padding: 6px;
       box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.6);
+      z-index: 9999;
     }
 
     .dropdown-item {
@@ -552,10 +553,12 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
 
     /* Mobile : ≤ 767px */
     @media (max-width: 767px) {
-      .navbar { padding: 0 10px; height: 56px; overflow: hidden; }
+      .navbar { padding: 0 10px; height: 56px; }
       .nav-burger { display: flex; }
       .nav-links { display: none; }
-      .btn-help { display: none; }
+      .btn-help span { display: none; }
+      .btn-help { padding: 6px; border-radius: 50%; min-width: 28px; min-height: 28px; justify-content: center; }
+      .btn-help svg { width: 14px; height: 14px; }
       .btn-upgrade-nav { padding: 6px 10px; font-size: 11px; }
       .plan-badge { padding: 3px 6px; font-size: 9px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .plan-trial { padding: 3px 4px 3px 6px; }
