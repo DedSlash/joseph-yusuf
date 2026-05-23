@@ -71,6 +71,12 @@ a:hover { color: var(--gold-light); }
   letter-spacing: 0.05em;
 }
 
+.admin-sidebar .brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .admin-sidebar .brand small {
   display: block;
   font-family: 'DM Sans', sans-serif;

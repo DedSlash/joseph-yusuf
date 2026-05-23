@@ -138,7 +138,7 @@ Chart.register(...registerables);
             <ng-template #gaugeBlocked>
               <div class="gauge-premium-hint">
                 <span>📊</span>
-                <span>La jauge de positionnement et les seuils précis sont disponibles en <a routerLink="/subscription" class="gauge-upgrade-link">Premium</a>.</span>
+                <span>La jauge de positionnement et les seuils précis seront disponibles en <strong>Premium</strong> dès l'ouverture des paiements.</span>
               </div>
             </ng-template>
           </div>
@@ -168,9 +168,9 @@ Chart.register(...registerables);
               <span class="overlay-icon">✦</span>
               <p class="overlay-title">Votre réserve Joseph vous attend</p>
               <p class="overlay-sub">
-                Passez en Premium pour découvrir combien vous auriez constitué grâce à vos mois d'abondance — et comment l'utiliser en période de disette.
+                Le calcul détaillé de votre réserve sera disponible en <strong>Premium</strong>
+                dès l'ouverture des paiements.
               </p>
-              <a routerLink="/subscription" class="btn-overlay-upgrade">Voir les offres Premium →</a>
             </div>
           </div>
         </div>
@@ -327,28 +327,29 @@ Chart.register(...registerables);
         </div>
       </section>
 
-      <!-- Bannière upgrade plan FREE -->
-      <section class="upgrade-section" *ngIf="!isPremium()">
-        <div class="upgrade-card">
-          <div class="upgrade-left">
-            <span class="upgrade-icon">✦</span>
-            <div>
-              <strong class="upgrade-title">Passez à Premium</strong>
-              <p class="upgrade-desc">
-                Sources illimitées, toutes les règles, import historique, rapports PDF mensuels.
-              </p>
-            </div>
+      <!-- Carte trial PREMIUM_PLUS -->
+      <section class="trial-dashboard-section" *ngIf="isInTrial">
+        <div class="trial-dashboard-card">
+          <div class="trial-dashboard-header">
+            <span class="badge-premium-plus-dash">PREMIUM+</span>
+            <span class="trial-dashboard-badge">Essai gratuit</span>
           </div>
-          <a routerLink="/subscription" class="btn-upgrade">Voir les plans →</a>
+          <p class="trial-dashboard-text">
+            Vous profitez de toutes les fonctionnalités.
+            Votre essai se termine dans
+            <strong>{{ trialDaysRemaining }} {{ trialDaysRemaining === 1 ? 'jour' : 'jours' }}</strong>.
+          </p>
+          <p class="trial-dashboard-promo">
+            🎁 Code <strong>EARLY50</strong> réservé aux 100 premiers inscrits — souscription bientôt disponible.
+          </p>
         </div>
       </section>
 
-      <!-- Badge plan actif (Premium) -->
-      <section class="plan-badge-section" *ngIf="isPremium()">
+      <!-- Badge plan actif (Premium, hors trial) -->
+      <section class="plan-badge-section" *ngIf="isPremium() && !isInTrial">
         <div class="plan-badge-card">
           <span class="plan-badge-icon">★</span>
           <span class="plan-badge-label">Plan {{ getPlanLabel() }}</span>
-          <a routerLink="/subscription" class="btn-manage-plan">Gérer mon abonnement</a>
         </div>
       </section>
 
@@ -1336,6 +1337,71 @@ Chart.register(...registerables);
 
     .btn-upgrade:hover { background: #DAC372; }
 
+    /* Trial dashboard card */
+    .trial-dashboard-section { margin: 1.5rem 0; }
+
+    .trial-dashboard-card {
+      padding: 1.25rem 1.5rem;
+      background: linear-gradient(135deg, rgba(232, 200, 118, 0.12), rgba(157, 130, 53, 0.06));
+      border: 1px solid var(--gold);
+      border-radius: 14px;
+    }
+
+    .trial-dashboard-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .badge-premium-plus-dash {
+      padding: 4px 10px;
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
+      color: #1b1500;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .trial-dashboard-badge {
+      padding: 3px 9px;
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--gold-light);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .trial-dashboard-text {
+      font-size: 0.9rem;
+      color: var(--text-1);
+      margin: 0 0 0.75rem;
+      line-height: 1.5;
+    }
+
+    .trial-dashboard-text strong { color: var(--gold-light); }
+
+    .btn-gold-small {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
+      color: #1b1500;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      margin-bottom: 0.6rem;
+    }
+
+    .trial-dashboard-promo {
+      font-size: 0.78rem;
+      color: var(--text-2);
+      margin: 0;
+    }
+
+    .trial-dashboard-promo strong { color: var(--gold-light); font-family: monospace; }
+
     .plan-badge-section { margin: 1.5rem 0; }
 
     .plan-badge-card {
@@ -1460,6 +1526,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   generatingPdf = false;
   pdfError = '';
 
+  // Trial
+  isInTrial = false;
+  trialDaysRemaining: number | null = null;
+
   // Money Tips
   hasTipsAvailable = false;
   showTipsModal = false;
@@ -1525,9 +1595,30 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     this.loadDashboardData();
+    this.loadTrialStatus();
 
     this.updateSub = this.incomeService.incomeUpdated$.subscribe(() => {
       this.loadDashboardData();
+    });
+  }
+
+  private loadTrialStatus(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user?.inTrial || !user.trialEndsAt) {
+      this.isInTrial = false;
+      this.trialDaysRemaining = null;
+      return;
+    }
+    this.authService.getTrialStatus().subscribe({
+      next: status => {
+        this.isInTrial = status.isInTrial;
+        this.trialDaysRemaining = status.isInTrial ? status.daysRemaining : null;
+      },
+      error: () => {
+        const diffMs = new Date(user.trialEndsAt!).getTime() - Date.now();
+        this.isInTrial = diffMs > 0;
+        this.trialDaysRemaining = this.isInTrial ? Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24))) : null;
+      }
     });
   }
 
@@ -2006,7 +2097,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   goToSubscription(): void {
-    this.router.navigate(['/subscription']);
+    // Souscription désactivée tant que les moyens de paiement ne sont pas activés.
   }
 
   onDashboardTipsDismiss(): void {}

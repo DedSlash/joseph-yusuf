@@ -6,18 +6,22 @@ import { DialogModule } from 'primeng/dialog';
 import { AuthService } from '../../../core/auth/auth.service';
 import { User, Plan } from '../../../shared/models/user.model';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
+import { CornLogoComponent } from '../corn-logo/corn-logo.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, DialogModule, NotificationBellComponent],
+  imports: [CommonModule, RouterModule, DialogModule, NotificationBellComponent, CornLogoComponent],
   template: `
     <nav class="navbar" *ngIf="currentUser$ | async as user">
       <div class="navbar-left">
         <button class="nav-burger" (click)="toggleDrawer($event)" [class.open]="drawerOpen" aria-label="Menu">
           <span></span><span></span><span></span>
         </button>
-        <a routerLink="/dashboard" class="logo">Joseph &middot; Yusuf</a>
+        <a routerLink="/dashboard" class="logo">
+          <app-corn-logo [size]="28"></app-corn-logo>
+          <span class="logo-text">Joseph &middot; Yusuf</span>
+        </a>
         <div class="nav-links">
           <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
           <a routerLink="/incomes" routerLinkActive="active" class="nav-link">Mes Revenus</a>
@@ -31,21 +35,22 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
           </svg>
           <span>Comment ça marche</span>
         </button>
-        <a
-          routerLink="/subscription"
-          class="btn-upgrade-nav"
-          *ngIf="user.plan === 'FREE'"
-        >✦ Passer Premium</a>
+        <span
+          class="plan-badge plan-trial"
+          *ngIf="user.inTrial && trialDaysRemaining !== null"
+        >
+          PREMIUM+
+          <span class="trial-indicator">Essai {{ trialDaysRemaining }}j</span>
+        </span>
         <span
           class="plan-badge"
           [ngClass]="getPlanClass(user.plan)"
-          *ngIf="user.plan !== 'FREE'"
+          *ngIf="user.plan !== 'FREE' && !user.inTrial"
         >{{ getPlanLabel(user.plan) }}</span>
         <div class="avatar-container" (click)="toggleDropdown()">
           <div class="avatar">{{ getInitials(user) }}</div>
           <div class="dropdown" *ngIf="dropdownOpen">
             <a class="dropdown-item" routerLink="/account" (click)="dropdownOpen = false">Mon compte</a>
-            <a class="dropdown-item" routerLink="/subscription" (click)="dropdownOpen = false">Mon abonnement</a>
             <a class="dropdown-item" routerLink="/support" (click)="dropdownOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; opacity: 0.7">
                 <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
@@ -64,7 +69,6 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       <a routerLink="/dashboard" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Dashboard</a>
       <a routerLink="/incomes" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Mes Revenus</a>
       <a routerLink="/account" class="drawer-link" (click)="drawerOpen = false">Mon compte</a>
-      <a routerLink="/subscription" class="drawer-link" (click)="drawerOpen = false">Mon abonnement</a>
       <a routerLink="/support" class="drawer-link" (click)="drawerOpen = false">Support</a>
       <div class="drawer-divider"></div>
       <button class="drawer-link drawer-logout" (click)="drawerOpen = false; logout()">Déconnexion</button>
@@ -166,6 +170,7 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       flex-shrink: 0;
     }
 
+    .logo-text { line-height: 1; }
     .logo:hover { color: var(--gold-light); }
 
     .nav-links {
@@ -233,6 +238,26 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
       background: linear-gradient(135deg, rgba(232, 200, 118, 0.2), rgba(157, 130, 53, 0.1));
       color: var(--gold-light);
       border: 1px solid var(--gold);
+    }
+
+    .plan-trial {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, rgba(232, 200, 118, 0.2), rgba(157, 130, 53, 0.1));
+      color: var(--gold-light);
+      border: 1px solid var(--gold);
+      padding: 4px 6px 4px 10px;
+    }
+
+    .trial-indicator {
+      padding: 2px 8px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--gold-light);
     }
 
     .btn-help {
@@ -538,6 +563,7 @@ export class NavbarComponent implements OnInit {
   dropdownOpen = false;
   drawerOpen = false;
   showHelp = false;
+  trialDaysRemaining: number | null = null;
 
   toggleDrawer(event: Event): void {
     event.stopPropagation();
@@ -558,7 +584,16 @@ export class NavbarComponent implements OnInit {
     }
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.currentUser$.subscribe(user => {
+      if (user?.inTrial && user.trialEndsAt) {
+        const diffMs = new Date(user.trialEndsAt).getTime() - Date.now();
+        this.trialDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      } else {
+        this.trialDaysRemaining = null;
+      }
+    });
+  }
 
   getInitials(user: User): string {
     return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
