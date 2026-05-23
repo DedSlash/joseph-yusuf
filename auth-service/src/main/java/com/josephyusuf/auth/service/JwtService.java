@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Function;
@@ -25,13 +26,26 @@ public class JwtService {
 
     public String generateAccessToken(UUID userId, String email, Plan plan, Role role,
                                        String country, String currency) {
-        return Jwts.builder()
+        return generateAccessToken(userId, email, plan, role, country, currency, false, null);
+    }
+
+    public String generateAccessToken(UUID userId, String email, Plan plan, Role role,
+                                       String country, String currency,
+                                       boolean inTrial, LocalDateTime trialEndsAt) {
+        var builder = Jwts.builder()
                 .subject(email)
                 .claim("userId", userId.toString())
                 .claim("plan", plan.name())
                 .claim("role", role.name())
                 .claim("country", country != null ? country : "SN")
                 .claim("currency", currency != null ? currency : "XOF")
+                .claim("inTrial", inTrial);
+
+        if (trialEndsAt != null) {
+            builder.claim("trialEndsAt", trialEndsAt.toString());
+        }
+
+        return builder
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(getSigningKey())

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,4 +25,8 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     long countByEnabled(boolean enabled);
 
     List<User> findByPlanAndEnabledTrueAndCreatedAtBetween(Plan plan, Instant from, Instant to);
+
+    List<User> findByInTrialTrueAndTrialEndsAtBefore(LocalDateTime dateTime);
+
+    List<User> findByInTrialTrueAndTrialEndsAtBetween(LocalDateTime from, LocalDateTime to);
 }

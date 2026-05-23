@@ -3,6 +3,7 @@ package com.josephyusuf.auth.controller;
 import com.josephyusuf.auth.dto.*;
 import com.josephyusuf.auth.service.AuthService;
 import com.josephyusuf.auth.service.PasswordResetService;
+import com.josephyusuf.auth.service.TrialService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final TrialService trialService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -64,5 +66,11 @@ public class AuthController {
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         passwordResetService.resetPassword(request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/trial/status")
+    public ResponseEntity<TrialService.TrialStatus> trialStatus(Authentication authentication) {
+        UUID userId = UUID.fromString((String) authentication.getPrincipal());
+        return ResponseEntity.ok(trialService.getTrialStatus(userId));
     }
 }

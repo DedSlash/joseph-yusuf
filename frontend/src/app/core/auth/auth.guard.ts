@@ -13,3 +13,9 @@ export const authGuard: CanActivateFn = () => {
   router.navigate(['/']);
   return false;
 };
+
+export const subscriptionDisabledGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  router.navigate(['/dashboard']);
+  return false;
+};

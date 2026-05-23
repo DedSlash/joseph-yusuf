@@ -18,13 +18,15 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,6 +46,9 @@ class AuthServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private TrialService trialService;
 
     @InjectMocks
     private AuthService authService;
@@ -83,7 +88,7 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("register - nominal case returns AuthResponse with tokens")
+    @DisplayName("register - nominal case returns AuthResponse with tokens and starts trial")
     void register_nominal() {
         RegisterRequest request = RegisterRequest.builder()
                 .email("test@example.com")
@@ -92,18 +97,38 @@ class AuthServiceTest {
                 .lastName("Yusuf")
                 .build();
 
+        // Après startTrial, l'utilisateur est rechargé avec plan PREMIUM_PLUS et inTrial=true
+        LocalDateTime trialEnd = LocalDateTime.now().plusDays(7);
+        User userAfterTrial = User.builder()
+                .id(userId)
+                .email("test@example.com")
+                .password("encodedPassword")
+                .firstName("Joseph")
+                .lastName("Yusuf")
+                .plan(Plan.PREMIUM_PLUS)
+                .role(Role.USER)
+                .enabled(true)
+                .country("SN")
+                .currency("XOF")
+                .inTrial(true)
+                .trialEndsAt(trialEnd)
+                .trialUsed(true)
+                .build();
+
         RefreshToken refreshToken = RefreshToken.builder()
                 .token("refresh-token-value")
-                .user(testUser)
+                .user(userAfterTrial)
                 .expiryDate(Instant.now().plusMillis(604800000))
                 .build();
 
         when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF")).thenReturn("access-token-value");
-        when(refreshTokenService.createRefreshToken(testUser)).thenReturn(refreshToken);
-        when(userMapper.toDto(testUser)).thenReturn(testUserDto);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(userAfterTrial));
+        when(jwtService.generateAccessToken(eq(userId), eq("test@example.com"), eq(Plan.PREMIUM_PLUS), eq(Role.USER),
+                eq("SN"), eq("XOF"), eq(true), any(LocalDateTime.class))).thenReturn("access-token-value");
+        when(refreshTokenService.createRefreshToken(userAfterTrial)).thenReturn(refreshToken);
+        when(userMapper.toDto(userAfterTrial)).thenReturn(testUserDto);
 
         AuthResponse response = authService.register(request);
 
@@ -114,8 +139,8 @@ class AuthServiceTest {
 
         verify(userRepository).existsByEmail("test@example.com");
         verify(userRepository).save(any(User.class));
-        verify(jwtService).generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF");
-        verify(refreshTokenService).createRefreshToken(testUser);
+        verify(trialService).startTrial(userId);
+        verify(refreshTokenService).createRefreshToken(userAfterTrial);
     }
 
     @Test
@@ -153,7 +178,8 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF")).thenReturn("access-token-value");
+        when(jwtService.generateAccessToken(eq(userId), eq("test@example.com"), eq(Plan.FREE), eq(Role.USER),
+                eq("SN"), eq("XOF"), anyBoolean(), any())).thenReturn("access-token-value");
         when(refreshTokenService.createRefreshToken(testUser)).thenReturn(refreshToken);
         when(userMapper.toDto(testUser)).thenReturn(testUserDto);
 
@@ -227,7 +253,8 @@ class AuthServiceTest {
                 .build();
 
         when(refreshTokenService.verifyRefreshToken("valid-refresh-token")).thenReturn(refreshToken);
-        when(jwtService.generateAccessToken(userId, "test@example.com", Plan.FREE, Role.USER, "SN", "XOF")).thenReturn("new-access-token");
+        when(jwtService.generateAccessToken(eq(userId), eq("test@example.com"), eq(Plan.FREE), eq(Role.USER),
+                eq("SN"), eq("XOF"), anyBoolean(), any())).thenReturn("new-access-token");
 
         TokenResponse response = authService.refresh(request);
 

@@ -149,4 +149,30 @@ class UserManagementServiceTest {
         assertThat(user.getPlan()).isEqualTo(Plan.PREMIUM_PLUS);
         verify(userRepository).save(user);
     }
+
+    @Test
+    @DisplayName("updatePlanInternal - utilisateur en trial qui paie → inTrial=false")
+    void updatePlanInternal_clearsInTrialOnPayment() {
+        user.setInTrial(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+
+        service.updatePlanInternal(userId, Plan.PREMIUM);
+
+        assertThat(user.getPlan()).isEqualTo(Plan.PREMIUM);
+        assertThat(user.isInTrial()).isFalse();
+    }
+
+    @Test
+    @DisplayName("updatePlanInternal - downgrade FREE pendant trial → inTrial reste vrai (géré par TrialService)")
+    void updatePlanInternal_keepsInTrialOnFreeDowngrade() {
+        user.setInTrial(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+
+        service.updatePlanInternal(userId, Plan.FREE);
+
+        assertThat(user.getPlan()).isEqualTo(Plan.FREE);
+        assertThat(user.isInTrial()).isTrue();
+    }
 }

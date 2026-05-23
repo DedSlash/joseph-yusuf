@@ -24,6 +24,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final UserMapper userMapper;
+    private final TrialService trialService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -45,7 +46,11 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency());
+        trialService.startTrial(user.getId());
+        // Reload user after trial activation (plan changed to PREMIUM_PLUS)
+        user = userRepository.findById(user.getId()).orElse(user);
+
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency(), user.isInTrial(), user.getTrialEndsAt());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -68,7 +73,7 @@ public class AuthService {
             throw new BadCredentialsException("Identifiants invalides");
         }
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency(), user.isInTrial(), user.getTrialEndsAt());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -82,7 +87,7 @@ public class AuthService {
         RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
         User user = refreshToken.getUser();
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency());
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency(), user.isInTrial(), user.getTrialEndsAt());
 
         return TokenResponse.builder()
                 .accessToken(accessToken)

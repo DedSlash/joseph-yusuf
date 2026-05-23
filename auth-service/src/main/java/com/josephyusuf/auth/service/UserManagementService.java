@@ -76,6 +76,9 @@ public class UserManagementService {
     public UserDto updatePlan(UUID id, Plan plan) {
         User user = findUser(id);
         user.setPlan(plan);
+        if (user.isInTrial() && plan != Plan.FREE) {
+            user.setInTrial(false);
+        }
         log.info("Plan utilisateur {} modifié → {}", id, plan);
         return userMapper.toDto(userRepository.save(user));
     }
@@ -84,6 +87,9 @@ public class UserManagementService {
     public void updatePlanInternal(UUID userId, Plan plan) {
         User user = findUser(userId);
         user.setPlan(plan);
+        if (user.isInTrial() && plan != Plan.FREE) {
+            user.setInTrial(false);
+        }
         userRepository.save(user);
         log.info("Plan utilisateur {} mis à jour (interne) → {}", userId, plan);
     }
