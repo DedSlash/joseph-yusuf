@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { AnimateOnScrollDirective } from '../../shared/directives/animate-on-scroll.directive';
+import { CornLogoComponent } from '../../shared/components/corn-logo/corn-logo.component';
 
 interface PlanCard {
   id: string;
@@ -67,11 +68,14 @@ const PLANS: PlanCard[] = [
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterModule, AnimateOnScrollDirective],
+  imports: [CommonModule, RouterModule, AnimateOnScrollDirective, CornLogoComponent],
   template: `
     <!-- ── Navbar ─────────────────────────────────────────────────────── -->
     <header class="lp-nav" [class.scrolled]="scrolled">
-      <a class="lp-logo" routerLink="/">Joseph&nbsp;·&nbsp;Yusuf</a>
+      <a class="lp-logo" routerLink="/">
+        <app-corn-logo [size]="26"></app-corn-logo>
+        <span>Joseph&nbsp;·&nbsp;Yusuf</span>
+      </a>
       <nav class="lp-nav-links">
         <a href="#principe" class="lp-nav-link" (click)="scrollTo($event,'principe')">Le Principe</a>
         <a href="#fonctionnalites" class="lp-nav-link" (click)="scrollTo($event,'fonctionnalites')">Fonctionnalités</a>
@@ -306,7 +310,10 @@ const PLANS: PlanCard[] = [
     <footer class="lp-footer">
       <div class="footer-inner">
         <div class="footer-brand">
-          <span class="footer-logo">Joseph · Yusuf</span>
+          <span class="footer-logo">
+            <app-corn-logo [size]="32"></app-corn-logo>
+            Joseph · Yusuf
+          </span>
           <span class="footer-copy">© {{ year }} Rey Dedy Pangou — Tous droits réservés</span>
         </div>
         <div class="footer-columns">
@@ -374,6 +381,9 @@ const PLANS: PlanCard[] = [
       text-decoration: none;
       letter-spacing: 0.5px;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .lp-nav-links {
@@ -1232,6 +1242,9 @@ const PLANS: PlanCard[] = [
       font-family: var(--font-serif, 'Cormorant Garamond', serif);
       color: rgba(201,168,76,0.85);
       font-size: 1.1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .footer-copy {

@@ -1,11 +1,14 @@
 package com.josephyusuf.auth.service;
 
+import com.josephyusuf.auth.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Service
@@ -44,31 +47,73 @@ public class EmailService {
         }
     }
 
-    public void sendWaitlistConfirmationEmail(String to, String planTier, String promoCode) {
-        String body = "Bonjour,\n\n"
-                + "Merci de votre intérêt pour Joseph·Yusuf — la plateforme qui applique le Principe de Joseph "
-                + "(épargner pendant l'abondance, tenir pendant la disette) à vos revenus.\n\n"
-                + "Vous êtes inscrit sur la liste d'attente pour le plan " + planTier + ".\n\n"
-                + (promoCode != null && !promoCode.isBlank()
-                    ? "✦ Avantage anticipateur : le code promo " + promoCode + " vous est réservé. "
-                      + "Il vous accordera une remise dès l'ouverture des paiements.\n\n"
-                    : "")
-                + "Nous vous notifierons par email dès que les paiements seront disponibles "
-                + "(Wave, Orange Money, Free Money et carte bancaire via PayDunya).\n\n"
-                + "À très bientôt,\n"
+    public void sendTrialWelcome(User user) {
+        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"));
+        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+                + "Bienvenue sur Joseph·Yusuf !\n\n"
+                + "Nous vous offrons 7 jours d'accès complet PREMIUM_PLUS pour découvrir toutes les fonctionnalités :\n\n"
+                + "✅ Sources de revenus illimitées\n"
+                + "✅ Toutes les règles financières\n"
+                + "✅ Objectifs d'épargne illimités\n"
+                + "✅ Rapports PDF mensuels et annuels\n"
+                + "✅ Support prioritaire\n\n"
+                + "Votre accès gratuit expire le " + expirationDate + ".\n\n"
+                + "Les moyens de paiement seront ouverts très bientôt. Quand ce sera le cas, "
+                + "vous pourrez utiliser le code EARLY50 pour bénéficier de -50% à vie — "
+                + "réservé aux 100 premiers inscrits.\n\n"
+                + "Si vous ne souhaitez pas continuer, aucune action n'est nécessaire — "
+                + "votre compte passera automatiquement en FREE le " + expirationDate + ".\n\n"
+                + "Bonne découverte !\n"
                 + "L'équipe Joseph·Yusuf";
 
+        sendSimpleEmail(user.getEmail(),
+                "🌟 Votre accès PREMIUM_PLUS est activé — 7 jours gratuits !",
+                body);
+    }
+
+    public void sendTrialReminder(User user) {
+        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"));
+        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+                + "Votre période d'essai PREMIUM_PLUS se termine demain le " + expirationDate + ".\n\n"
+                + "Sans action de votre part, votre compte passera automatiquement en FREE demain. "
+                + "Vous garderez vos données et toutes vos saisies — seules les fonctionnalités "
+                + "avancées seront désactivées.\n\n"
+                + "Les moyens de paiement seront ouverts très bientôt. Quand ce sera le cas, "
+                + "le code EARLY50 vous donnera -50% à vie — réservé aux 100 premiers inscrits.\n\n"
+                + "Nous vous préviendrons dès l'ouverture des paiements.\n\n"
+                + "L'équipe Joseph·Yusuf";
+
+        sendSimpleEmail(user.getEmail(),
+                "⏰ Votre accès PREMIUM_PLUS expire demain",
+                body);
+    }
+
+    public void sendTrialExpired(User user) {
+        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+                + "Votre période d'essai est terminée.\n"
+                + "Votre compte est maintenant en FREE — toutes vos données restent disponibles.\n\n"
+                + "Les moyens de paiement ne sont pas encore activés. Dès qu'ils le seront, "
+                + "vous pourrez passer en PREMIUM ou PREMIUM_PLUS, et utiliser le code EARLY50 "
+                + "(-50% à vie, réservé aux 100 premiers inscrits) s'il est encore disponible.\n\n"
+                + "Nous vous préviendrons par email dès l'ouverture des paiements.\n\n"
+                + "L'équipe Joseph·Yusuf";
+
+        sendSimpleEmail(user.getEmail(),
+                "Votre essai PREMIUM_PLUS est terminé",
+                body);
+    }
+
+    private void sendSimpleEmail(String to, String subject, String body) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(from);
             message.setTo(to);
-            message.setSubject("Joseph·Yusuf — Inscription confirmée sur la liste d'attente");
+            message.setSubject(subject);
             message.setText(body);
             mailSender.send(message);
-            log.info("Email waitlist envoyé à {} (plan={})", to, planTier);
+            log.info("Email envoyé à {} : {}", to, subject);
         } catch (Exception e) {
-            log.warn("Échec envoi email waitlist à {} : {} (plan={})",
-                    to, e.getMessage(), planTier);
+            log.warn("Échec envoi email à {} : {} (sujet: {})", to, e.getMessage(), subject);
         }
     }
 }
