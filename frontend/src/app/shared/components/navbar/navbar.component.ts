@@ -1,8 +1,10 @@
 import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Observable } from 'rxjs';
 import { DialogModule } from 'primeng/dialog';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { AuthService } from '../../../core/auth/auth.service';
 import { User, Plan } from '../../../shared/models/user.model';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
@@ -11,7 +13,8 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, DialogModule, NotificationBellComponent, CornLogoComponent],
+  imports: [CommonModule, RouterModule, DialogModule, ToastModule, NotificationBellComponent, CornLogoComponent],
+  providers: [MessageService],
   template: `
     <nav class="navbar" *ngIf="currentUser$ | async as user">
       <div class="navbar-left">
@@ -50,7 +53,7 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
         <div class="avatar-container" (click)="toggleDropdown()">
           <div class="avatar">{{ getInitials(user) }}</div>
           <div class="dropdown" *ngIf="dropdownOpen">
-            <a class="dropdown-item" routerLink="/account" (click)="dropdownOpen = false">Mon compte</a>
+            <a class="dropdown-item" (click)="goToAccount()">Mon compte</a>
             <a class="dropdown-item" routerLink="/support" (click)="dropdownOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; opacity: 0.7">
                 <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
@@ -63,12 +66,14 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
       </div>
     </nav>
 
+    <p-toast position="top-center"></p-toast>
+
     <!-- Drawer mobile -->
     <div class="nav-drawer-overlay" *ngIf="drawerOpen" (click)="drawerOpen = false"></div>
     <aside class="nav-drawer" [class.open]="drawerOpen">
       <a routerLink="/dashboard" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Dashboard</a>
       <a routerLink="/incomes" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Mes Revenus</a>
-      <a routerLink="/account" class="drawer-link" (click)="drawerOpen = false">Mon compte</a>
+      <a class="drawer-link" (click)="goToAccount()">Mon compte</a>
       <a routerLink="/support" class="drawer-link" (click)="drawerOpen = false">Support</a>
       <div class="drawer-divider"></div>
       <button class="drawer-link drawer-logout" (click)="drawerOpen = false; logout()">Déconnexion</button>
@@ -547,14 +552,26 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
 
     /* Mobile : ≤ 767px */
     @media (max-width: 767px) {
-      .navbar { padding: 0 12px; height: 56px; }
+      .navbar { padding: 0 10px; height: 56px; overflow: hidden; }
       .nav-burger { display: flex; }
       .nav-links { display: none; }
-      .btn-help span { display: none; }
+      .btn-help { display: none; }
       .btn-upgrade-nav { padding: 6px 10px; font-size: 11px; }
-      .plan-badge { padding: 3px 8px; font-size: 10px; }
-      .logo { font-size: 1rem; }
-      .navbar-right { gap: 6px; }
+      .plan-badge { padding: 3px 6px; font-size: 9px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .plan-trial { padding: 3px 4px 3px 6px; }
+      .trial-indicator { padding: 2px 5px; font-size: 8px; }
+      .logo { font-size: 0.9rem; }
+      .logo-text { display: none; }
+      .navbar-left { gap: 0.5rem; }
+      .navbar-right { gap: 4px; }
+      .avatar { width: 30px; height: 30px; font-size: 11px; }
+    }
+
+    /* Extra small : ≤ 375px */
+    @media (max-width: 375px) {
+      .navbar { padding: 0 8px; }
+      .plan-badge { max-width: 80px; font-size: 8px; }
+      .plan-trial .trial-indicator { display: none; }
     }
   `]
 })
@@ -570,7 +587,12 @@ export class NavbarComponent implements OnInit {
     this.drawerOpen = !this.drawerOpen;
   }
 
-  constructor(private readonly authService: AuthService, private readonly elRef: ElementRef) {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly elRef: ElementRef,
+    private readonly router: Router,
+    private readonly messageService: MessageService
+  ) {
     this.currentUser$ = this.authService.currentUser$;
   }
 
@@ -617,6 +639,18 @@ export class NavbarComponent implements OnInit {
 
   toggleDropdown(): void {
     this.dropdownOpen = !this.dropdownOpen;
+  }
+
+  goToAccount(): void {
+    this.dropdownOpen = false;
+    this.drawerOpen = false;
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Bientôt disponible',
+      detail: 'Cette fonctionnalité arrive bientôt',
+      life: 3000
+    });
+    this.router.navigate(['/dashboard']);
   }
 
   logout(): void {

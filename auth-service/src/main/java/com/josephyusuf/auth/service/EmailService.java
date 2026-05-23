@@ -30,13 +30,13 @@ public class EmailService {
                 + "Cliquez sur le lien ci-dessous (valide 15 minutes) :\n"
                 + link + "\n\n"
                 + "Si vous n'avez pas demandé cette réinitialisation, ignorez cet email — votre mot de passe restera inchangé.\n\n"
-                + "L'équipe Joseph·Yusuf";
+                + "🌾 L'équipe Joseph·Yusuf";
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(from);
             message.setTo(to);
-            message.setSubject("Joseph·Yusuf — Réinitialisation de mot de passe");
+            message.setSubject("🌾 Joseph·Yusuf — Réinitialisation de mot de passe");
             message.setText(body);
             mailSender.send(message);
             log.info("Email de reset envoyé à {}", to);
@@ -64,7 +64,7 @@ public class EmailService {
                 + "Si vous ne souhaitez pas continuer, aucune action n'est nécessaire — "
                 + "votre compte passera automatiquement en FREE le " + expirationDate + ".\n\n"
                 + "Bonne découverte !\n"
-                + "L'équipe Joseph·Yusuf";
+                + "🌾 L'équipe Joseph·Yusuf";
 
         sendSimpleEmail(user.getEmail(),
                 "🌟 Votre accès PREMIUM_PLUS est activé — 7 jours gratuits !",
@@ -81,7 +81,7 @@ public class EmailService {
                 + "Les moyens de paiement seront ouverts très bientôt. Quand ce sera le cas, "
                 + "le code EARLY50 vous donnera -50% à vie — réservé aux 100 premiers inscrits.\n\n"
                 + "Nous vous préviendrons dès l'ouverture des paiements.\n\n"
-                + "L'équipe Joseph·Yusuf";
+                + "🌾 L'équipe Joseph·Yusuf";
 
         sendSimpleEmail(user.getEmail(),
                 "⏰ Votre accès PREMIUM_PLUS expire demain",
@@ -96,7 +96,7 @@ public class EmailService {
                 + "vous pourrez passer en PREMIUM ou PREMIUM_PLUS, et utiliser le code EARLY50 "
                 + "(-50% à vie, réservé aux 100 premiers inscrits) s'il est encore disponible.\n\n"
                 + "Nous vous préviendrons par email dès l'ouverture des paiements.\n\n"
-                + "L'équipe Joseph·Yusuf";
+                + "🌾 L'équipe Joseph·Yusuf";
 
         sendSimpleEmail(user.getEmail(),
                 "Votre essai PREMIUM_PLUS est terminé",

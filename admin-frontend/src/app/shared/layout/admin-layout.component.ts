@@ -12,7 +12,7 @@ import { AdminSupportService } from '../../core/services/admin-support.service';
     <div class="admin-shell">
       <aside class="admin-sidebar">
         <div class="brand">
-          Joseph · Yusuf
+          🌾 Joseph · Yusuf
           <small>Admin Console</small>
         </div>
 

@@ -64,7 +64,7 @@
       ansible.builtin.wait_for:
         port: 8081
         host: 127.0.0.1
-        timeout: 120
+        timeout: 180
 
     - name: Health check Gateway
       ansible.builtin.uri:
