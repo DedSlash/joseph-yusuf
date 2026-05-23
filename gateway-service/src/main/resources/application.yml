@@ -17,6 +17,9 @@ spring:
             allowedOrigins:
               - "http://localhost:4200"
               - "http://localhost:4201"
+              - "https://josephyusuf.com"
+              - "https://www.josephyusuf.com"
+              - "https://admin.josephyusuf.com"
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
