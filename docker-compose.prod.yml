@@ -127,7 +127,7 @@ services:
     container_name: joseph_discovery_server
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseG1GC
+      - JAVA_OPTS=-Xms128m -Xmx220m -XX:+UseG1GC
     networks:
       - joseph-network
     healthcheck:
@@ -140,7 +140,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256m
+          memory: 384m
           cpus: '0.25'
     logging:
       driver: json-file
@@ -159,10 +159,10 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseG1GC
+      - JAVA_OPTS=-Xms128m -Xmx220m -XX:+UseG1GC
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
     networks:
       - joseph-network
     healthcheck:
@@ -175,7 +175,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256m
+          memory: 384m
           cpus: '0.5'
     logging:
       driver: json-file
@@ -206,6 +206,10 @@ services:
       - SPRING_MAIL_PORT=${MAIL_PORT}
       - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_FROM=Joseph·Yusuf <no-reply@josephyusuf.com>
       - APP_RESET_URL=${RESET_URL}
       - SUPER_ADMIN_EMAILS=${SUPER_ADMIN_EMAILS}
       - SUPER_ADMIN_DEFAULT_PASSWORD=${SUPER_ADMIN_DEFAULT_PASSWORD:-}
@@ -511,6 +515,10 @@ services:
       - SPRING_MAIL_PORT=${MAIL_PORT}
       - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_FROM=Joseph·Yusuf <no-reply@josephyusuf.com>
     networks:
       - joseph-network
     healthcheck:

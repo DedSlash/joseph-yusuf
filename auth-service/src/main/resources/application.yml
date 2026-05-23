@@ -30,7 +30,7 @@ spring:
     port: ${MAIL_PORT:1025}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
-    from: ${MAIL_FROM:no-reply@josephyusuf.com}
+    from: ${SPRING_MAIL_FROM:no-reply@josephyusuf.com}
     properties:
       mail:
         smtp:
