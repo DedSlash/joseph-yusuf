@@ -7,7 +7,17 @@ export interface User {
   lastName: string;
   plan: Plan;
   enabled: boolean;
+  inTrial?: boolean;
+  trialEndsAt?: string;
   createdAt: string;
+}
+
+export interface TrialStatus {
+  isInTrial: boolean;
+  trialEndsAt: string | null;
+  daysRemaining: number;
+  hoursRemaining: number;
+  trialUsed: boolean;
 }
 
 export interface AuthResponse {

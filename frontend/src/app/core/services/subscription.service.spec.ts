@@ -140,15 +140,6 @@ describe('SubscriptionService', () => {
     req.flush({ token: 'tok_1', status: 'COMPLETED' });
   });
 
-  it('joinWaitlist() → POST /api/auth/waitlist/join (URL différente)', () => {
-    const body = { email: 'a@b.c', planTier: 'PREMIUM' };
-    service.joinWaitlist(body).subscribe();
-    const req = httpMock.expectOne(`${environment.apiUrl}/api/auth/waitlist/join`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual(body);
-    req.flush({ email: 'a@b.c', planTier: 'PREMIUM', promoCodeReserved: 'EARLY50', message: 'ok' });
-  });
-
   it('createPayTechPayment() → POST /paytech/create avec planTier + couponCode', () => {
     const body = { planTier: 'PREMIUM', couponCode: 'EARLY50' };
     service.createPayTechPayment(body).subscribe();

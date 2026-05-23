@@ -5,6 +5,7 @@ import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { RegisterRequest } from '../../../shared/models/user.model';
+import { CornLogoComponent } from '../../../shared/components/corn-logo/corn-logo.component';
 
 interface RegisterForm {
   firstName: string;
@@ -18,12 +19,15 @@ interface RegisterForm {
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CornLogoComponent],
   template: `
     <div class="auth-container">
       <div class="auth-left">
         <div class="branding">
-          <h1 class="logo">Joseph &middot; Yusuf</h1>
+          <h1 class="logo">
+            <app-corn-logo [size]="48"></app-corn-logo>
+            <span>Joseph &middot; Yusuf</span>
+          </h1>
           <p class="tagline">Gerez vos revenus avec sagesse</p>
           <blockquote class="verse">
             &laquo; Qu'ils rassemblent tous les produits de ces bonnes annees qui vont venir ;
@@ -176,6 +180,9 @@ interface RegisterForm {
       font-weight: 600;
       color: var(--gold);
       margin-bottom: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
     }
 
     .tagline {
@@ -475,10 +482,8 @@ export class RegisterComponent implements OnInit {
         const promo = this.form.promoCode.trim();
         if (promo) {
           localStorage.setItem('joseph_promo_code', promo.toUpperCase());
-          this.router.navigate(['/subscription'], { queryParams: { promo } });
-        } else {
-          this.router.navigate(['/dashboard']);
         }
+        this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.loading = false;

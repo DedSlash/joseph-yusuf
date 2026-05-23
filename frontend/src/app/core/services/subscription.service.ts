@@ -75,10 +75,4 @@ export class SubscriptionService {
   createPayTechPayment(request: PayTechRequest): Observable<PayTechPaymentResponse> {
     return this.http.post<PayTechPaymentResponse>(`${this.apiUrl}/paytech/create`, request);
   }
-
-  joinWaitlist(request: { email: string; planTier: string }): Observable<{ email: string; planTier: string; promoCodeReserved: string; message: string }> {
-    return this.http.post<{ email: string; planTier: string; promoCodeReserved: string; message: string }>(
-      `${environment.apiUrl}/api/auth/waitlist/join`, request
-    );
-  }
 }

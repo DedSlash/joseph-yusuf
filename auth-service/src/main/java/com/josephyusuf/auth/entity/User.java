@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -54,6 +55,20 @@ public class User {
     @Column(nullable = false, length = 10)
     @Builder.Default
     private String currency = "XOF";
+
+    @Column(name = "trial_started_at")
+    private LocalDateTime trialStartedAt;
+
+    @Column(name = "trial_ends_at")
+    private LocalDateTime trialEndsAt;
+
+    @Column(name = "trial_used")
+    @Builder.Default
+    private boolean trialUsed = false;
+
+    @Column(name = "is_in_trial")
+    @Builder.Default
+    private boolean inTrial = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, catchError, of, switchMap, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, LoginRequest, RegisterRequest, TokenResponse, User, Plan } from '../../shared/models/user.model';
+import { AuthResponse, LoginRequest, RegisterRequest, TokenResponse, User, Plan, TrialStatus } from '../../shared/models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -92,6 +92,15 @@ export class AuthService {
   getPlan(): Plan {
     const user = this.currentUserSubject.value;
     return user?.plan ?? 'FREE';
+  }
+
+  getTrialStatus(): Observable<TrialStatus> {
+    return this.http.get<TrialStatus>(`${this.apiUrl}/trial/status`);
+  }
+
+  isInTrial(): boolean {
+    const user = this.currentUserSubject.value;
+    return user?.inTrial ?? false;
   }
 
   getCurrentUser(): User | null {

@@ -6,6 +6,7 @@ import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
 import { firstValueFrom } from 'rxjs';
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { TrialStatus } from '../../shared/models/user.model';
 import {
   SubscriptionInfo,
   CreateSubscriptionResponse,
@@ -17,7 +18,7 @@ import { environment } from '../../../environments/environment';
 const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type View   = 'loading' | 'manage' | 'upgrade';   // manage = client existant
+type View   = 'loading' | 'manage' | 'upgrade' | 'trial';   // trial = essai actif
 type Step   = 'plan' | 'payment' | 'confirm' | 'success';
 type PaymentMethod = 'stripe' | 'wave' | 'orange' | 'paydunya' | 'paytech';
 type PlanId = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS';
@@ -85,6 +86,64 @@ const STRIPE_APPEARANCE = {
       <div class="loading-state" *ngIf="view === 'loading'">
         <span class="spinner"></span>
       </div>
+
+      <!-- ════════════ VUE TRIAL (essai actif) ════════════ -->
+      <ng-container *ngIf="view === 'trial' && trialStatus">
+        <div class="trial-active-card">
+          <div class="trial-icon-large">&#x1F31F;</div>
+          <h2 class="trial-title">Vous profitez de votre acc&egrave;s PREMIUM_PLUS gratuit</h2>
+
+          <div class="trial-countdown">
+            <span class="trial-days">{{ trialStatus.daysRemaining }}</span>
+            <span class="trial-days-label">jours restants</span>
+          </div>
+
+          <p class="trial-message">
+            Profitez de toutes les fonctionnalit&eacute;s sans limitation.
+            Un jour avant la fin de votre essai, vous pourrez choisir
+            l'offre qui vous convient le mieux.
+          </p>
+
+          <div class="trial-features-list">
+            <div class="trial-feature"><span class="check">&#x2713;</span> Sources illimit&eacute;es</div>
+            <div class="trial-feature"><span class="check">&#x2713;</span> Toutes les r&egrave;gles financi&egrave;res</div>
+            <div class="trial-feature"><span class="check">&#x2713;</span> Objectifs d'&eacute;pargne illimit&eacute;s</div>
+            <div class="trial-feature"><span class="check">&#x2713;</span> Rapports PDF</div>
+            <div class="trial-feature"><span class="check">&#x2713;</span> Support prioritaire</div>
+          </div>
+
+          <div class="trial-founder-offer">
+            <span class="founder-badge">&#x1F381; OFFRE FONDATEURS</span>
+            <p>
+              Code <strong>EARLY50</strong> r&eacute;serv&eacute; aux
+              <strong>100 premiers inscrits</strong> pour b&eacute;n&eacute;ficier de
+              <strong>-50% &agrave; vie</strong> d&egrave;s l'ouverture des paiements.
+            </p>
+          </div>
+
+          <div class="trial-actions">
+            <button class="btn-next" disabled>
+              Choisir mon offre &mdash; Bient&ocirc;t disponible
+            </button>
+          </div>
+
+          <p class="trial-cancel-note">
+            Sans action de votre part, votre compte passera
+            automatiquement en FREE &agrave; la fin de l'essai.
+          </p>
+        </div>
+      </ng-container>
+
+      <!-- ════════════ VUE EXPIRATION IMMINENTE (J-1) ════════════ -->
+      <ng-container *ngIf="view === 'upgrade' && trialStatus?.isInTrial && trialStatus?.daysRemaining! <= 1">
+        <div class="trial-expiring-banner">
+          <span class="urgency-badge">&#x26A0;&#xFE0F; Votre essai expire demain</span>
+          <p>Choisissez votre offre maintenant pour continuer sans interruption.</p>
+          <p class="promo-reminder">
+            &#x1F381; Code <strong>EARLY50</strong> : -50% &agrave; vie
+          </p>
+        </div>
+      </ng-container>
 
       <!-- ════════════ VUE GESTION (client actif) ════════════ -->
       <ng-container *ngIf="view === 'manage' && sub">
@@ -351,7 +410,7 @@ const STRIPE_APPEARANCE = {
         </div>
 
         <!-- ── Étape 2 : méthode de paiement ── -->
-        <div class="step-content" *ngIf="step === 'payment' && paymentsEnabled">
+        <div class="step-content" *ngIf="step === 'payment'">
           <div class="payment-summary">
             <div class="summary-row"><span>Plan</span><strong>{{ planLabel(selectedPlan!) }}</strong></div>
             <div class="summary-row" *ngIf="promoApplied">
@@ -452,52 +511,7 @@ const STRIPE_APPEARANCE = {
           </div>
         </div>
 
-        <!-- ── Étape 2 : LISTE D'ATTENTE (paiements désactivés) ── -->
-        <div class="step-content" *ngIf="step === 'payment' && !paymentsEnabled">
-          <div class="waitlist-card" *ngIf="!waitlistSuccess">
-            <div class="waitlist-header">
-              <span class="waitlist-icon">&#10024;</span>
-              <h3>Paiements disponibles tres bientot !</h3>
-            </div>
-            <p class="waitlist-desc">
-              Nous finalisons l'integration de nos systemes de paiement (Wave, Orange Money, Carte bancaire).
-              Inscrivez-vous a la liste d'attente pour etre notifie des l'ouverture.
-            </p>
-            <div class="waitlist-plan-badge">
-              Plan selectionne : <strong>{{ planLabel(selectedPlan!) }}</strong>
-              &mdash; {{ getPriceDisplay() }} / mois
-            </div>
-            <div class="waitlist-form">
-              <label>Votre email</label>
-              <input type="email" [(ngModel)]="waitlistEmail" placeholder="votre@email.com"
-                     class="form-input" />
-            </div>
-            <div class="error-banner" *ngIf="waitlistError">{{ waitlistError }}</div>
-            <div class="step-actions">
-              <button class="btn-ghost" (click)="step = 'plan'">&#8592; Retour</button>
-              <button class="btn-next" [disabled]="waitlistSubmitting || !waitlistEmail.trim()"
-                      (click)="submitWaitlist()">
-                {{ waitlistSubmitting ? 'Inscription...' : 'Me notifier' }}
-              </button>
-            </div>
-          </div>
-
-          <div class="waitlist-success-card" *ngIf="waitlistSuccess">
-            <div class="waitlist-success-icon">&#9989;</div>
-            <h3>Vous etes inscrit !</h3>
-            <p>
-              Vous serez notifie des que le paiement sera disponible.
-            </p>
-            <div class="waitlist-promo-card">
-              <span class="waitlist-promo-label">Code promo reserve pour vous :</span>
-              <code class="waitlist-promo-code">{{ waitlistPromoCode }}</code>
-              <span class="waitlist-promo-hint">-50% sur votre premier mois</span>
-            </div>
-            <div class="step-actions">
-              <button class="btn-next" (click)="finish()">Retour au tableau de bord</button>
-            </div>
-          </div>
-        </div>
+        <!-- ── Étape 2 : paiement ── -->
 
         <!-- ── Étape 3 : formulaire Stripe ── -->
         <div class="step-content" *ngIf="step === 'confirm' && paymentMethod === 'stripe'">
@@ -1086,57 +1100,91 @@ const STRIPE_APPEARANCE = {
     .success-step p { color: var(--text-1); margin-bottom: 2rem; }
     .success-step .btn-next { display: inline-block; }
 
-    /* ── Waitlist (glass cards) ── */
-    .waitlist-card, .waitlist-success-card {
+    /* ── Trial view ── */
+    .trial-active-card {
       background: linear-gradient(180deg, rgba(28, 42, 77, 0.55), rgba(19, 22, 42, 0.7));
       border: 1px solid rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(20px) saturate(140%);
       -webkit-backdrop-filter: blur(20px) saturate(140%);
       border-radius: var(--r-lg);
-      padding: 2rem;
+      padding: 2.5rem 2rem;
       text-align: center;
       box-shadow: var(--shadow-card);
+      animation: fadeInUp 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     }
-    .waitlist-header { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1rem; }
-    .waitlist-icon { font-size: 1.5rem; }
-    .waitlist-header h3 { font-family: var(--font-serif); font-size: 1.4rem; color: var(--text-0); margin: 0; }
-    .waitlist-desc { font-size: 0.88rem; color: var(--text-2); line-height: 1.6; margin: 0 0 1.25rem; }
-    .waitlist-plan-badge {
-      display: inline-block;
-      background: var(--gold-tint);
-      border: 1px solid var(--line-strong);
-      border-radius: var(--r-sm);
-      padding: 0.5rem 1rem;
-      font-size: 0.85rem;
-      color: var(--text-1);
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+    .trial-icon-large { font-size: 2.5rem; margin-bottom: 1rem; }
+    .trial-title { font-family: var(--font-serif); font-size: 1.6rem; color: var(--text-0); margin: 0 0 1.5rem; }
+
+    .trial-countdown {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       margin-bottom: 1.5rem;
     }
-    .waitlist-plan-badge strong { color: var(--gold); }
-    .waitlist-form { text-align: left; max-width: 360px; margin: 0 auto 1rem; }
-    .waitlist-form label { display: block; font-size: 0.83rem; color: var(--text-2); margin-bottom: 0.4rem; }
-    .waitlist-success-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
-    .waitlist-success-card h3 { font-family: var(--font-serif); font-size: 1.5rem; color: var(--text-0); margin: 0 0 0.5rem; }
-    .waitlist-success-card p { font-size: 0.88rem; color: var(--text-2); margin: 0 0 1.5rem; }
-    .waitlist-promo-card {
-      background: rgba(92,219,111,0.06);
-      border: 1px solid rgba(92,219,111,0.2);
+    .trial-days {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--gold);
+      font-family: var(--font-mono);
+      line-height: 1;
+    }
+    .trial-days-label { font-size: 0.85rem; color: var(--text-2); margin-top: 0.25rem; }
+
+    .trial-message { font-size: 0.9rem; color: var(--text-2); max-width: 500px; margin: 0 auto 1.5rem; line-height: 1.6; }
+
+    .trial-features-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .trial-feature { font-size: 0.85rem; color: var(--text-1); display: flex; align-items: center; gap: 0.4rem; }
+
+    .trial-founder-offer {
+      background: var(--gold-tint);
+      border: 1px solid var(--line-strong);
       border-radius: var(--r-md);
       padding: 1rem 1.5rem;
       margin-bottom: 1.5rem;
-      display: inline-flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      align-items: center;
+      display: inline-block;
     }
-    .waitlist-promo-label { font-size: 0.8rem; color: var(--text-2); }
-    .waitlist-promo-code { font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono); color: #5cdb6f; letter-spacing: 2px; }
-    .waitlist-promo-hint { font-size: 0.75rem; color: #5cdb6f; opacity: 0.8; }
+    .founder-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold-light);
+      margin-bottom: 0.5rem;
+    }
+    .trial-founder-offer p { font-size: 0.85rem; color: var(--text-1); margin: 0; line-height: 1.5; }
+    .trial-founder-offer strong { color: var(--gold); }
+
+    .trial-actions { margin-bottom: 1rem; }
+    .trial-cancel-note { font-size: 0.78rem; color: var(--text-3); margin: 0; }
+
+    .trial-expiring-banner {
+      background: rgba(243,156,18,0.08);
+      border: 1px solid rgba(243,156,18,0.25);
+      border-radius: var(--r-md);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .urgency-badge { font-size: 0.9rem; font-weight: 700; color: #f5b041; }
+    .trial-expiring-banner p { font-size: 0.85rem; color: var(--text-1); margin: 0.5rem 0 0; }
+    .promo-reminder { color: var(--gold); font-size: 0.85rem; }
 
     @media (max-width: 600px) {
       .plans-grid-2 { grid-template-columns: 1fr; }
       .current-plan-card { flex-direction: column; }
       .cp-right { text-align: left; }
       .sub-page { padding: 1rem; padding-top: 5rem; }
+      .trial-active-card { padding: 1.5rem 1.25rem; }
+      .trial-title { font-size: 1.3rem; }
     }
   `]
 })
@@ -1173,13 +1221,8 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   promoDiscount: number | null = null;   // % de remise validé
   promoValidating = false;
 
-  // Waitlist
-  paymentsEnabled = environment.paymentsEnabled;
-  waitlistEmail = '';
-  waitlistSubmitting = false;
-  waitlistSuccess = false;
-  waitlistError = '';
-  waitlistPromoCode = '';
+  // Trial
+  trialStatus: TrialStatus | null = null;
 
   // PayDunya
   payDunyaLoading = false;
@@ -1205,7 +1248,6 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
   ) {}
 
   ngOnInit(): void {
-    // Les retours Stripe 3DS atterrissent sur /subscription/success (géré par SuccessComponent)
     this.subscriptionService.getPaymentMethods().subscribe({
       next: m => this.paymentMethods = m,
       error: () => this.paymentMethods = [
@@ -1216,18 +1258,21 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     });
 
     this.applyStoredPromoCode();
-    this.loadSubscription();
-    this.prefillWaitlistEmail();
+    this.loadTrialAndSubscription();
   }
 
-  private prefillWaitlistEmail(): void {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      try {
-        const user = JSON.parse(stored);
-        if (user.email) this.waitlistEmail = user.email;
-      } catch (_) {}
-    }
+  private loadTrialAndSubscription(): void {
+    this.authService.getTrialStatus().subscribe({
+      next: trial => {
+        this.trialStatus = trial;
+        if (trial.isInTrial && trial.daysRemaining > 1) {
+          this.view = 'trial';
+        } else {
+          this.loadSubscription();
+        }
+      },
+      error: () => this.loadSubscription()
+    });
   }
 
   private applyStoredPromoCode(): void {
@@ -1635,30 +1680,6 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
 
   finish(): void { this.router.navigate(['/dashboard']); }
 
-  submitWaitlist(): void {
-    if (!this.waitlistEmail.trim() || !this.selectedPlan) return;
-    this.waitlistSubmitting = true;
-    this.waitlistError = '';
-    this.subscriptionService.joinWaitlist({
-      email: this.waitlistEmail.trim(),
-      planTier: this.selectedPlan
-    }).subscribe({
-      next: res => {
-        this.waitlistSubmitting = false;
-        this.waitlistSuccess = true;
-        this.waitlistPromoCode = res.promoCodeReserved || 'EARLY50';
-      },
-      error: err => {
-        this.waitlistSubmitting = false;
-        if (err.status === 409 || err.error?.alreadyRegistered) {
-          this.waitlistSuccess = true;
-          this.waitlistPromoCode = 'EARLY50';
-        } else {
-          this.waitlistError = err.error?.message ?? 'Erreur lors de l\'inscription.';
-        }
-      }
-    });
-  }
 
   payWithPayDunya(): void {
     if (!this.selectedPlan) return;

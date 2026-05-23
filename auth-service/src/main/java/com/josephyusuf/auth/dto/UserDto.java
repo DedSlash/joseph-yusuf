@@ -5,6 +5,7 @@ import com.josephyusuf.auth.entity.Role;
 import lombok.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -23,5 +24,7 @@ public class UserDto {
     private boolean enabled;
     private String country;
     private String currency;
+    private boolean inTrial;
+    private LocalDateTime trialEndsAt;
     private Instant createdAt;
 }

@@ -23,10 +23,13 @@ describe('SubscriptionComponent', () => {
     subscriptionSpy.getCurrent.and.returnValue(EMPTY);
     subscriptionSpy.getPaymentMethods.and.returnValue(of([]));
 
-    authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'getCurrentUser', 'refreshSession', 'isLoggedIn']);
+    authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'getCurrentUser', 'refreshSession', 'isLoggedIn', 'getTrialStatus']);
     authSpy.getPlan.and.returnValue('FREE');
     authSpy.refreshSession.and.returnValue(of(null));
     authSpy.isLoggedIn.and.returnValue(true);
+    authSpy.getTrialStatus.and.returnValue(of({
+      isInTrial: false, trialEndsAt: null, daysRemaining: 0, hoursRemaining: 0, trialUsed: false
+    }));
 
     await TestBed.configureTestingModule({
       imports: [SubscriptionComponent],
@@ -645,87 +648,6 @@ describe('SubscriptionComponent', () => {
 
       expect(localStorage.getItem('joseph_promo_code')).toBeNull();
       expect(component.promoValidating).toBe(false);
-    });
-  });
-
-  describe('prefillWaitlistEmail (via ngOnInit)', () => {
-    afterEach(() => localStorage.removeItem('user'));
-
-    it('user en localStorage avec email → waitlistEmail pré-rempli', () => {
-      localStorage.setItem('user', JSON.stringify({ email: 'jane@example.com' }));
-      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
-
-      component.ngOnInit();
-
-      expect(component.waitlistEmail).toBe('jane@example.com');
-    });
-
-    it('user malformé → silencieux, pas d\'erreur', () => {
-      localStorage.setItem('user', '{not-json}');
-      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
-
-      expect(() => component.ngOnInit()).not.toThrow();
-      expect(component.waitlistEmail).toBe('');
-    });
-  });
-
-  describe('submitWaitlist', () => {
-    it('no-op si email vide', () => {
-      component.waitlistEmail = '   ';
-      component.selectedPlan = 'PREMIUM';
-      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist');
-      component.submitWaitlist();
-      expect((subscriptionSpy as any).joinWaitlist).not.toHaveBeenCalled();
-    });
-
-    it('succès → waitlistSuccess=true + promoCode renvoyé', () => {
-      component.waitlistEmail = 'a@b.c';
-      component.selectedPlan = 'PREMIUM';
-      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(of({
-        email: 'a@b.c', planTier: 'PREMIUM', promoCodeReserved: 'EARLY99', message: 'ok'
-      }));
-
-      component.submitWaitlist();
-
-      expect(component.waitlistSuccess).toBe(true);
-      expect(component.waitlistPromoCode).toBe('EARLY99');
-    });
-
-    it('succès sans promoCodeReserved → fallback EARLY50', () => {
-      component.waitlistEmail = 'a@b.c';
-      component.selectedPlan = 'PREMIUM';
-      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(of({
-        email: 'a@b.c', planTier: 'PREMIUM', promoCodeReserved: '', message: 'ok'
-      }));
-
-      component.submitWaitlist();
-
-      expect(component.waitlistPromoCode).toBe('EARLY50');
-    });
-
-    it('erreur 409 → traité comme succès avec EARLY50', () => {
-      component.waitlistEmail = 'a@b.c';
-      component.selectedPlan = 'PREMIUM';
-      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(
-        throwError(() => ({ status: 409, error: {} }))
-      );
-
-      component.submitWaitlist();
-
-      expect(component.waitlistSuccess).toBe(true);
-      expect(component.waitlistPromoCode).toBe('EARLY50');
-    });
-
-    it('erreur 500 → waitlistError prend le message backend', () => {
-      component.waitlistEmail = 'a@b.c';
-      component.selectedPlan = 'PREMIUM';
-      (subscriptionSpy as any).joinWaitlist = jasmine.createSpy('joinWaitlist').and.returnValue(
-        throwError(() => ({ status: 500, error: { message: 'Service down' } }))
-      );
-
-      component.submitWaitlist();
-
-      expect(component.waitlistError).toBe('Service down');
     });
   });
 

@@ -14,9 +14,9 @@ import { Plan } from '../../models/user.model';
         <p class="upgrade-title">{{ featureName }} nécessite le plan {{ planLabel }}</p>
         <p class="upgrade-desc">{{ description }}</p>
       </div>
-      <a routerLink="/subscription" class="upgrade-btn">
-        Passer à {{ planLabel }}
-      </a>
+      <span class="upgrade-btn upgrade-btn-disabled" aria-disabled="true">
+        Bientôt disponible
+      </span>
     </div>
   `,
   styles: [`
@@ -54,6 +54,12 @@ import { Plan } from '../../models/user.model';
       white-space: nowrap;
     }
     .upgrade-btn:hover { opacity: 0.9; }
+    .upgrade-btn-disabled {
+      background: rgba(201, 168, 76, 0.25);
+      color: rgba(255, 255, 255, 0.7);
+      cursor: not-allowed;
+    }
+    .upgrade-btn-disabled:hover { opacity: 1; }
     @media (max-width: 600px) {
       .upgrade-banner { flex-direction: column; text-align: center; }
     }

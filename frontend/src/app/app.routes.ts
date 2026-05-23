@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/auth.guard';
+import { authGuard, subscriptionDisabledGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   {
@@ -35,12 +35,12 @@ export const routes: Routes = [
   {
     path: 'subscription',
     loadComponent: () => import('./features/subscription/subscription.component').then(m => m.SubscriptionComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, subscriptionDisabledGuard]
   },
   {
     path: 'subscription/success',
     loadComponent: () => import('./features/subscription/success/success.component').then(m => m.SuccessComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, subscriptionDisabledGuard]
   },
   {
     path: 'support',
