@@ -165,6 +165,10 @@ services:
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-no-reply@josephyusuf.com}
       - RESET_URL=${RESET_URL:-http://localhost:4200/reset-password}
+      - PAYMENTS_ACTIVE=${PAYMENTS_ACTIVE:-false}
+      - TRIAL_EXTENSION_DAYS=${TRIAL_EXTENSION_DAYS:-30}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-joseph_internal_dev_token_change_me}
+      - SUBSCRIPTION_URL=${SUBSCRIPTION_URL:-http://localhost:4200/subscription}
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -293,6 +297,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-joseph_internal_dev_token_change_me}
     depends_on:
       discovery-server:
         condition: service_healthy

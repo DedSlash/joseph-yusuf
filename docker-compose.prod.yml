@@ -213,6 +213,10 @@ services:
       - APP_RESET_URL=${RESET_URL}
       - SUPER_ADMIN_EMAILS=${SUPER_ADMIN_EMAILS}
       - SUPER_ADMIN_DEFAULT_PASSWORD=${SUPER_ADMIN_DEFAULT_PASSWORD:-}
+      - PAYMENTS_ACTIVE=${PAYMENTS_ACTIVE:-false}
+      - TRIAL_EXTENSION_DAYS=${TRIAL_EXTENSION_DAYS:-30}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN}
+      - SUBSCRIPTION_URL=${SUBSCRIPTION_URL:-https://josephyusuf.com/subscription}
     networks:
       - joseph-network
     healthcheck:
@@ -336,6 +340,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN}
     networks:
       - joseph-network
     healthcheck:

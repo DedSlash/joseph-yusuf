@@ -29,4 +29,8 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     List<User> findByInTrialTrueAndTrialEndsAtBefore(LocalDateTime dateTime);
 
     List<User> findByInTrialTrueAndTrialEndsAtBetween(LocalDateTime from, LocalDateTime to);
+
+    List<User> findByInTrialTrue();
+
+    long countByInTrialTrue();
 }

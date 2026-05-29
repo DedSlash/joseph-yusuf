@@ -2,6 +2,7 @@ package com.josephyusuf.alert.service;
 
 import com.josephyusuf.alert.dto.AlertDto;
 import com.josephyusuf.alert.dto.IncomeClassifiedEvent;
+import com.josephyusuf.alert.dto.InternalAlertRequest;
 import com.josephyusuf.alert.dto.RuleAppliedEvent;
 import com.josephyusuf.alert.dto.SavingsRecommendationEvent;
 import com.josephyusuf.alert.entity.Alert;
@@ -72,6 +73,21 @@ public class AlertService {
     @Transactional
     public void deleteAll(UUID userId) {
         alertRepository.deleteAllByUserId(userId);
+    }
+
+    @Transactional
+    public Alert createInternal(InternalAlertRequest request) {
+        Alert alert = Alert.builder()
+                .userId(request.getUserId())
+                .type(request.getType())
+                .severity(request.getSeverity())
+                .title(request.getTitle())
+                .message(truncate(request.getMessage(), 500))
+                .read(false)
+                .month(request.getMonth())
+                .year(request.getYear())
+                .build();
+        return alertRepository.save(alert);
     }
 
     @Transactional

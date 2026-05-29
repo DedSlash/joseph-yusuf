@@ -3,7 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  AuditLog, KpiOverview, PageResponse, PaymentMethodConfig, PlanStats,
+  AuditLog, KpiOverview, PageResponse, PaymentMethodConfig,
+  PaymentsToggleActivateResponse, PaymentsToggleStatus, PlanStats,
   PromoCode, PromoCodeStats, Role, Plan, Transaction, User
 } from '../../shared/models/admin.model';
 
@@ -88,6 +89,15 @@ export class AdminApiService {
 
   togglePaymentMethod(provider: string): Observable<PaymentMethodConfig> {
     return this.http.put<PaymentMethodConfig>(`${this.apiUrl}/payment-methods/${provider}/toggle`, {});
+  }
+
+  // Payments toggle (prolongation auto pendant que les paiements sont fermés)
+  paymentsToggleStatus(): Observable<PaymentsToggleStatus> {
+    return this.http.get<PaymentsToggleStatus>(`${this.apiUrl}/payments-toggle/status`);
+  }
+
+  activatePayments(): Observable<PaymentsToggleActivateResponse> {
+    return this.http.post<PaymentsToggleActivateResponse>(`${this.apiUrl}/payments-toggle/activate`, {});
   }
 
   // KPIs

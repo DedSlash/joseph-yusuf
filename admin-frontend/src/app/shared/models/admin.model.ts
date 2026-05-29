@@ -93,6 +93,17 @@ export interface PaymentMethodConfig {
   updatedAt: string;
 }
 
+export interface PaymentsToggleStatus {
+  paymentsActive: boolean;
+  usersInTrialExtension: number;
+}
+
+export interface PaymentsToggleActivateResponse {
+  paymentsActive: boolean;
+  usersNotified: number;
+  alreadyActive: boolean;
+}
+
 export interface PlanStats {
   free: number;
   premium: number;

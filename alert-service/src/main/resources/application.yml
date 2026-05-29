@@ -38,6 +38,10 @@ spring:
 jwt:
   secret: ${JWT_SECRET:am9zZXBoeXVzdWYtand0LXNlY3JldC1rZXktMjAyNi1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}
 
+app:
+  internal:
+    token: ${INTERNAL_API_TOKEN:}
+
 eureka:
   client:
     register-with-eureka: true

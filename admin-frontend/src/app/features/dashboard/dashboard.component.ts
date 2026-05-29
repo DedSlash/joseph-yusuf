@@ -2,7 +2,9 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../core/services/admin-api.service';
-import { KpiOverview, PaymentMethodConfig, PlanStats } from '../../shared/models/admin.model';
+import {
+  KpiOverview, PaymentMethodConfig, PaymentsToggleStatus, PlanStats
+} from '../../shared/models/admin.model';
 
 @Component({
   selector: 'admin-dashboard',
@@ -91,6 +93,53 @@ import { KpiOverview, PaymentMethodConfig, PlanStats } from '../../shared/models
         </div>
       </div>
     </ng-container>
+
+    <!-- Section prolongation automatique du trial -->
+    <div class="card trial-extension-card" style="margin-top:1rem"
+         *ngIf="paymentsStatus() as ts">
+      <div class="te-head">
+        <div>
+          <h3>Prolongation automatique du trial</h3>
+          <p class="section-sub" style="margin:0">
+            Tant que les paiements ne sont pas ouverts, les trials qui expirent sont
+            prolongés gratuitement et les utilisateurs reçoivent un email de fidélité.
+          </p>
+        </div>
+        <span class="te-badge" [ngClass]="ts.paymentsActive ? 'te-off' : 'te-on'">
+          {{ ts.paymentsActive ? 'Inactive' : 'Active' }}
+        </span>
+      </div>
+
+      <div class="te-grid">
+        <div class="te-stat">
+          <div class="te-stat-label">Utilisateurs en prolongation</div>
+          <div class="te-stat-value">{{ ts.usersInTrialExtension | number }}</div>
+        </div>
+        <div class="te-stat">
+          <div class="te-stat-label">Paiements</div>
+          <div class="te-stat-value" [ngClass]="ts.paymentsActive ? 'ok' : 'pending'">
+            {{ ts.paymentsActive ? 'Disponibles' : 'Non disponibles' }}
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="paymentsToggleError()" class="alert error" style="margin-top:1rem">
+        {{ paymentsToggleError() }}
+      </div>
+      <div *ngIf="paymentsToggleNotice()" class="alert success" style="margin-top:1rem">
+        {{ paymentsToggleNotice() }}
+      </div>
+
+      <button class="te-activate"
+              *ngIf="!ts.paymentsActive"
+              [disabled]="activatingPayments()"
+              (click)="activatePayments()">
+        {{ activatingPayments() ? 'Activation en cours…' : 'Activer les paiements' }}
+      </button>
+      <div *ngIf="ts.paymentsActive" class="te-done">
+        ✅ Les paiements sont actifs. Les nouveaux trials suivent le cycle normal.
+      </div>
+    </div>
 
     <!-- Section modes de paiement (indépendante des KPIs) -->
     <div class="card payment-methods-card" style="margin-top:1rem">
@@ -254,6 +303,69 @@ import { KpiOverview, PaymentMethodConfig, PlanStats } from '../../shared/models
     .pm-toggle-off:hover:not(:disabled) { background: rgba(220,53,69,0.18); }
 
     .pm-empty { color: var(--text-dim); font-size: 0.85rem; padding: 1rem 0; text-align: center; }
+
+    .trial-extension-card .te-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+    }
+    .te-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.7rem;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+    .te-on { background: rgba(92,219,111,0.15); color: #5cdb6f; border: 1px solid rgba(92,219,111,0.3); }
+    .te-off { background: rgba(128,128,128,0.12); color: #aaa; border: 1px solid rgba(128,128,128,0.2); }
+    .te-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 600px) {
+      .te-grid { grid-template-columns: 1fr; }
+    }
+    .te-stat {
+      background: var(--night-soft);
+      border: 1px solid var(--border-dim);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+    }
+    .te-stat-label { font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.4rem; }
+    .te-stat-value { font-size: 1.4rem; font-weight: 700; color: var(--gold); }
+    .te-stat-value.pending { color: #ff9f4a; }
+    .te-stat-value.ok { color: #5cdb6f; }
+    .te-activate {
+      margin-top: 1.1rem;
+      background: var(--gold);
+      color: #1a1a1a;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+    .te-activate:hover:not(:disabled) { filter: brightness(1.1); }
+    .te-activate:disabled { opacity: 0.5; cursor: not-allowed; }
+    .te-done {
+      margin-top: 1rem;
+      color: #5cdb6f;
+      font-size: 0.9rem;
+    }
+    .alert.success {
+      background: rgba(92,219,111,0.12);
+      border: 1px solid rgba(92,219,111,0.35);
+      color: #5cdb6f;
+      padding: 0.6rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
   `]
 })
 export class DashboardComponent implements OnInit {
@@ -266,6 +378,10 @@ export class DashboardComponent implements OnInit {
   protected readonly paymentMethods = signal<PaymentMethodConfig[]>([]);
   protected readonly paymentMethodsError = signal<string | null>(null);
   protected readonly togglingProvider = signal<string | null>(null);
+  protected readonly paymentsStatus = signal<PaymentsToggleStatus | null>(null);
+  protected readonly paymentsToggleError = signal<string | null>(null);
+  protected readonly paymentsToggleNotice = signal<string | null>(null);
+  protected readonly activatingPayments = signal(false);
 
   private static readonly PRICE_PREMIUM = 4.99;
   private static readonly PRICE_PREMIUM_PLUS = 9.99;
@@ -289,6 +405,40 @@ export class DashboardComponent implements OnInit {
     this.api.getPaymentMethods().subscribe({
       next: methods => this.paymentMethods.set(methods),
       error: () => this.paymentMethodsError.set('Impossible de charger les modes de paiement')
+    });
+
+    this.loadPaymentsStatus();
+  }
+
+  private loadPaymentsStatus(): void {
+    this.api.paymentsToggleStatus().subscribe({
+      next: status => this.paymentsStatus.set(status),
+      error: () => this.paymentsToggleError.set('Impossible de charger le statut des paiements')
+    });
+  }
+
+  protected activatePayments(): void {
+    if (!confirm('Activer les paiements ? Tous les utilisateurs en prolongation recevront un email les informant qu\'ils peuvent désormais souscrire.')) {
+      return;
+    }
+    this.activatingPayments.set(true);
+    this.paymentsToggleError.set(null);
+    this.paymentsToggleNotice.set(null);
+    this.api.activatePayments().subscribe({
+      next: response => {
+        this.activatingPayments.set(false);
+        this.paymentsToggleNotice.set(
+          response.alreadyActive
+            ? 'Les paiements étaient déjà actifs.'
+            : `Paiements activés. ${response.usersNotified} utilisateur(s) notifié(s).`
+        );
+        this.loadPaymentsStatus();
+        setTimeout(() => this.paymentsToggleNotice.set(null), 6000);
+      },
+      error: () => {
+        this.activatingPayments.set(false);
+        this.paymentsToggleError.set('Échec de l\'activation des paiements');
+      }
     });
   }
 

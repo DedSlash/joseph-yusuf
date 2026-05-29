@@ -1,5 +1,7 @@
 package com.josephyusuf.auth.service;
 
+import com.josephyusuf.auth.client.AlertClient;
+import com.josephyusuf.auth.client.dto.InternalAlertRequest;
 import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.Role;
 import com.josephyusuf.auth.entity.User;
@@ -12,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +33,12 @@ class TrialServiceTest {
 
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private SystemSettingsService systemSettingsService;
+
+    @Mock
+    private AlertClient alertClient;
 
     @InjectMocks
     private TrialService trialService;
@@ -54,6 +63,7 @@ class TrialServiceTest {
                 .trialUsed(false)
                 .inTrial(false)
                 .build();
+        ReflectionTestUtils.setField(trialService, "extensionDays", 30);
     }
 
     @Test
@@ -90,24 +100,10 @@ class TrialServiceTest {
     }
 
     @Test
-    @DisplayName("expireTrials - downgrade FREE + email + inTrial=false")
-    void expireTrials_downgradesToFree() {
-        User expired = User.builder()
-                .id(userId)
-                .email("trial@example.com")
-                .password("p")
-                .firstName("J")
-                .lastName("Y")
-                .plan(Plan.PREMIUM_PLUS)
-                .role(Role.USER)
-                .enabled(true)
-                .country("SN")
-                .currency("XOF")
-                .inTrial(true)
-                .trialUsed(true)
-                .trialEndsAt(LocalDateTime.now().minusHours(1))
-                .build();
-
+    @DisplayName("expireTrials - PAYMENTS_ACTIVE=true → downgrade FREE + email + inTrial=false")
+    void expireTrials_paymentsActive_downgradesToFree() {
+        User expired = trialUser();
+        when(systemSettingsService.isPaymentsActive()).thenReturn(true);
         when(userRepository.findByInTrialTrueAndTrialEndsAtBefore(any(LocalDateTime.class)))
                 .thenReturn(List.of(expired));
 
@@ -117,11 +113,41 @@ class TrialServiceTest {
         assertThat(expired.isInTrial()).isFalse();
         verify(userRepository).save(expired);
         verify(emailService).sendTrialExpired(expired);
+        verify(emailService, never()).sendTrialExtended(any(User.class));
+        verify(alertClient, never()).createInternalAlert(any());
+    }
+
+    @Test
+    @DisplayName("expireTrials - PAYMENTS_ACTIVE=false → prolonge 30j + email fidélité + alerte in-app")
+    void expireTrials_paymentsInactive_extendsTrial() {
+        User expired = trialUser();
+        LocalDateTime oldEnd = expired.getTrialEndsAt();
+        when(systemSettingsService.isPaymentsActive()).thenReturn(false);
+        when(userRepository.findByInTrialTrueAndTrialEndsAtBefore(any(LocalDateTime.class)))
+                .thenReturn(List.of(expired));
+
+        trialService.expireTrials();
+
+        assertThat(expired.getPlan()).isEqualTo(Plan.PREMIUM_PLUS);
+        assertThat(expired.isInTrial()).isTrue();
+        assertThat(expired.getTrialEndsAt()).isAfter(oldEnd);
+        assertThat(expired.getTrialEndsAt()).isAfter(LocalDateTime.now().plusDays(29));
+        verify(userRepository).save(expired);
+        verify(emailService).sendTrialExtended(expired);
+        verify(emailService, never()).sendTrialExpired(any(User.class));
+
+        ArgumentCaptor<InternalAlertRequest> alertCaptor = ArgumentCaptor.forClass(InternalAlertRequest.class);
+        verify(alertClient).createInternalAlert(alertCaptor.capture());
+        InternalAlertRequest alert = alertCaptor.getValue();
+        assertThat(alert.getUserId()).isEqualTo(expired.getId());
+        assertThat(alert.getType()).isEqualTo("TRIAL_EXTENDED");
+        assertThat(alert.getSeverity()).isEqualTo("SUCCESS");
     }
 
     @Test
     @DisplayName("expireTrials - aucun utilisateur trial expiré → no-op")
     void expireTrials_noExpired() {
+        when(systemSettingsService.isPaymentsActive()).thenReturn(true);
         when(userRepository.findByInTrialTrueAndTrialEndsAtBefore(any(LocalDateTime.class)))
                 .thenReturn(List.of());
 
@@ -129,11 +155,13 @@ class TrialServiceTest {
 
         verify(userRepository, never()).save(any(User.class));
         verify(emailService, never()).sendTrialExpired(any(User.class));
+        verify(emailService, never()).sendTrialExtended(any(User.class));
     }
 
     @Test
-    @DisplayName("sendTrialReminders - envoi à J-1 pour chaque user")
-    void sendTrialReminders_nominal() {
+    @DisplayName("sendTrialReminders - PAYMENTS_ACTIVE=true → envoi à J-1 pour chaque user")
+    void sendTrialReminders_paymentsActive_nominal() {
+        when(systemSettingsService.isPaymentsActive()).thenReturn(true);
         User u1 = User.builder().id(UUID.randomUUID()).email("a@b.c").firstName("A").lastName("B")
                 .password("p").plan(Plan.PREMIUM_PLUS).role(Role.USER).enabled(true)
                 .country("SN").currency("XOF").inTrial(true).trialUsed(true)
@@ -150,6 +178,17 @@ class TrialServiceTest {
 
         verify(emailService).sendTrialReminder(u1);
         verify(emailService).sendTrialReminder(u2);
+    }
+
+    @Test
+    @DisplayName("sendTrialReminders - PAYMENTS_ACTIVE=false → court-circuit, aucun email")
+    void sendTrialReminders_paymentsInactive_skipped() {
+        when(systemSettingsService.isPaymentsActive()).thenReturn(false);
+
+        trialService.sendTrialReminders();
+
+        verify(userRepository, never()).findByInTrialTrueAndTrialEndsAtBetween(any(), any());
+        verify(emailService, never()).sendTrialReminder(any(User.class));
     }
 
     @Test
@@ -178,5 +217,34 @@ class TrialServiceTest {
         assertThat(status.isInTrial()).isFalse();
         assertThat(status.daysRemaining()).isZero();
         assertThat(status.trialEndsAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("pushInAppAlert - exception alert-service ne casse rien")
+    void pushInAppAlert_alertFailure_swallowed() {
+        doThrow(new RuntimeException("alert-service down"))
+                .when(alertClient).createInternalAlert(any());
+
+        trialService.pushInAppAlert(userId, "TRIAL_EXTENDED", "SUCCESS", "t", "m");
+
+        verify(alertClient).createInternalAlert(any());
+    }
+
+    private User trialUser() {
+        return User.builder()
+                .id(userId)
+                .email("trial@example.com")
+                .password("p")
+                .firstName("J")
+                .lastName("Y")
+                .plan(Plan.PREMIUM_PLUS)
+                .role(Role.USER)
+                .enabled(true)
+                .country("SN")
+                .currency("XOF")
+                .inTrial(true)
+                .trialUsed(true)
+                .trialEndsAt(LocalDateTime.now().minusHours(1))
+                .build();
     }
 }

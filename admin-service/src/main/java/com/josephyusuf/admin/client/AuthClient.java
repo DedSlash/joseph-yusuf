@@ -33,4 +33,10 @@ public interface AuthClient {
 
     @GetMapping("/api/auth/users/stats/plans")
     PlanStatsResponse planStats();
+
+    @GetMapping("/api/auth/admin/payments-toggle/status")
+    PaymentsToggleStatusDto paymentsToggleStatus();
+
+    @PostMapping("/api/auth/admin/payments-toggle/activate")
+    PaymentsToggleActivateResponse paymentsToggleActivate();
 }

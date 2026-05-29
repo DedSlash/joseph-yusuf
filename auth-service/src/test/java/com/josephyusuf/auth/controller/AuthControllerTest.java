@@ -45,6 +45,9 @@ class AuthControllerTest {
     private com.josephyusuf.auth.service.PasswordResetService passwordResetService;
 
     @MockBean
+    private com.josephyusuf.auth.service.TrialService trialService;
+
+    @MockBean
     private JwtService jwtService;
 
     @MockBean

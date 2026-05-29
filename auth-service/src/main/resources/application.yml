@@ -43,8 +43,15 @@ app:
   super-admin-emails: ${SUPER_ADMIN_EMAILS:admin@josephyusuf.com}
   super-admin-default-password: ${SUPER_ADMIN_DEFAULT_PASSWORD:}
   frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  subscription-url: ${SUBSCRIPTION_URL:http://localhost:4200/subscription}
   conversion-emails:
     enabled: ${CONVERSION_EMAILS_ENABLED:false}
+  payments:
+    active: ${PAYMENTS_ACTIVE:false}
+  trial:
+    extension-days: ${TRIAL_EXTENSION_DAYS:30}
+  internal:
+    token: ${INTERNAL_API_TOKEN:}
 
 jwt:
   secret: ${JWT_SECRET:am9zZXBoeXVzdWYtand0LXNlY3JldC1rZXktMjAyNi1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}

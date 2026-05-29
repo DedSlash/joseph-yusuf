@@ -28,6 +28,9 @@ public class EmailService {
     @Value("${app.reset-url}")
     private String resetUrl;
 
+    @Value("${app.subscription-url:https://josephyusuf.com/subscription}")
+    private String subscriptionUrl;
+
     private InternetAddress getSender() throws Exception {
         String address = (mailUsername != null && !mailUsername.isBlank()) ? mailUsername : from;
         return new InternetAddress(address, "Joseph·Yusuf", "UTF-8");
@@ -110,6 +113,52 @@ public class EmailService {
 
         sendEmail(user.getEmail(),
                 "Votre essai PREMIUM_PLUS est terminé",
+                body);
+    }
+
+    public void sendTrialExtended(User user) {
+        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+                + "Ta période d'essai de 7 jours vient de se terminer — et on ne te laisse "
+                + "pas sur le carreau.\n\n"
+                + "Ton accès Premium+ est prolongé gratuitement jusqu'à l'ouverture officielle "
+                + "des paiements sur la plateforme.\n\n"
+                + "Pourquoi ? Parce que tu fais partie des tout premiers à avoir fait confiance "
+                + "à Joseph·Yusuf. Ce n'est pas anodin pour nous.\n\n"
+                + "Quand les paiements seront activés (Wave, Orange Money, carte bancaire), "
+                + "tu seras parmi les tout premiers informés — avant tout le monde.\n\n"
+                + "Et en tant qu'early adopter, ton coupon EARLY50 (-50% à vie) reste valable "
+                + "et réservé pour toi.\n\n"
+                + "Continue à explorer l'app librement. Si tu as des retours, des questions, "
+                + "ou des idées — réponds directement à cet email. Je lis tout.\n\n"
+                + "À très bientôt,\n"
+                + "Rey\n"
+                + "Fondateur — Joseph·Yusuf\n"
+                + "josephyusuf.com";
+
+        sendEmail(user.getEmail(),
+                "🌾 Ton accès Joseph·Yusuf continue",
+                body);
+    }
+
+    public void sendPaymentsActivated(User user) {
+        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+                + "Bonne nouvelle — les paiements sont maintenant disponibles sur Joseph·Yusuf.\n\n"
+                + "Tu peux désormais activer ton abonnement Premium ou Premium+ directement "
+                + "depuis l'application via Wave, Orange Money ou carte bancaire.\n\n"
+                + "En tant qu'early adopter, ton coupon EARLY50 te donne -50% à vie sur ton "
+                + "abonnement.\n\n"
+                + "→ Premium : 1 500 FCFA/mois au lieu de 3 000\n"
+                + "→ Premium+ : 3 000 FCFA/mois au lieu de 6 000\n\n"
+                + "Ton accès continue normalement jusqu'à ce que tu choisisses de souscrire — "
+                + "aucune interruption.\n\n"
+                + "Active ton abonnement ici :\n"
+                + subscriptionUrl + "\n\n"
+                + "À très bientôt,\n"
+                + "Rey\n"
+                + "Fondateur — Joseph·Yusuf";
+
+        sendEmail(user.getEmail(),
+                "🌾 Les paiements sont ouverts — ton coupon t'attend",
                 body);
     }
 
