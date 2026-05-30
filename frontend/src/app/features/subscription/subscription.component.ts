@@ -89,7 +89,7 @@ const STRIPE_APPEARANCE = {
 
       <!-- ════════════ VUE TRIAL (essai actif) ════════════ -->
       <ng-container *ngIf="view === 'trial' && trialStatus">
-        <div class="trial-active-card">
+        <div class="trial-active-card" *ngIf="trialStatus.paymentsActive; else giftAccessCard">
           <div class="trial-icon-large">&#x1F31F;</div>
           <h2 class="trial-title">Vous profitez de votre acc&egrave;s PREMIUM_PLUS gratuit</h2>
 
@@ -132,10 +132,28 @@ const STRIPE_APPEARANCE = {
             automatiquement en FREE &agrave; la fin de l'essai.
           </p>
         </div>
+
+        <ng-template #giftAccessCard>
+          <div class="trial-active-card">
+            <div class="trial-icon-large">&#x1F31F;</div>
+            <h2 class="trial-title">Acc&egrave;s Premium+ offert</h2>
+            <p class="trial-message">
+              Les moyens de paiement arrivent bient&ocirc;t. En attendant,
+              profitez de toutes les fonctionnalit&eacute;s sans limitation.
+            </p>
+            <div class="trial-features-list">
+              <div class="trial-feature"><span class="check">&#x2713;</span> Sources illimit&eacute;es</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Toutes les r&egrave;gles financi&egrave;res</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Objectifs d'&eacute;pargne illimit&eacute;s</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Rapports PDF</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Support prioritaire</div>
+            </div>
+          </div>
+        </ng-template>
       </ng-container>
 
       <!-- ════════════ VUE EXPIRATION IMMINENTE (J-1) ════════════ -->
-      <ng-container *ngIf="view === 'upgrade' && trialStatus?.isInTrial && trialStatus?.daysRemaining! <= 1">
+      <ng-container *ngIf="view === 'upgrade' && trialStatus?.isInTrial && trialStatus?.paymentsActive && trialStatus?.daysRemaining! <= 1">
         <div class="trial-expiring-banner">
           <span class="urgency-badge">&#x26A0;&#xFE0F; Votre essai expire demain</span>
           <p>Choisissez votre offre maintenant pour continuer sans interruption.</p>
@@ -1265,7 +1283,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     this.authService.getTrialStatus().subscribe({
       next: trial => {
         this.trialStatus = trial;
-        if (trial.isInTrial && trial.daysRemaining > 1) {
+        if (trial.isInTrial && (!trial.paymentsActive || trial.daysRemaining > 1)) {
           this.view = 'trial';
         } else {
           this.loadSubscription();
