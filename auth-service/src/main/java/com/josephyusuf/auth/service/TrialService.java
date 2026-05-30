@@ -49,7 +49,7 @@ public class TrialService {
         log.info("Trial PREMIUM_PLUS démarré pour userId={}, expire le {}", userId, user.getTrialEndsAt());
     }
 
-    @Scheduled(fixedRate = 3600000)
+    @Scheduled(fixedRate = 300000)
     @Transactional
     public void expireTrials() {
         boolean paymentsActive = systemSettingsService.isPaymentsActive();
