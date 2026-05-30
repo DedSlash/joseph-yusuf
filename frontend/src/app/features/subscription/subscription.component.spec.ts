@@ -28,7 +28,7 @@ describe('SubscriptionComponent', () => {
     authSpy.refreshSession.and.returnValue(of(null));
     authSpy.isLoggedIn.and.returnValue(true);
     authSpy.getTrialStatus.and.returnValue(of({
-      isInTrial: false, trialEndsAt: null, daysRemaining: 0, hoursRemaining: 0, trialUsed: false, paymentsActive: false
+      isInTrial: false, trialEndsAt: null, daysRemaining: 0, hoursRemaining: 0, trialUsed: false
     }));
 
     await TestBed.configureTestingModule({

@@ -330,29 +330,18 @@ Chart.register(...registerables);
       <!-- Carte trial PREMIUM_PLUS -->
       <section class="trial-dashboard-section" *ngIf="isInTrial">
         <div class="trial-dashboard-card">
-          <ng-container *ngIf="paymentsActive; else giftView">
-            <div class="trial-dashboard-header">
-              <span class="badge-premium-plus-dash">PREMIUM+</span>
-              <span class="trial-dashboard-badge">Essai gratuit</span>
-            </div>
-            <p class="trial-dashboard-text">
-              Vous profitez de toutes les fonctionnalités.
-              Votre essai se termine dans
-              <strong>{{ trialDaysRemaining }} {{ trialDaysRemaining === 1 ? 'jour' : 'jours' }}</strong>.
-            </p>
-            <p class="trial-dashboard-promo">
-              🎁 Code <strong>EARLY50</strong> réservé aux 100 premiers inscrits — souscription bientôt disponible.
-            </p>
-          </ng-container>
-          <ng-template #giftView>
-            <div class="trial-dashboard-header">
-              <span class="badge-premium-plus-dash">PREMIUM+</span>
-            </div>
-            <p class="trial-dashboard-text">
-              <strong>Accès Premium+ offert.</strong><br>
-              Les moyens de paiement arrivent bientôt.
-            </p>
-          </ng-template>
+          <div class="trial-dashboard-header">
+            <span class="badge-premium-plus-dash">PREMIUM+</span>
+            <span class="trial-dashboard-badge">Essai gratuit</span>
+          </div>
+          <p class="trial-dashboard-text">
+            Vous profitez de toutes les fonctionnalités.
+            Votre essai se termine dans
+            <strong>{{ trialDaysRemaining }} {{ trialDaysRemaining === 1 ? 'jour' : 'jours' }}</strong>.
+          </p>
+          <p class="trial-dashboard-promo">
+            🎁 Code <strong>EARLY50</strong> réservé aux 100 premiers inscrits — souscription bientôt disponible.
+          </p>
         </div>
       </section>
 
@@ -1540,7 +1529,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   // Trial
   isInTrial = false;
   trialDaysRemaining: number | null = null;
-  paymentsActive = false;
 
   // Money Tips
   hasTipsAvailable = false;
@@ -1619,20 +1607,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!user?.inTrial || !user.trialEndsAt) {
       this.isInTrial = false;
       this.trialDaysRemaining = null;
-      this.paymentsActive = false;
       return;
     }
     this.authService.getTrialStatus().subscribe({
       next: status => {
         this.isInTrial = status.isInTrial;
         this.trialDaysRemaining = status.isInTrial ? status.daysRemaining : null;
-        this.paymentsActive = status.paymentsActive;
       },
       error: () => {
         const diffMs = new Date(user.trialEndsAt!).getTime() - Date.now();
         this.isInTrial = diffMs > 0;
         this.trialDaysRemaining = this.isInTrial ? Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24))) : null;
-        this.paymentsActive = false;
       }
     });
   }

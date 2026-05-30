@@ -40,15 +40,11 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
         </button>
         <span
           class="plan-badge plan-trial"
-          *ngIf="user.inTrial && paymentsActive && trialDaysRemaining !== null"
+          *ngIf="user.inTrial && trialDaysRemaining !== null"
         >
           PREMIUM+
           <span class="trial-indicator">Essai {{ trialDaysRemaining }}j</span>
         </span>
-        <span
-          class="plan-badge plan-premium-plus"
-          *ngIf="user.inTrial && !paymentsActive"
-        >PREMIUM+</span>
         <span
           class="plan-badge"
           [ngClass]="getPlanClass(user.plan)"
@@ -588,7 +584,6 @@ export class NavbarComponent implements OnInit {
   drawerOpen = false;
   showHelp = false;
   trialDaysRemaining: number | null = null;
-  paymentsActive = false;
 
   toggleDrawer(event: Event): void {
     event.stopPropagation();
@@ -623,13 +618,6 @@ export class NavbarComponent implements OnInit {
         this.trialDaysRemaining = null;
       }
     });
-
-    if (this.authService.isLoggedIn()) {
-      this.authService.getTrialStatus().subscribe({
-        next: status => { this.paymentsActive = status.paymentsActive; },
-        error: () => { this.paymentsActive = false; }
-      });
-    }
   }
 
   getInitials(user: User): string {

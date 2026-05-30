@@ -102,10 +102,9 @@ public class TrialService {
     @Transactional(readOnly = true)
     public TrialStatus getTrialStatus(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow();
-        boolean paymentsActive = systemSettingsService.isPaymentsActive();
 
         if (!user.isInTrial()) {
-            return new TrialStatus(false, null, 0, 0, user.isTrialUsed(), paymentsActive);
+            return new TrialStatus(false, null, 0, 0, user.isTrialUsed());
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -113,7 +112,7 @@ public class TrialService {
         long hoursRemaining = java.time.Duration.between(now, endsAt).toHours();
         int daysRemaining = (int) Math.max(0, java.time.Duration.between(now, endsAt).toDays());
 
-        return new TrialStatus(true, endsAt, daysRemaining, (int) Math.max(0, hoursRemaining), user.isTrialUsed(), paymentsActive);
+        return new TrialStatus(true, endsAt, daysRemaining, (int) Math.max(0, hoursRemaining), user.isTrialUsed());
     }
 
     public void pushInAppAlert(UUID userId, String type, String severity, String title, String message) {
@@ -135,7 +134,6 @@ public class TrialService {
             LocalDateTime trialEndsAt,
             int daysRemaining,
             int hoursRemaining,
-            boolean trialUsed,
-            boolean paymentsActive
+            boolean trialUsed
     ) {}
 }
