@@ -6,6 +6,7 @@ import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
 import { firstValueFrom } from 'rxjs';
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnalyticsService } from '../../core/services/analytics.service';
 import { TrialStatus } from '../../shared/models/user.model';
 import {
   SubscriptionInfo,
@@ -17,10 +18,16 @@ import { environment } from '../../../environments/environment';
 
 const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
 
+declare global {
+  interface Window {
+    Paddle: any;
+  }
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────
 type View   = 'loading' | 'manage' | 'upgrade' | 'trial';   // trial = essai actif
 type Step   = 'plan' | 'payment' | 'confirm' | 'success';
-type PaymentMethod = 'stripe' | 'wave' | 'orange' | 'paydunya' | 'paytech';
+type PaymentMethod = 'stripe' | 'paddle' | 'wave' | 'orange' | 'paydunya' | 'paytech';
 type PlanId = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS';
 
 interface PlanMeta {
@@ -89,7 +96,7 @@ const STRIPE_APPEARANCE = {
 
       <!-- ════════════ VUE TRIAL (essai actif) ════════════ -->
       <ng-container *ngIf="view === 'trial' && trialStatus">
-        <div class="trial-active-card">
+        <div class="trial-active-card" *ngIf="trialStatus.paymentsActive; else giftAccessCard">
           <div class="trial-icon-large">&#x1F31F;</div>
           <h2 class="trial-title">Vous profitez de votre acc&egrave;s PREMIUM_PLUS gratuit</h2>
 
@@ -132,10 +139,28 @@ const STRIPE_APPEARANCE = {
             automatiquement en FREE &agrave; la fin de l'essai.
           </p>
         </div>
+
+        <ng-template #giftAccessCard>
+          <div class="trial-active-card">
+            <div class="trial-icon-large">&#x1F31F;</div>
+            <h2 class="trial-title">Acc&egrave;s Premium+ offert</h2>
+            <p class="trial-message">
+              Les moyens de paiement arrivent bient&ocirc;t. En attendant,
+              profitez de toutes les fonctionnalit&eacute;s sans limitation.
+            </p>
+            <div class="trial-features-list">
+              <div class="trial-feature"><span class="check">&#x2713;</span> Sources illimit&eacute;es</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Toutes les r&egrave;gles financi&egrave;res</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Objectifs d'&eacute;pargne illimit&eacute;s</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Rapports PDF</div>
+              <div class="trial-feature"><span class="check">&#x2713;</span> Support prioritaire</div>
+            </div>
+          </div>
+        </ng-template>
       </ng-container>
 
       <!-- ════════════ VUE EXPIRATION IMMINENTE (J-1) ════════════ -->
-      <ng-container *ngIf="view === 'upgrade' && trialStatus?.isInTrial && trialStatus?.daysRemaining! <= 1">
+      <ng-container *ngIf="view === 'upgrade' && trialStatus?.isInTrial && trialStatus?.paymentsActive && trialStatus?.daysRemaining! <= 1">
         <div class="trial-expiring-banner">
           <span class="urgency-badge">&#x26A0;&#xFE0F; Votre essai expire demain</span>
           <p>Choisissez votre offre maintenant pour continuer sans interruption.</p>
@@ -445,8 +470,16 @@ const STRIPE_APPEARANCE = {
 
           <div class="payment-methods">
             <div class="pm-card"
+                 [ngClass]="{ selected: paymentMethod === 'paddle', unavailable: !isEnabled('PADDLE') }"
+                 (click)="isEnabled('PADDLE') && selectPaddle()">
+              <span class="pm-logo">🏄</span>
+              <div class="pm-info"><strong>Paddle</strong><span>Carte, PayPal — EUR ou XOF (recommandé)</span></div>
+              <span class="pm-unavail" *ngIf="!isEnabled('PADDLE')">Indisponible</span>
+              <span class="pm-check" *ngIf="paymentMethod === 'paddle'">✓</span>
+            </div>
+            <div class="pm-card"
                  [ngClass]="{ selected: paymentMethod === 'stripe', unavailable: !isEnabled('STRIPE') }"
-                 (click)="isEnabled('STRIPE') && (paymentMethod = 'stripe')">
+                 (click)="isEnabled('STRIPE') && selectStripe()">
               <span class="pm-logo">💳</span>
               <div class="pm-info"><strong>Carte bancaire</strong><span>Visa, Mastercard — EUR ou XOF</span></div>
               <span class="pm-unavail" *ngIf="!isEnabled('STRIPE')">Indisponible</span>
@@ -1244,13 +1277,17 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     private readonly subscriptionService: SubscriptionService,
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly analytics: AnalyticsService
   ) {}
 
   ngOnInit(): void {
+    this.initPaddle();
+
     this.subscriptionService.getPaymentMethods().subscribe({
       next: m => this.paymentMethods = m,
       error: () => this.paymentMethods = [
+        { provider: 'PADDLE', enabled: true },
         { provider: 'STRIPE', enabled: true },
         { provider: 'WAVE', enabled: false },
         { provider: 'ORANGE_MONEY', enabled: false }
@@ -1261,11 +1298,20 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     this.loadTrialAndSubscription();
   }
 
+  private initPaddle(): void {
+    if (window.Paddle) {
+      window.Paddle.Initialize({
+        token: environment.paddleClientToken,
+        environment: environment.paddleEnvironment
+      });
+    }
+  }
+
   private loadTrialAndSubscription(): void {
     this.authService.getTrialStatus().subscribe({
       next: trial => {
         this.trialStatus = trial;
-        if (trial.isInTrial && trial.daysRemaining > 1) {
+        if (trial.isInTrial && (!trial.paymentsActive || trial.daysRemaining > 1)) {
           this.view = 'trial';
         } else {
           this.loadSubscription();
@@ -1465,11 +1511,53 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     return order.indexOf(this.step) > order.indexOf(s);
   }
 
-  selectPlan(id: PlanId): void { this.selectedPlan = id; }
+  selectPlan(id: PlanId): void {
+    this.selectedPlan = id;
+    this.analytics.event('plan_selected', { plan: id });
+  }
+
+  selectPaddle(): void {
+    this.paymentMethod = 'paddle';
+    this.analytics.event('payment_method_selected', { method: 'paddle' });
+  }
+
+  selectStripe(): void {
+    this.paymentMethod = 'stripe';
+    this.analytics.event('payment_method_selected', { method: 'stripe' });
+  }
 
   selectMobile(method: PaymentMethod): void {
     this.paymentMethod = method;
     this.currencyMode = 'XOF';
+    this.analytics.event('payment_method_selected', { method });
+  }
+
+  openPaddleCheckout(): void {
+    if (!window.Paddle || !this.selectedPlan) return;
+
+    const priceId = (environment.paddlePrices as any)[this.selectedPlan];
+    if (!priceId) {
+      this.paymentError = 'Plan non configuré pour Paddle.';
+      return;
+    }
+
+    const email = this.authService.getCurrentUser()?.email || '';
+    const checkoutConfig: any = {
+      items: [{ priceId, quantity: 1 }],
+      customer: { email },
+      settings: {
+        successUrl: `${window.location.origin}/subscription/success`,
+        displayMode: 'overlay',
+        theme: 'dark',
+        locale: 'fr'
+      }
+    };
+
+    if (this.promoApplied && environment.paddleDiscountId) {
+      checkoutConfig.discountId = environment.paddleDiscountId;
+    }
+
+    window.Paddle.Checkout.open(checkoutConfig);
   }
 
   onPromoInput(): void {
@@ -1489,6 +1577,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
         if (res.valid && res.discountPercent) {
           this.promoApplied = true;
           this.promoDiscount = res.discountPercent;
+          this.analytics.event('promo_applied', { code, discount: res.discountPercent });
         } else {
           this.promoApplied = false;
           this.promoDiscount = null;
@@ -1507,6 +1596,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     if (!this.selectedPlan) return;
     this.paymentError = '';
     this.step = 'payment';
+    this.analytics.event('checkout_step1_continue', { plan: this.selectedPlan });
   }
 
   canPay(): boolean {
@@ -1550,9 +1640,11 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     this.paymentError = '';
 
     switch (this.paymentMethod) {
+      case 'paddle':
+        this.paying = false;
+        this.openPaddleCheckout();
+        return;
       case 'stripe':
-        // Pattern PM-first : on monte Elements en mode 'subscription' et on appellera
-        // le backend uniquement lors du clic sur "Payer" (createPaymentMethod → /stripe/create).
         this.stripeSubResult = null;
         this.stripeMounted = false;
         this.stripeElements = null;
@@ -1617,6 +1709,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     if (!this.stripe || !this.stripeElements || !this.selectedPlan) return;
     this.stripeConfirming = true;
     this.stripeError = '';
+    this.analytics.event('payment_confirm_stripe', { plan: this.selectedPlan });
 
     try {
       // 1. Valider les Elements (champ requis manquant, etc.)
@@ -1674,6 +1767,7 @@ export class SubscriptionComponent implements OnInit, AfterViewChecked {
     this.stripeConfirming = false;
     localStorage.removeItem('joseph_promo_code');
     localStorage.removeItem(PENDING_SUB_KEY);
+    this.analytics.event('payment_success', { plan: this.selectedPlan, method: this.paymentMethod });
     this.authService.refreshSession().subscribe();
     this.router.navigate(['/subscription/success']);
   }

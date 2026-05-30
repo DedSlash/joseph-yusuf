@@ -18,6 +18,7 @@ export interface TrialStatus {
   daysRemaining: number;
   hoursRemaining: number;
   trialUsed: boolean;
+  paymentsActive: boolean;
 }
 
 export interface AuthResponse {
