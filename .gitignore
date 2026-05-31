@@ -30,3 +30,6 @@ docker-compose.override.yml
 
 # Logs
 *.log
+
+# Internal audit reports (not for public repo)
+docs/JOSEPH-YUSUF-STATUS-*.md
