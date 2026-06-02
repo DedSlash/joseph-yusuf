@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { RegisterRequest } from '../../../shared/models/user.model';
 import { CornLogoComponent } from '../../../shared/components/corn-logo/corn-logo.component';
@@ -124,7 +125,7 @@ interface RegisterForm {
             </div>
 
             <div class="form-group promo-group">
-              <button type="button" class="promo-toggle-link" (click)="showPromo = !showPromo">
+              <button type="button" class="promo-toggle-link" (click)="showPromo = !showPromo; !showPromo || analytics.promoCodeOpened()">
                 {{ showPromo ? '− Masquer' : '+ Vous avez un code promo ?' }}
               </button>
               <div *ngIf="showPromo" class="promo-input-wrapper">
@@ -418,6 +419,7 @@ export class RegisterComponent implements OnInit {
 
   constructor(
     private readonly authService: AuthService,
+    protected readonly analytics: AnalyticsService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly subscriptionService: SubscriptionService
@@ -467,6 +469,7 @@ export class RegisterComponent implements OnInit {
       return;
     }
 
+    this.analytics.registerSubmit();
     this.loading = true;
 
     const request: RegisterRequest = {
@@ -479,6 +482,8 @@ export class RegisterComponent implements OnInit {
 
     this.authService.register(request).subscribe({
       next: () => {
+        this.analytics.registrationCompleted();
+        this.analytics.trialStarted();
         const promo = this.form.promoCode.trim();
         if (promo) {
           localStorage.setItem('joseph_promo_code', promo.toUpperCase());

@@ -27,8 +27,19 @@ ssh "$VPS_USER@$VPS_IP" bash -s <<ENDSSH
     echo "🐳 Build tous les services..."
     docker compose -f docker-compose.prod.yml build
 
+    # admin-frontend : --no-cache forcé — le cache Docker rate parfois les
+    # changements Angular et laisse l'ancien bundle en place (incident 2026-05-29)
+    echo "🐳 Rebuild admin-frontend (--no-cache)..."
+    docker compose -f docker-compose.prod.yml build --no-cache admin-frontend
+
     echo "🚀 Redémarrage tous les services..."
     docker compose -f docker-compose.prod.yml up -d --remove-orphans
+  elif [ "$SERVICES" = "admin-frontend" ]; then
+    echo "🐳 Build admin-frontend (--no-cache forcé)..."
+    docker compose -f docker-compose.prod.yml build --no-cache admin-frontend
+
+    echo "🚀 Redémarrage admin-frontend..."
+    docker compose -f docker-compose.prod.yml up -d --no-deps admin-frontend
   else
     echo "🐳 Build service: $SERVICES..."
     docker compose -f docker-compose.prod.yml build $SERVICES

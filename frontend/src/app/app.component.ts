@@ -3,6 +3,7 @@ import { RouterOutlet, Router } from '@angular/router';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
+import { AnalyticsService } from './core/services/analytics.service';
 import { SupportButtonComponent } from './features/support/support-button.component';
 
 @Component({
@@ -22,9 +23,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   };
 
-  constructor(private readonly router: Router, protected readonly authService: AuthService) {}
+  constructor(private readonly router: Router, protected readonly authService: AuthService, private readonly analytics: AnalyticsService) {}
 
   ngOnInit(): void {
+    this.analytics.init();
     document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 

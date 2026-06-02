@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { AnalyticsService } from '../../core/services/analytics.service';
 import { AnimateOnScrollDirective } from '../../shared/directives/animate-on-scroll.directive';
 import { CornLogoComponent } from '../../shared/components/corn-logo/corn-logo.component';
 
@@ -83,7 +84,7 @@ const PLANS: PlanCard[] = [
       </nav>
       <div class="lp-nav-actions">
         <a routerLink="/login"    class="btn-ghost">Se connecter</a>
-        <a routerLink="/register" class="btn-gold">Créer un compte</a>
+        <a routerLink="/register" class="btn-gold" (click)="analytics.navRegister()">Créer un compte</a>
       </div>
       <button class="lp-burger" (click)="mobileMenuOpen = !mobileMenuOpen" [class.open]="mobileMenuOpen" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -118,7 +119,7 @@ const PLANS: PlanCard[] = [
           Saisissez vos revenus, l'outil fait le reste — alertes, répartitions, réserves.
         </p>
         <div class="hero-cta fade-in-up" style="animation-delay: 300ms">
-          <a routerLink="/register" class="btn-hero-primary">Commencer gratuitement</a>
+          <a routerLink="/register" class="btn-hero-primary" (click)="analytics.ctaHeroRegister()">Commencer gratuitement</a>
           <a href="#principe"       class="btn-hero-ghost"   (click)="scrollTo($event,'principe')">Voir comment ça marche ↓</a>
         </div>
         <p class="hero-caption fade-in-up" style="animation-delay: 400ms">Gratuit · Sans carte bancaire · Idéal pour l'Afrique francophone &amp; la diaspora</p>
@@ -264,7 +265,7 @@ const PLANS: PlanCard[] = [
                 <span class="check">✓</span> {{ f }}
               </li>
             </ul>
-            <a routerLink="/register" class="btn-plan" [class.btn-plan-gold]="plan.highlight">
+            <a routerLink="/register" class="btn-plan" [class.btn-plan-gold]="plan.highlight" (click)="trackPricing(plan.id)">
               {{ plan.cta }}
             </a>
           </div>
@@ -299,7 +300,7 @@ const PLANS: PlanCard[] = [
             Gratuit. Sans engagement. Aucune carte bancaire requise.
           </p>
           <div class="final-cta-actions">
-            <a routerLink="/register" class="btn-hero-primary">Créer mon compte →</a>
+            <a routerLink="/register" class="btn-hero-primary" (click)="analytics.ctaFinalRegister()">Créer mon compte →</a>
             <a routerLink="/login"    class="btn-hero-ghost">J'ai déjà un compte</a>
           </div>
         </div>
@@ -1433,7 +1434,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     { icon: '🎯', text: 'Vous voulez épargner sans effort grâce à des règles automatiques' },
   ];
 
-  constructor(private readonly authService: AuthService, private readonly router: Router) {}
+  constructor(private readonly authService: AuthService, private readonly router: Router, protected readonly analytics: AnalyticsService) {}
 
   ngOnInit(): void {
     if (this.authService.isTokenValid()) {
@@ -1469,6 +1470,12 @@ export class LandingComponent implements OnInit, OnDestroy {
   @HostListener('window:scroll')
   onScroll(): void {
     this.scrolled = window.scrollY > 20;
+  }
+
+  trackPricing(planId: string): void {
+    if (planId === 'FREE') this.analytics.ctaPricingFree();
+    else if (planId === 'PREMIUM') this.analytics.ctaPricingPremium();
+    else if (planId === 'PREMIUM_PLUS') this.analytics.ctaPricingPremiumPlus();
   }
 
   scrollTo(event: Event, id: string): void {
