@@ -12,10 +12,12 @@ import { LegalLayoutComponent } from './legal-layout.component';
       eyebrow="Nous contacter"
       title="Contact">
 
-      <p>
-        Nous sommes &agrave; votre &eacute;coute. Selon votre besoin, choisissez le canal le plus
-        adapt&eacute; ci-dessous.
-      </p>
+      <div class="legal-info-block">
+        <p><strong>PANGOU REY DEDY</strong> (Joseph&nbsp;&middot;&nbsp;Yusuf)</p>
+        <p>Ouest Foire Cit&eacute; Xandar Villa N&deg;20, Dakar, S&eacute;n&eacute;gal</p>
+        <p>T&eacute;l&eacute;phone : <a href="tel:+221781602037">+221 78 160 20 37</a></p>
+        <p>Email : <a href="mailto:support@josephyusuf.com">support&#64;josephyusuf.com</a></p>
+      </div>
 
       <h2>Support utilisateur</h2>
       <p>
@@ -34,16 +36,17 @@ import { LegalLayoutComponent } from './legal-layout.component';
         <p>D&eacute;lai de r&eacute;ponse moyen : 24h ouvr&eacute;es</p>
       </div>
 
-      <h2>Demandes RGPD</h2>
+      <h2>Donn&eacute;es personnelles</h2>
       <p>
         Pour exercer vos droits d'acc&egrave;s, de rectification, d'effacement ou de
-        portabilit&eacute; de vos donn&eacute;es personnelles :
+        portabilit&eacute; de vos donn&eacute;es personnelles
+        (Loi n&deg;&nbsp;2008-12 du 25 janvier 2008) :
       </p>
       <div class="legal-info-block">
         <p>
           &Eacute;mail :
           <a href="mailto:support@josephyusuf.com">support&#64;josephyusuf.com</a>
-          (objet : &laquo;&nbsp;RGPD&nbsp;&raquo;)
+          (objet : &laquo;&nbsp;Donn&eacute;es personnelles&nbsp;&raquo;)
         </p>
         <p>
           Plus d'informations dans la

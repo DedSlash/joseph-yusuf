@@ -22,7 +22,7 @@ import { RouterModule } from '@angular/router';
       </main>
 
       <footer class="legal-footer">
-        <span class="legal-footer-copy">&copy; {{ year }} Rey Dedy Pangou &mdash; Tous droits r&eacute;serv&eacute;s</span>
+        <span class="legal-footer-copy">&copy; {{ year }} PANGOU REY DEDY (Joseph&nbsp;&middot;&nbsp;Yusuf) &mdash; Tous droits r&eacute;serv&eacute;s</span>
         <div class="legal-footer-links">
           <a routerLink="/cgu">CGU</a>
           <a routerLink="/privacy">Confidentialit&eacute;</a>
