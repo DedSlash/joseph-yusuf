@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,12 +51,23 @@ class WebhookControllerTest {
     }
 
     @Test
-    @DisplayName("paytech success → 200 ok")
-    void paytechSuccess() {
+    @DisplayName("paytech JSON success → 200 ok")
+    void paytechJsonSuccess() {
         Map<String, Object> payload = Map.of("type_event", "sale_complete");
         doNothing().when(payTechWebhookService).handleIPN(payload);
 
-        ResponseEntity<String> response = controller.paytech(payload);
+        ResponseEntity<String> response = controller.paytechJson(payload);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("paytech form-urlencoded success → 200 ok")
+    void paytechFormSuccess() {
+        Map<String, String> params = Map.of("type_event", "sale_complete");
+        doNothing().when(payTechWebhookService).handleIPN(any());
+
+        ResponseEntity<String> response = controller.paytechForm(params);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
     }
@@ -66,7 +78,7 @@ class WebhookControllerTest {
         Map<String, Object> payload = Map.of("type_event", "sale_complete");
         doThrow(new SecurityException("bad sig")).when(payTechWebhookService).handleIPN(payload);
 
-        ResponseEntity<String> response = controller.paytech(payload);
+        ResponseEntity<String> response = controller.paytechJson(payload);
 
         assertThat(response.getStatusCode().value()).isEqualTo(401);
     }
