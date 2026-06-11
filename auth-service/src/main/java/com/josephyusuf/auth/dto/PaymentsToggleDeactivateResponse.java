@@ -1,4 +1,4 @@
-package com.josephyusuf.admin.dto;
+package com.josephyusuf.auth.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,11 +9,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentsToggleActivateResponse {
+public class PaymentsToggleDeactivateResponse {
 
     private boolean paymentsActive;
-    private int usersNotified;
+    private int usersRestored;
+    private int usersExtended;
     private int usersInOriginalTrial;
-    private int usersInGrace24h;
-    private boolean alreadyActive;
+    private boolean alreadyInactive;
 }

@@ -70,6 +70,20 @@ const METHOD_ICON: Record<string, string> = {
         <a routerLink="/dashboard" class="back-link">← Retour au tableau de bord</a>
       </div>
 
+      <!-- ════════════ BANNIÈRE ADMIN PREVIEW ════════════ -->
+      <div class="admin-preview-banner" *ngIf="isAdmin">
+        <span class="admin-preview-icon">🛠</span>
+        <div class="admin-preview-body">
+          <strong>Mode preview admin</strong>
+          <span *ngIf="trialStatus && !trialStatus.paymentsActive">
+            Les paiements sont fermés au public — tu peux quand même parcourir le wizard pour validation UX.
+          </span>
+          <span *ngIf="trialStatus?.paymentsActive">
+            Les paiements sont ouverts. Tu vois la page comme un utilisateur classique.
+          </span>
+        </div>
+      </div>
+
       <!-- ════════════ CHARGEMENT ════════════ -->
       <div class="loading-state" *ngIf="view === 'loading'">
         <span class="spinner"></span>
@@ -484,6 +498,21 @@ const METHOD_ICON: Record<string, string> = {
 
     .back-link { color: var(--gold); text-decoration: none; font-size: 0.85rem; }
     .back-link:hover { color: var(--gold-light); }
+
+    .admin-preview-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      background: rgba(93, 173, 226, 0.08);
+      border: 1px solid rgba(93, 173, 226, 0.3);
+      border-radius: var(--r-md);
+      padding: 0.85rem 1.1rem;
+      margin-bottom: 1.5rem;
+    }
+    .admin-preview-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .admin-preview-body { display: flex; flex-direction: column; gap: 0.2rem; }
+    .admin-preview-body strong { font-size: 0.85rem; color: #5dade2; }
+    .admin-preview-body span { font-size: 0.78rem; color: var(--text-2); line-height: 1.4; }
 
     .loading-state { display: flex; justify-content: center; padding: 5rem; }
     .spinner {
@@ -1022,6 +1051,9 @@ export class SubscriptionComponent implements OnInit {
   // Trial
   trialStatus: TrialStatus | null = null;
 
+  // Admin preview mode
+  isAdmin = false;
+
   // PayTech
   payTechLoading = false;
 
@@ -1033,6 +1065,8 @@ export class SubscriptionComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.isAdmin = this.authService.isAdmin();
+
     this.paymentMethodsLoading = true;
     this.subscriptionService.getAvailablePaymentMethods().subscribe({
       next: m => {
@@ -1053,7 +1087,8 @@ export class SubscriptionComponent implements OnInit {
     this.authService.getTrialStatus().subscribe({
       next: trial => {
         this.trialStatus = trial;
-        if (trial.isInTrial && (!trial.paymentsActive || trial.daysRemaining > 1)) {
+        // Admin bypass : toujours afficher le wizard pour permettre la QA, même si trial actif.
+        if (!this.isAdmin && trial.isInTrial && (!trial.paymentsActive || trial.daysRemaining > 1)) {
           this.view = 'trial';
         } else {
           this.loadSubscription();

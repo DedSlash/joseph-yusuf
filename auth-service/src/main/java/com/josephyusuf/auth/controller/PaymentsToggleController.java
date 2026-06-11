@@ -1,6 +1,7 @@
 package com.josephyusuf.auth.controller;
 
 import com.josephyusuf.auth.dto.PaymentsToggleActivateResponse;
+import com.josephyusuf.auth.dto.PaymentsToggleDeactivateResponse;
 import com.josephyusuf.auth.dto.PaymentsToggleStatusDto;
 import com.josephyusuf.auth.entity.User;
 import com.josephyusuf.auth.repository.UserRepository;
@@ -9,6 +10,7 @@ import com.josephyusuf.auth.service.SystemSettingsService;
 import com.josephyusuf.auth.service.TrialService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +43,13 @@ public class PaymentsToggleController {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final TrialService trialService;
+
+    /**
+     * Durée d'extension du trial appliquée au cron quand les paiements sont fermés.
+     * Réutilisée pour la restauration lors de {@code /deactivate}.
+     */
+    @Value("${app.trial.extension-days:30}")
+    private int extensionDays;
 
     @GetMapping("/status")
     @PreAuthorize("hasRole('ADMIN')")
@@ -111,12 +120,68 @@ public class PaymentsToggleController {
     }
 
     /**
+     * Revient en arrière sur l'activation : repasse {@code payments.active=false}
+     * et restaure le {@code trial_ends_at} des utilisateurs en trial.
+     * <p>
+     * Pour chaque user en trial :
+     * <ul>
+     *   <li>Si encore dans les 7 jours initiaux ({@code createdAt + 7j > now}) :
+     *       on garde le {@code trial_ends_at} actuel (qui est déjà
+     *       {@code createdAt + 7j} après l'activation).</li>
+     *   <li>Sinon : on étend de {@code extensionDays} jours, ce qui reproduit
+     *       le comportement du cron {@code TrialService.expireTrials} en mode
+     *       paiements fermés.</li>
+     * </ul>
+     * Aucun email n'est envoyé — c'est une action de rollback silencieuse.
+     */
+    @PostMapping("/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public ResponseEntity<PaymentsToggleDeactivateResponse> deactivate() {
+        if (!systemSettingsService.isPaymentsActive()) {
+            return ResponseEntity.ok(PaymentsToggleDeactivateResponse.builder()
+                    .paymentsActive(false)
+                    .usersRestored(0)
+                    .usersExtended(0)
+                    .usersInOriginalTrial(0)
+                    .alreadyInactive(true)
+                    .build());
+        }
+
+        List<User> trialUsers = userRepository.findByInTrialTrue();
+        systemSettingsService.setPaymentsActive(false);
+
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+        int extended = 0;
+        int kept = 0;
+
+        for (User user : trialUsers) {
+            LocalDateTime originalEnd = resolveOriginalTrialEnd(user, nowUtc);
+
+            if (originalEnd.isAfter(nowUtc)) {
+                kept++;
+            } else {
+                user.setTrialEndsAt(nowUtc.plusDays(extensionDays));
+                userRepository.save(user);
+                extended++;
+            }
+        }
+
+        log.info("Paiements désactivés par admin — {} trials prolongés de {}j, {} restent dans leur fenêtre initiale",
+                extended, extensionDays, kept);
+
+        return ResponseEntity.ok(PaymentsToggleDeactivateResponse.builder()
+                .paymentsActive(false)
+                .usersRestored(extended + kept)
+                .usersExtended(extended)
+                .usersInOriginalTrial(kept)
+                .alreadyInactive(false)
+                .build());
+    }
+
+    /**
      * Envoie un email d'aperçu à l'adresse fournie, sans toucher à la DB.
      * Templates supportés : {@code trial-active} et {@code grace-24h}.
-     *
-     * @param template nom du template à prévisualiser
-     * @param to adresse email destinataire (typiquement celle de l'admin)
-     * @param firstName prénom utilisé dans le corps de l'email, par défaut "Admin"
      */
     @PostMapping("/preview-email/{template}")
     @PreAuthorize("hasRole('ADMIN')")

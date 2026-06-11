@@ -22,10 +22,11 @@ describe('SubscriptionComponent', () => {
     subscriptionSpy.getCurrent.and.returnValue(EMPTY);
     subscriptionSpy.getAvailablePaymentMethods.and.returnValue(of([]));
 
-    authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'getCurrentUser', 'refreshSession', 'isLoggedIn', 'getTrialStatus']);
+    authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'getCurrentUser', 'refreshSession', 'isLoggedIn', 'isAdmin', 'getTrialStatus']);
     authSpy.getPlan.and.returnValue('FREE');
     authSpy.refreshSession.and.returnValue(of(null));
     authSpy.isLoggedIn.and.returnValue(true);
+    authSpy.isAdmin.and.returnValue(false);
     authSpy.getTrialStatus.and.returnValue(of({
       isInTrial: false, trialEndsAt: null, daysRemaining: 0, hoursRemaining: 0, trialUsed: false, paymentsActive: false
     }));

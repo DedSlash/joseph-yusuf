@@ -1,6 +1,7 @@
 package com.josephyusuf.auth.controller;
 
 import com.josephyusuf.auth.dto.PaymentsToggleActivateResponse;
+import com.josephyusuf.auth.dto.PaymentsToggleDeactivateResponse;
 import com.josephyusuf.auth.dto.PaymentsToggleStatusDto;
 import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.Role;
@@ -43,6 +44,11 @@ class PaymentsToggleControllerTest {
 
     @InjectMocks
     private PaymentsToggleController controller;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "extensionDays", 30);
+    }
 
     private User trialUser(Instant createdAt) {
         return User.builder()
@@ -228,6 +234,81 @@ class PaymentsToggleControllerTest {
         verify(emailService, never()).sendPaymentsActivatedGrace24h(any());
         assertThat(response.getBody().getUsersNotified()).isZero();
         assertThat(response.getBody().isAlreadyActive()).isFalse();
+    }
+
+    @Test
+    @DisplayName("deactivate déjà inactif → no-op + alreadyInactive=true")
+    void deactivate_alreadyInactive() {
+        when(systemSettingsService.isPaymentsActive()).thenReturn(false);
+
+        ResponseEntity<PaymentsToggleDeactivateResponse> response = controller.deactivate();
+
+        assertThat(response.getBody().isAlreadyInactive()).isTrue();
+        assertThat(response.getBody().getUsersRestored()).isZero();
+        verify(systemSettingsService, never()).setPaymentsActive(anyBoolean());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("deactivate → user au-delà des 7j : trial étendu de extensionDays")
+    void deactivate_userBeyondSevenDays_extends() {
+        Instant createdAt = Instant.now().minus(20, ChronoUnit.DAYS);
+        User user = trialUser(createdAt);
+        when(systemSettingsService.isPaymentsActive()).thenReturn(true);
+        when(userRepository.findByInTrialTrue()).thenReturn(List.of(user));
+
+        ResponseEntity<PaymentsToggleDeactivateResponse> response = controller.deactivate();
+
+        verify(systemSettingsService).setPaymentsActive(false);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        User saved = userCaptor.getValue();
+        assertThat(saved.getTrialEndsAt())
+                .isAfter(LocalDateTime.now(ZoneOffset.UTC).plusDays(29))
+                .isBefore(LocalDateTime.now(ZoneOffset.UTC).plusDays(31));
+
+        assertThat(response.getBody().getUsersExtended()).isEqualTo(1);
+        assertThat(response.getBody().getUsersInOriginalTrial()).isZero();
+        assertThat(response.getBody().getUsersRestored()).isEqualTo(1);
+        assertThat(response.getBody().isAlreadyInactive()).isFalse();
+    }
+
+    @Test
+    @DisplayName("deactivate → user encore dans 7j : trial_ends_at conservé")
+    void deactivate_userWithinSevenDays_kept() {
+        Instant createdAt = Instant.now().minus(3, ChronoUnit.DAYS);
+        User user = trialUser(createdAt);
+        when(systemSettingsService.isPaymentsActive()).thenReturn(true);
+        when(userRepository.findByInTrialTrue()).thenReturn(List.of(user));
+
+        ResponseEntity<PaymentsToggleDeactivateResponse> response = controller.deactivate();
+
+        verify(systemSettingsService).setPaymentsActive(false);
+        verify(userRepository, never()).save(any(User.class));
+
+        assertThat(response.getBody().getUsersInOriginalTrial()).isEqualTo(1);
+        assertThat(response.getBody().getUsersExtended()).isZero();
+        assertThat(response.getBody().getUsersRestored()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("deactivate → mix users : compteurs séparés")
+    void deactivate_mixed() {
+        User inside = trialUser(Instant.now().minus(2, ChronoUnit.DAYS));
+        User beyond1 = trialUser(Instant.now().minus(15, ChronoUnit.DAYS));
+        User beyond2 = trialUser(Instant.now().minus(30, ChronoUnit.DAYS));
+        when(systemSettingsService.isPaymentsActive()).thenReturn(true);
+        when(userRepository.findByInTrialTrue()).thenReturn(List.of(inside, beyond1, beyond2));
+
+        ResponseEntity<PaymentsToggleDeactivateResponse> response = controller.deactivate();
+
+        assertThat(response.getBody().getUsersInOriginalTrial()).isEqualTo(1);
+        assertThat(response.getBody().getUsersExtended()).isEqualTo(2);
+        assertThat(response.getBody().getUsersRestored()).isEqualTo(3);
+        verify(userRepository, times(2)).save(any(User.class));
+        verify(emailService, never()).sendPaymentsActivatedTrialActive(any());
+        verify(emailService, never()).sendPaymentsActivatedGrace24h(any());
     }
 
     @Test

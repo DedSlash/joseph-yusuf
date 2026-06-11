@@ -101,7 +101,23 @@ export interface PaymentsToggleStatus {
 export interface PaymentsToggleActivateResponse {
   paymentsActive: boolean;
   usersNotified: number;
+  usersInOriginalTrial: number;
+  usersInGrace24h: number;
   alreadyActive: boolean;
+}
+
+export interface PaymentsToggleDeactivateResponse {
+  paymentsActive: boolean;
+  usersRestored: number;
+  usersExtended: number;
+  usersInOriginalTrial: number;
+  alreadyInactive: boolean;
+}
+
+export interface PreviewEmailResponse {
+  sent: boolean;
+  template: string;
+  to: string;
 }
 
 export interface PlanStats {
