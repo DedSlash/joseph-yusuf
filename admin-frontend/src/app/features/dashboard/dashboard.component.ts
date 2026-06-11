@@ -1,15 +1,18 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { AdminApiService } from '../../core/services/admin-api.service';
 import {
   KpiOverview, PaymentMethodConfig, PaymentsToggleStatus, PlanStats
 } from '../../shared/models/admin.model';
 
+type PreviewTemplate = 'trial-active' | 'grace-24h';
+
 @Component({
   selector: 'admin-dashboard',
   standalone: true,
-  imports: [CommonModule, DatePipe, DecimalPipe, PercentPipe],
+  imports: [CommonModule, FormsModule, DatePipe, DecimalPipe, PercentPipe],
   template: `
     <h1>Dashboard</h1>
     <p class="subtitle">Indicateurs clés Joseph · Yusuf</p>
@@ -130,14 +133,73 @@ import {
         {{ paymentsToggleNotice() }}
       </div>
 
-      <button class="te-activate"
-              *ngIf="!ts.paymentsActive"
-              [disabled]="activatingPayments()"
-              (click)="activatePayments()">
-        {{ activatingPayments() ? 'Activation en cours…' : 'Activer les paiements' }}
-      </button>
+      <div class="te-actions">
+        <button class="te-activate"
+                *ngIf="!ts.paymentsActive"
+                [disabled]="activatingPayments()"
+                (click)="activatePayments()">
+          {{ activatingPayments() ? 'Activation en cours…' : 'Activer les paiements' }}
+        </button>
+
+        <button class="te-secondary"
+                *ngIf="!ts.paymentsActive"
+                (click)="openPreview()">
+          ✉ Prévisualiser un email
+        </button>
+
+        <button class="te-deactivate"
+                *ngIf="ts.paymentsActive"
+                [disabled]="deactivatingPayments()"
+                (click)="deactivatePayments()">
+          {{ deactivatingPayments() ? 'Désactivation…' : 'Désactiver les paiements' }}
+        </button>
+      </div>
+
       <div *ngIf="ts.paymentsActive" class="te-done">
         ✅ Les paiements sont actifs. Les nouveaux trials suivent le cycle normal.
+      </div>
+    </div>
+
+    <!-- Modale preview email -->
+    <div *ngIf="previewOpen()" class="modal-backdrop" (click)="closePreview()">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+        <h3>Prévisualiser un email d'activation</h3>
+        <p class="modal-sub">
+          L'email sera envoyé à l'adresse fournie, sans toucher à la base de données
+          ni au statut des utilisateurs.
+        </p>
+
+        <label class="modal-label">Template</label>
+        <select class="modal-input" [(ngModel)]="previewTemplate" name="previewTemplate">
+          <option value="trial-active">Trial actif (user dans ses 7 jours initiaux)</option>
+          <option value="grace-24h">Grace 24h (user au-delà des 7 jours)</option>
+        </select>
+
+        <label class="modal-label">Destinataire</label>
+        <input class="modal-input" type="email"
+               [(ngModel)]="previewEmailAddress" name="previewEmail"
+               placeholder="ton.email@josephyusuf.com" />
+
+        <label class="modal-label">Prénom (optionnel)</label>
+        <input class="modal-input" type="text"
+               [(ngModel)]="previewFirstName" name="previewFirstName"
+               placeholder="Admin" />
+
+        <div *ngIf="previewError()" class="alert error" style="margin-top:0.75rem">
+          {{ previewError() }}
+        </div>
+        <div *ngIf="previewNotice()" class="alert success" style="margin-top:0.75rem">
+          {{ previewNotice() }}
+        </div>
+
+        <div class="modal-actions">
+          <button class="te-secondary" (click)="closePreview()">Fermer</button>
+          <button class="te-activate"
+                  [disabled]="!canPreview() || sendingPreview()"
+                  (click)="sendPreview()">
+            {{ sendingPreview() ? 'Envoi…' : 'Envoyer' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -340,8 +402,13 @@ import {
     .te-stat-value { font-size: 1.4rem; font-weight: 700; color: var(--gold); }
     .te-stat-value.pending { color: #ff9f4a; }
     .te-stat-value.ok { color: #5cdb6f; }
-    .te-activate {
+    .te-actions {
+      display: flex;
+      gap: 0.6rem;
       margin-top: 1.1rem;
+      flex-wrap: wrap;
+    }
+    .te-activate {
       background: var(--gold);
       color: #1a1a1a;
       border: none;
@@ -353,6 +420,68 @@ import {
     }
     .te-activate:hover:not(:disabled) { filter: brightness(1.1); }
     .te-activate:disabled { opacity: 0.5; cursor: not-allowed; }
+    .te-secondary {
+      background: transparent;
+      color: var(--gold);
+      border: 1px solid rgba(201, 168, 76, 0.45);
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .te-secondary:hover { background: rgba(201, 168, 76, 0.08); }
+    .te-deactivate {
+      background: rgba(220, 53, 69, 0.12);
+      color: #ff6b7a;
+      border: 1px solid rgba(220, 53, 69, 0.35);
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .te-deactivate:hover:not(:disabled) { background: rgba(220, 53, 69, 0.2); }
+    .te-deactivate:disabled { opacity: 0.5; cursor: not-allowed; }
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .modal-box {
+      background: var(--night-soft, #1a1a1a);
+      border: 1px solid rgba(201, 168, 76, 0.25);
+      border-radius: 12px;
+      padding: 1.5rem 1.75rem;
+      width: 100%; max-width: 480px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .modal-box h3 { color: var(--gold); margin: 0 0 0.5rem; }
+    .modal-sub { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 1.25rem; }
+    .modal-label {
+      display: block;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      margin: 0.85rem 0 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .modal-input {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(201, 168, 76, 0.2);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+    .modal-input:focus { outline: 1px solid var(--gold); }
+    .modal-actions {
+      display: flex; justify-content: flex-end;
+      gap: 0.6rem; margin-top: 1.25rem;
+    }
     .te-done {
       margin-top: 1rem;
       color: #5cdb6f;
@@ -382,6 +511,14 @@ export class DashboardComponent implements OnInit {
   protected readonly paymentsToggleError = signal<string | null>(null);
   protected readonly paymentsToggleNotice = signal<string | null>(null);
   protected readonly activatingPayments = signal(false);
+  protected readonly deactivatingPayments = signal(false);
+  protected readonly previewOpen = signal(false);
+  protected readonly previewError = signal<string | null>(null);
+  protected readonly previewNotice = signal<string | null>(null);
+  protected readonly sendingPreview = signal(false);
+  protected previewTemplate: PreviewTemplate = 'grace-24h';
+  protected previewEmailAddress = '';
+  protected previewFirstName = '';
 
   private static readonly PRICE_PREMIUM = 4.99;
   private static readonly PRICE_PREMIUM_PLUS = 9.99;
@@ -418,7 +555,12 @@ export class DashboardComponent implements OnInit {
   }
 
   protected activatePayments(): void {
-    if (!confirm('Activer les paiements ? Tous les utilisateurs en prolongation recevront un email les informant qu\'ils peuvent désormais souscrire.')) {
+    if (!confirm(
+      'Activer les paiements ?\n\n' +
+      'Les utilisateurs encore dans leurs 7 jours d\'inscription continueront leur essai normalement.\n' +
+      'Les utilisateurs au-delà des 7 jours auront 24h pour souscrire avant un downgrade automatique vers FREE.\n\n' +
+      'Cette action est réversible via "Désactiver les paiements".'
+    )) {
       return;
     }
     this.activatingPayments.set(true);
@@ -430,14 +572,79 @@ export class DashboardComponent implements OnInit {
         this.paymentsToggleNotice.set(
           response.alreadyActive
             ? 'Les paiements étaient déjà actifs.'
-            : `Paiements activés. ${response.usersNotified} utilisateur(s) notifié(s).`
+            : `Paiements activés. ${response.usersNotified} utilisateur(s) notifié(s) (${response.usersInOriginalTrial} encore dans le trial initial, ${response.usersInGrace24h} en grace 24h).`
         );
         this.loadPaymentsStatus();
-        setTimeout(() => this.paymentsToggleNotice.set(null), 6000);
+        setTimeout(() => this.paymentsToggleNotice.set(null), 10000);
       },
       error: () => {
         this.activatingPayments.set(false);
         this.paymentsToggleError.set('Échec de l\'activation des paiements');
+      }
+    });
+  }
+
+  protected deactivatePayments(): void {
+    if (!confirm(
+      'Désactiver les paiements ?\n\n' +
+      'Les utilisateurs en grace 24h verront leur trial prolongé de 30 jours.\n' +
+      'Les utilisateurs encore dans leurs 7 jours initiaux gardent leur fin de trial actuelle.\n\n' +
+      'Aucun email ne sera envoyé.'
+    )) {
+      return;
+    }
+    this.deactivatingPayments.set(true);
+    this.paymentsToggleError.set(null);
+    this.paymentsToggleNotice.set(null);
+    this.api.deactivatePayments().subscribe({
+      next: response => {
+        this.deactivatingPayments.set(false);
+        this.paymentsToggleNotice.set(
+          response.alreadyInactive
+            ? 'Les paiements étaient déjà inactifs.'
+            : `Paiements désactivés. ${response.usersRestored} trial(s) restauré(s) (${response.usersExtended} prolongés de 30j, ${response.usersInOriginalTrial} dans la fenêtre initiale).`
+        );
+        this.loadPaymentsStatus();
+        setTimeout(() => this.paymentsToggleNotice.set(null), 10000);
+      },
+      error: () => {
+        this.deactivatingPayments.set(false);
+        this.paymentsToggleError.set('Échec de la désactivation des paiements');
+      }
+    });
+  }
+
+  protected openPreview(): void {
+    this.previewOpen.set(true);
+    this.previewError.set(null);
+    this.previewNotice.set(null);
+  }
+
+  protected closePreview(): void {
+    this.previewOpen.set(false);
+  }
+
+  protected canPreview(): boolean {
+    return this.previewEmailAddress.trim().length > 0 && this.previewEmailAddress.includes('@');
+  }
+
+  protected sendPreview(): void {
+    if (!this.canPreview()) return;
+    this.sendingPreview.set(true);
+    this.previewError.set(null);
+    this.previewNotice.set(null);
+    this.api.previewEmail(
+      this.previewTemplate,
+      this.previewEmailAddress.trim(),
+      this.previewFirstName.trim() || undefined
+    ).subscribe({
+      next: res => {
+        this.sendingPreview.set(false);
+        this.previewNotice.set(`Email "${res.template}" envoyé à ${res.to}. Vérifie ta boîte de réception.`);
+      },
+      error: () => {
+        this.sendingPreview.set(false);
+        this.previewError.set('Échec de l\'envoi. Vérifie l\'adresse et réessaie.');
       }
     });
   }

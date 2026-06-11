@@ -103,6 +103,21 @@ export class AuthService {
     return user?.inTrial ?? false;
   }
 
+  /**
+   * Vrai si le JWT contient le claim role=ADMIN. Permet aux admins d'accéder
+   * en preview à la page d'abonnement même quand les paiements sont fermés.
+   */
+  isAdmin(): boolean {
+    const token = this.getAccessToken();
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role === 'ADMIN';
+    } catch {
+      return false;
+    }
+  }
+
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }

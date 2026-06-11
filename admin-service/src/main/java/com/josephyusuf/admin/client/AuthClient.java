@@ -4,6 +4,7 @@ import com.josephyusuf.admin.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @FeignClient(name = "auth-service")
@@ -39,4 +40,12 @@ public interface AuthClient {
 
     @PostMapping("/api/auth/admin/payments-toggle/activate")
     PaymentsToggleActivateResponse paymentsToggleActivate();
+
+    @PostMapping("/api/auth/admin/payments-toggle/deactivate")
+    PaymentsToggleDeactivateResponse paymentsToggleDeactivate();
+
+    @PostMapping("/api/auth/admin/payments-toggle/preview-email/{template}")
+    Map<String, Object> paymentsTogglePreviewEmail(@PathVariable("template") String template,
+                                                    @RequestParam("to") String to,
+                                                    @RequestParam(value = "firstName", required = false) String firstName);
 }

@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AuditLog, KpiOverview, PageResponse, PaymentMethodConfig,
-  PaymentsToggleActivateResponse, PaymentsToggleStatus, PlanStats,
+  PaymentsToggleActivateResponse, PaymentsToggleDeactivateResponse,
+  PaymentsToggleStatus, PlanStats, PreviewEmailResponse,
   PromoCode, PromoCodeStats, Role, Plan, Transaction, User
 } from '../../shared/models/admin.model';
 
@@ -98,6 +99,20 @@ export class AdminApiService {
 
   activatePayments(): Observable<PaymentsToggleActivateResponse> {
     return this.http.post<PaymentsToggleActivateResponse>(`${this.apiUrl}/payments-toggle/activate`, {});
+  }
+
+  deactivatePayments(): Observable<PaymentsToggleDeactivateResponse> {
+    return this.http.post<PaymentsToggleDeactivateResponse>(`${this.apiUrl}/payments-toggle/deactivate`, {});
+  }
+
+  previewEmail(template: 'trial-active' | 'grace-24h', to: string, firstName?: string): Observable<PreviewEmailResponse> {
+    let params = new HttpParams().set('to', to);
+    if (firstName) params = params.set('firstName', firstName);
+    return this.http.post<PreviewEmailResponse>(
+      `${this.apiUrl}/payments-toggle/preview-email/${template}`,
+      {},
+      { params }
+    );
   }
 
   // KPIs
