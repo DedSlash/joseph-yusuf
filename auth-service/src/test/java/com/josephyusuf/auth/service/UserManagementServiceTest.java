@@ -1,6 +1,7 @@
 package com.josephyusuf.auth.service;
 
 import com.josephyusuf.auth.dto.PageResponse;
+import com.josephyusuf.auth.dto.RenewalReminderEmailRequest;
 import com.josephyusuf.auth.dto.UserDto;
 import com.josephyusuf.auth.dto.UserMapper;
 import com.josephyusuf.auth.entity.Plan;
@@ -38,6 +39,9 @@ class UserManagementServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private UserManagementService service;
@@ -174,5 +178,39 @@ class UserManagementServiceTest {
 
         assertThat(user.getPlan()).isEqualTo(Plan.FREE);
         assertThat(user.isInTrial()).isTrue();
+    }
+
+    @Test
+    @DisplayName("sendRenewalReminderEmail - délègue à EmailService avec l'utilisateur résolu")
+    void sendRenewalReminderEmail_delegatesToEmailService() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        RenewalReminderEmailRequest request = RenewalReminderEmailRequest.builder()
+                .userId(userId)
+                .plan(Plan.PREMIUM)
+                .type("J_MINUS_3")
+                .expiresAt(java.time.Instant.now().plus(3, java.time.temporal.ChronoUnit.DAYS))
+                .couponApplied("EARLY50")
+                .couponLifetime(true)
+                .build();
+
+        service.sendRenewalReminderEmail(request);
+
+        verify(emailService).sendRenewalReminder(user, request);
+    }
+
+    @Test
+    @DisplayName("sendRenewalReminderEmail - user introuvable → UserNotFoundException, email non envoyé")
+    void sendRenewalReminderEmail_userNotFound_throws() {
+        UUID unknownId = UUID.randomUUID();
+        when(userRepository.findById(unknownId)).thenReturn(Optional.empty());
+        RenewalReminderEmailRequest request = RenewalReminderEmailRequest.builder()
+                .userId(unknownId)
+                .plan(Plan.PREMIUM)
+                .type("J_MINUS_3")
+                .build();
+
+        assertThatThrownBy(() -> service.sendRenewalReminderEmail(request))
+                .isInstanceOf(UserNotFoundException.class);
+        verify(emailService, never()).sendRenewalReminder(any(), any());
     }
 }

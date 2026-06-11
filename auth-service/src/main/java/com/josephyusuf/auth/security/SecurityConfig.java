@@ -39,6 +39,7 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/password/forgot",
                                 "/api/auth/password/reset",
+                                "/api/auth/users/internal/**",
                                 "/actuator/**")
                         .permitAll()
                         .anyRequest().authenticated())

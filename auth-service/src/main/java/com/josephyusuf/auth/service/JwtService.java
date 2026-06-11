@@ -1,5 +1,6 @@
 package com.josephyusuf.auth.service;
 
+import com.josephyusuf.auth.dto.AccessTokenClaims;
 import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.Role;
 import io.jsonwebtoken.Claims;
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Function;
@@ -26,23 +26,25 @@ public class JwtService {
 
     public String generateAccessToken(UUID userId, String email, Plan plan, Role role,
                                        String country, String currency) {
-        return generateAccessToken(userId, email, plan, role, country, currency, false, null);
+        return generateAccessToken(AccessTokenClaims.builder()
+                .userId(userId).email(email).plan(plan).role(role)
+                .country(country).currency(currency)
+                .inTrial(false).trialEndsAt(null)
+                .build());
     }
 
-    public String generateAccessToken(UUID userId, String email, Plan plan, Role role,
-                                       String country, String currency,
-                                       boolean inTrial, LocalDateTime trialEndsAt) {
+    public String generateAccessToken(AccessTokenClaims claims) {
         var builder = Jwts.builder()
-                .subject(email)
-                .claim("userId", userId.toString())
-                .claim("plan", plan.name())
-                .claim("role", role.name())
-                .claim("country", country != null ? country : "SN")
-                .claim("currency", currency != null ? currency : "XOF")
-                .claim("inTrial", inTrial);
+                .subject(claims.getEmail())
+                .claim("userId", claims.getUserId().toString())
+                .claim("plan", claims.getPlan().name())
+                .claim("role", claims.getRole().name())
+                .claim("country", claims.getCountry() != null ? claims.getCountry() : "SN")
+                .claim("currency", claims.getCurrency() != null ? claims.getCurrency() : "XOF")
+                .claim("inTrial", claims.isInTrial());
 
-        if (trialEndsAt != null) {
-            builder.claim("trialEndsAt", trialEndsAt.toString());
+        if (claims.getTrialEndsAt() != null) {
+            builder.claim("trialEndsAt", claims.getTrialEndsAt().toString());
         }
 
         return builder

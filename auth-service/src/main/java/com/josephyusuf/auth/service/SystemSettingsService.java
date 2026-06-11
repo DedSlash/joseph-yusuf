@@ -23,7 +23,7 @@ public class SystemSettingsService {
 
     @PostConstruct
     @Transactional
-    void bootstrap() {
+    public void bootstrap() {
         if (repository.findById(KEY_PAYMENTS_ACTIVE).isEmpty()) {
             repository.save(SystemSetting.builder()
                     .key(KEY_PAYMENTS_ACTIVE)

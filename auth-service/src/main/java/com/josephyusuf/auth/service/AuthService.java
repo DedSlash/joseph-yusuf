@@ -50,7 +50,7 @@ public class AuthService {
         // Reload user after trial activation (plan changed to PREMIUM_PLUS)
         user = userRepository.findById(user.getId()).orElse(user);
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency(), user.isInTrial(), user.getTrialEndsAt());
+        String accessToken = jwtService.generateAccessToken(toClaims(user));
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -73,7 +73,7 @@ public class AuthService {
             throw new BadCredentialsException("Identifiants invalides");
         }
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency(), user.isInTrial(), user.getTrialEndsAt());
+        String accessToken = jwtService.generateAccessToken(toClaims(user));
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return AuthResponse.builder()
@@ -87,7 +87,7 @@ public class AuthService {
         RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
         User user = refreshToken.getUser();
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getPlan(), user.getRole(), user.getCountry(), user.getCurrency(), user.isInTrial(), user.getTrialEndsAt());
+        String accessToken = jwtService.generateAccessToken(toClaims(user));
 
         return TokenResponse.builder()
                 .accessToken(accessToken)
@@ -125,5 +125,18 @@ public class AuthService {
 
         user = userRepository.save(user);
         return userMapper.toDto(user);
+    }
+
+    private AccessTokenClaims toClaims(User user) {
+        return AccessTokenClaims.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .plan(user.getPlan())
+                .role(user.getRole())
+                .country(user.getCountry())
+                .currency(user.getCurrency())
+                .inTrial(user.isInTrial())
+                .trialEndsAt(user.getTrialEndsAt())
+                .build();
     }
 }

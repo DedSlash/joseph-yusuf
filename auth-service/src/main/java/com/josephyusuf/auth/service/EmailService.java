@@ -1,5 +1,7 @@
 package com.josephyusuf.auth.service;
 
+import com.josephyusuf.auth.dto.RenewalReminderEmailRequest;
+import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.User;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
@@ -10,12 +12,19 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.io.UnsupportedEncodingException;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
+
+    private static final String ENCODING = "UTF-8";
+    private static final String DATE_PATTERN = "dd MMMM yyyy";
+    private static final String GREETING = "Bonjour ";
 
     private final JavaMailSender mailSender;
 
@@ -28,12 +37,12 @@ public class EmailService {
     @Value("${app.reset-url}")
     private String resetUrl;
 
-    @Value("${app.subscription-url:https://josephyusuf.com/subscription}")
+    @Value("${app.subscription-url}")
     private String subscriptionUrl;
 
-    private InternetAddress getSender() throws Exception {
+    private InternetAddress getSender() throws UnsupportedEncodingException {
         String address = (mailUsername != null && !mailUsername.isBlank()) ? mailUsername : from;
-        return new InternetAddress(address, "Joseph·Yusuf", "UTF-8");
+        return new InternetAddress(address, "Joseph·Yusuf", ENCODING);
     }
 
     public void sendPasswordResetEmail(String to, String token) {
@@ -47,7 +56,7 @@ public class EmailService {
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, ENCODING);
             helper.setFrom(getSender());
             helper.setTo(to);
             helper.setSubject("🌾 Joseph·Yusuf — Réinitialisation de mot de passe");
@@ -61,8 +70,8 @@ public class EmailService {
     }
 
     public void sendTrialWelcome(User user) {
-        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"));
-        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern(DATE_PATTERN));
+        String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Bienvenue sur Joseph·Yusuf !\n\n"
                 + "Nous vous offrons 7 jours d'accès complet PREMIUM_PLUS pour découvrir toutes les fonctionnalités :\n\n"
                 + "✅ Sources de revenus illimitées\n"
@@ -85,8 +94,8 @@ public class EmailService {
     }
 
     public void sendTrialReminder(User user) {
-        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"));
-        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern(DATE_PATTERN));
+        String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Votre période d'essai PREMIUM_PLUS se termine demain le " + expirationDate + ".\n\n"
                 + "Sans action de votre part, votre compte passera automatiquement en FREE demain. "
                 + "Vous garderez vos données et toutes vos saisies — seules les fonctionnalités "
@@ -102,7 +111,7 @@ public class EmailService {
     }
 
     public void sendTrialExpired(User user) {
-        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+        String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Votre période d'essai est terminée.\n"
                 + "Votre compte est maintenant en FREE — toutes vos données restent disponibles.\n\n"
                 + "Les moyens de paiement ne sont pas encore activés. Dès qu'ils le seront, "
@@ -117,7 +126,7 @@ public class EmailService {
     }
 
     public void sendTrialExtended(User user) {
-        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+        String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Ta période d'essai de 7 jours vient de se terminer — et on ne te laisse "
                 + "pas sur le carreau.\n\n"
                 + "Ton accès Premium+ est prolongé gratuitement jusqu'à l'ouverture officielle "
@@ -146,8 +155,8 @@ public class EmailService {
      * date d'origine, mais ils peuvent souscrire dès maintenant.
      */
     public void sendPaymentsActivatedTrialActive(User user) {
-        String originalEnd = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"));
-        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+        String originalEnd = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern(DATE_PATTERN));
+        String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Bonne nouvelle — les paiements sont maintenant ouverts sur Joseph·Yusuf.\n\n"
                 + "Tu es encore dans ta période d'essai gratuite de 7 jours, qui se termine "
                 + "le " + originalEnd + ". Aucune action immédiate n'est nécessaire : "
@@ -180,7 +189,7 @@ public class EmailService {
      * étaient fermés). Délai de grâce de 24h pour souscrire ou downgrade FREE.
      */
     public void sendPaymentsActivatedGrace24h(User user) {
-        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+        String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Les paiements viennent d'être ouverts sur Joseph·Yusuf.\n\n"
                 + "Tu as bénéficié d'une prolongation gratuite au-delà de tes 7 jours "
                 + "d'essai initiaux pendant que les paiements n'étaient pas encore "
@@ -208,10 +217,94 @@ public class EmailService {
                 body);
     }
 
+    /**
+     * Envoie l'email de rappel de renouvellement (J-3, J-1) ou d'expiration (J+0).
+     * Template choisi sur le champ {@code type} de la requête. Le coupon lifetime
+     * (s'il existe) est explicitement mentionné pour rassurer sur le prix.
+     */
+    public void sendRenewalReminder(User user, RenewalReminderEmailRequest request) {
+        String type = request.getType() == null ? "" : request.getType();
+        String expirationDate = request.getExpiresAt()
+                .atZone(ZoneId.of("Africa/Dakar"))
+                .format(DateTimeFormatter.ofPattern(DATE_PATTERN, Locale.FRENCH));
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "";
+        String planLabel = planLabel(request.getPlan());
+        String priceLine = priceLine(request.getPlan(), request.getCouponApplied(), request.isCouponLifetime());
+
+        String subject;
+        String body;
+        switch (type) {
+            case "J_MINUS_3" -> {
+                subject = "🌾 Ton abonnement Joseph·Yusuf expire dans 3 jours";
+                body = GREETING + firstName + ",\n\n"
+                        + "Petit rappel : ton abonnement " + planLabel + " expire le "
+                        + expirationDate + " (dans 3 jours).\n\n"
+                        + "Pour conserver ton accès sans interruption, pense à renouveler "
+                        + "avant cette date. PayTech ne débite pas automatiquement — chaque "
+                        + "renouvellement passe par la page de paiement.\n\n"
+                        + priceLine
+                        + "Renouveler mon abonnement :\n"
+                        + subscriptionUrl + "\n\n"
+                        + "À très bientôt,\n"
+                        + "🌾 L'équipe Joseph·Yusuf";
+            }
+            case "J_MINUS_1" -> {
+                subject = "⏰ Plus que 24h avant l'expiration de ton abonnement";
+                body = GREETING + firstName + ",\n\n"
+                        + "Dernier rappel — ton abonnement " + planLabel + " expire demain ("
+                        + expirationDate + ").\n\n"
+                        + "Si tu ne renouvelles pas, ton accès aux fonctionnalités avancées "
+                        + "sera coupé. Tes données restent disponibles : tu pourras "
+                        + "réactiver à tout moment.\n\n"
+                        + priceLine
+                        + "Renouveler maintenant :\n"
+                        + subscriptionUrl + "\n\n"
+                        + "À très bientôt,\n"
+                        + "🌾 L'équipe Joseph·Yusuf";
+            }
+            case "EXPIRED" -> {
+                subject = "Ton abonnement Joseph·Yusuf a expiré";
+                body = GREETING + firstName + ",\n\n"
+                        + "Ton abonnement " + planLabel + " a expiré aujourd'hui.\n\n"
+                        + "Tes données sont conservées intactes. Quand tu seras prêt, "
+                        + "tu peux relancer ton abonnement en un clic.\n\n"
+                        + priceLine
+                        + "Réactiver mon abonnement :\n"
+                        + subscriptionUrl + "\n\n"
+                        + "À très bientôt,\n"
+                        + "🌾 L'équipe Joseph·Yusuf";
+            }
+            default -> {
+                log.warn("RenewalReminder : type inconnu '{}' pour userId={}, email non envoyé",
+                        type, user.getId());
+                return;
+            }
+        }
+        sendEmail(user.getEmail(), subject, body);
+    }
+
+    private String planLabel(Plan plan) {
+        return switch (plan) {
+            case PREMIUM -> "Premium";
+            case PREMIUM_PLUS -> "Premium+";
+            default -> "Premium";
+        };
+    }
+
+    private String priceLine(Plan plan, String couponCode, boolean couponLifetime) {
+        long basePrice = plan == Plan.PREMIUM_PLUS ? 5990L : 2990L;
+        if (couponLifetime && couponCode != null && !couponCode.isBlank()) {
+            long discounted = basePrice / 2;
+            return "Avec ton coupon " + couponCode + " (-50% à vie), tu payes "
+                    + discounted + " FCFA au lieu de " + basePrice + " FCFA.\n\n";
+        }
+        return "Tarif : " + basePrice + " FCFA/mois.\n\n";
+    }
+
     private void sendEmail(String to, String subject, String body) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, ENCODING);
             helper.setFrom(getSender());
             helper.setTo(to);
             helper.setSubject(subject);

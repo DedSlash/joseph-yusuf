@@ -1,6 +1,7 @@
 package com.josephyusuf.auth.service;
 
 import com.josephyusuf.auth.dto.PageResponse;
+import com.josephyusuf.auth.dto.RenewalReminderEmailRequest;
 import com.josephyusuf.auth.dto.UserDto;
 import com.josephyusuf.auth.dto.UserMapper;
 import com.josephyusuf.auth.entity.Plan;
@@ -30,6 +31,7 @@ public class UserManagementService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final EmailService emailService;
 
     @Transactional(readOnly = true)
     public PageResponse<UserDto> listUsers(int page, int size, Plan plan, Boolean enabled, String search) {
@@ -92,6 +94,17 @@ public class UserManagementService {
         }
         userRepository.save(user);
         log.info("Plan utilisateur {} mis à jour (interne) → {}", userId, plan);
+    }
+
+    /**
+     * Envoie l'email de rappel de renouvellement déclenché par le cron de
+     * subscription-service. Délègue à {@link EmailService} qui choisit le
+     * template selon {@code request.type}.
+     */
+    @Transactional(readOnly = true)
+    public void sendRenewalReminderEmail(RenewalReminderEmailRequest request) {
+        User user = findUser(request.getUserId());
+        emailService.sendRenewalReminder(user, request);
     }
 
     @Transactional

@@ -47,6 +47,7 @@ public class PromoCodeService {
                 .maxUses(request.getMaxUses())
                 .expiresAt(request.getExpiresAt())
                 .active(true)
+                .lifetime(request.isLifetime())
                 .createdBy(adminId)
                 .build();
 
@@ -128,6 +129,15 @@ public class PromoCodeService {
             throw new PromoCodeException(validation.getReason());
         }
 
+        boolean alreadyUsed = promoCodeUsageRepository
+                .existsByPromoCodeIdAndUserId(promoCode.getId(), request.getUserId());
+
+        if (promoCode.isLifetime() && alreadyUsed) {
+            log.info("Code promo lifetime {} réappliqué pour utilisateur {} (transactionId={}) — pas de double comptage",
+                    normalizedCode, request.getUserId(), request.getTransactionId());
+            return validation;
+        }
+
         promoCode.setUsedCount(promoCode.getUsedCount() + 1);
         promoCodeRepository.save(promoCode);
 
@@ -155,10 +165,13 @@ public class PromoCodeService {
         if (promo.getExpiresAt() != null && promo.getExpiresAt().isBefore(Instant.now())) {
             return invalid("Code promo expiré");
         }
-        if (promo.getMaxUses() != null && promo.getUsedCount() >= promo.getMaxUses()) {
+        boolean alreadyUsed = promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId);
+        // Codes lifetime : réutilisables par le même user à chaque renouvellement.
+        // On vérifie quand même maxUses sauf si déjà utilisé (cas du renouvellement).
+        if (!alreadyUsed && promo.getMaxUses() != null && promo.getUsedCount() >= promo.getMaxUses()) {
             return invalid("Code promo épuisé");
         }
-        if (promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)) {
+        if (alreadyUsed && !promo.isLifetime()) {
             return invalid("Code promo déjà utilisé par cet utilisateur");
         }
         return PromoCodeValidation.builder()
@@ -166,6 +179,7 @@ public class PromoCodeService {
                 .code(promo.getCode())
                 .discountPercent(promo.getDiscountPercent())
                 .valid(true)
+                .lifetime(promo.isLifetime())
                 .build();
     }
 
@@ -184,6 +198,7 @@ public class PromoCodeService {
                 .code(promo.getCode())
                 .discountPercent(promo.getDiscountPercent())
                 .valid(true)
+                .lifetime(promo.isLifetime())
                 .build();
     }
 

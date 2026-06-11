@@ -63,6 +63,13 @@ public class Subscription {
     @Builder.Default
     private boolean autoRenew = true;
 
+    @Column(name = "coupon_applied", length = 50)
+    private String couponApplied;
+
+    @Column(name = "coupon_lifetime", nullable = false)
+    @Builder.Default
+    private boolean couponLifetime = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

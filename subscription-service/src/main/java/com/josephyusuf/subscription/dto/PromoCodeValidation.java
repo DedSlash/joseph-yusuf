@@ -16,4 +16,5 @@ public class PromoCodeValidation {
     private Integer discountPercent;
     private boolean valid;
     private String reason;
+    private boolean lifetime;
 }

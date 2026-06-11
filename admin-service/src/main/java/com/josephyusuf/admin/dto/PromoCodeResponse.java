@@ -20,5 +20,6 @@ public class PromoCodeResponse {
     private Integer usedCount;
     private Instant expiresAt;
     private boolean active;
+    private boolean lifetime;
     private Instant createdAt;
 }

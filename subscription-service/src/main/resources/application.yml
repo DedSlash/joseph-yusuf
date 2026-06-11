@@ -37,6 +37,12 @@ paydunya:
   return-url: ${PAYDUNYA_RETURN_URL:http://localhost:4200/subscription/success}
   cancel-url: ${PAYDUNYA_CANCEL_URL:http://localhost:4200/subscription}
 
+app:
+  internal:
+    token: ${INTERNAL_API_TOKEN:}
+  renewal-reminders:
+    cron: ${RENEWAL_REMINDERS_CRON:0 0 9 * * *}
+
 paytech:
   api-key: ${PAYTECH_API_KEY:test_paytech_api_key}
   api-secret: ${PAYTECH_API_SECRET:test_paytech_api_secret}
