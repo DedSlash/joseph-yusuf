@@ -44,6 +44,10 @@ public class PromoCode {
     @Builder.Default
     private boolean active = true;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean lifetime = false;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

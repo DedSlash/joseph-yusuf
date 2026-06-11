@@ -49,11 +49,13 @@ public class PayTechService {
         BigDecimal amount = resolvePlanAmount(plan);
         BigDecimal originalAmount = amount;
         Integer discountPercent = null;
+        boolean couponLifetime = false;
 
         if (couponCode != null && !couponCode.isBlank()) {
             PromoCodeValidation validation = adminClient.validatePublic(couponCode);
             if (validation.isValid()) {
                 discountPercent = validation.getDiscountPercent();
+                couponLifetime = validation.isLifetime();
                 amount = amount.multiply(BigDecimal.valueOf(100L - discountPercent))
                         .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
             }
@@ -100,6 +102,7 @@ public class PayTechService {
                 .promoCode(couponCode)
                 .discountPercent(discountPercent)
                 .originalAmount(discountPercent != null ? originalAmount : null)
+                .couponLifetime(couponLifetime)
                 .build());
 
         log.info("PayTech paiement créé userId={} plan={} method={} amount={} XOF ref={}",

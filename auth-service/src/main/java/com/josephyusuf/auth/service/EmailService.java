@@ -1,5 +1,7 @@
 package com.josephyusuf.auth.service;
 
+import com.josephyusuf.auth.dto.RenewalReminderEmailRequest;
+import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.User;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
@@ -10,7 +12,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -206,6 +210,90 @@ public class EmailService {
         sendEmail(user.getEmail(),
                 "⏰ 24h pour activer ton abonnement Joseph·Yusuf",
                 body);
+    }
+
+    /**
+     * Envoie l'email de rappel de renouvellement (J-3, J-1) ou d'expiration (J+0).
+     * Template choisi sur le champ {@code type} de la requête. Le coupon lifetime
+     * (s'il existe) est explicitement mentionné pour rassurer sur le prix.
+     */
+    public void sendRenewalReminder(User user, RenewalReminderEmailRequest request) {
+        String type = request.getType() == null ? "" : request.getType();
+        String expirationDate = request.getExpiresAt()
+                .atZone(ZoneId.of("Africa/Dakar"))
+                .format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.FRENCH));
+        String firstName = user.getFirstName() != null ? user.getFirstName() : "";
+        String planLabel = planLabel(request.getPlan());
+        String priceLine = priceLine(request.getPlan(), request.getCouponApplied(), request.isCouponLifetime());
+
+        String subject;
+        String body;
+        switch (type) {
+            case "J_MINUS_3" -> {
+                subject = "🌾 Ton abonnement Joseph·Yusuf expire dans 3 jours";
+                body = "Bonjour " + firstName + ",\n\n"
+                        + "Petit rappel : ton abonnement " + planLabel + " expire le "
+                        + expirationDate + " (dans 3 jours).\n\n"
+                        + "Pour conserver ton accès sans interruption, pense à renouveler "
+                        + "avant cette date. PayTech ne débite pas automatiquement — chaque "
+                        + "renouvellement passe par la page de paiement.\n\n"
+                        + priceLine
+                        + "Renouveler mon abonnement :\n"
+                        + subscriptionUrl + "\n\n"
+                        + "À très bientôt,\n"
+                        + "🌾 L'équipe Joseph·Yusuf";
+            }
+            case "J_MINUS_1" -> {
+                subject = "⏰ Plus que 24h avant l'expiration de ton abonnement";
+                body = "Bonjour " + firstName + ",\n\n"
+                        + "Dernier rappel — ton abonnement " + planLabel + " expire demain ("
+                        + expirationDate + ").\n\n"
+                        + "Si tu ne renouvelles pas, ton accès aux fonctionnalités avancées "
+                        + "sera coupé. Tes données restent disponibles : tu pourras "
+                        + "réactiver à tout moment.\n\n"
+                        + priceLine
+                        + "Renouveler maintenant :\n"
+                        + subscriptionUrl + "\n\n"
+                        + "À très bientôt,\n"
+                        + "🌾 L'équipe Joseph·Yusuf";
+            }
+            case "EXPIRED" -> {
+                subject = "Ton abonnement Joseph·Yusuf a expiré";
+                body = "Bonjour " + firstName + ",\n\n"
+                        + "Ton abonnement " + planLabel + " a expiré aujourd'hui.\n\n"
+                        + "Tes données sont conservées intactes. Quand tu seras prêt, "
+                        + "tu peux relancer ton abonnement en un clic.\n\n"
+                        + priceLine
+                        + "Réactiver mon abonnement :\n"
+                        + subscriptionUrl + "\n\n"
+                        + "À très bientôt,\n"
+                        + "🌾 L'équipe Joseph·Yusuf";
+            }
+            default -> {
+                log.warn("RenewalReminder : type inconnu '{}' pour userId={}, email non envoyé",
+                        type, user.getId());
+                return;
+            }
+        }
+        sendEmail(user.getEmail(), subject, body);
+    }
+
+    private String planLabel(Plan plan) {
+        return switch (plan) {
+            case PREMIUM -> "Premium";
+            case PREMIUM_PLUS -> "Premium+";
+            default -> "Premium";
+        };
+    }
+
+    private String priceLine(Plan plan, String couponCode, boolean couponLifetime) {
+        long basePrice = plan == Plan.PREMIUM_PLUS ? 5990L : 2990L;
+        if (couponLifetime && couponCode != null && !couponCode.isBlank()) {
+            long discounted = basePrice / 2;
+            return "Avec ton coupon " + couponCode + " (-50% à vie), tu payes "
+                    + discounted + " FCFA au lieu de " + basePrice + " FCFA.\n\n";
+        }
+        return "Tarif : " + basePrice + " FCFA/mois.\n\n";
     }
 
     private void sendEmail(String to, String subject, String body) {

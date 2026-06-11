@@ -15,6 +15,9 @@ export interface SubscriptionInfo {
 
   nextInvoiceAmount: number | null;
   currency: string | null;
+
+  couponApplied: string | null;
+  couponLifetime: boolean;
 }
 
 export interface PaymentProviderResult {

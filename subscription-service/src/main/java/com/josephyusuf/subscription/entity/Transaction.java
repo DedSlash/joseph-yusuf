@@ -65,6 +65,10 @@ public class Transaction {
     @Column(name = "original_amount", precision = 15, scale = 2)
     private BigDecimal originalAmount;
 
+    @Column(name = "coupon_lifetime", nullable = false)
+    @Builder.Default
+    private boolean couponLifetime = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

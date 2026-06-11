@@ -43,12 +43,20 @@ public class SubscriptionService {
 
     /**
      * Activation après paiement réussi (PayTech IPN, ou activation manuelle admin).
+     * Lit la Transaction associée à externalTxId pour persister sur la subscription
+     * le coupon appliqué et son flag {@code lifetime} (utilisé au renouvellement).
      */
     @Transactional
     public Subscription activateAfterPayment(UUID userId, PlanTier plan, PaymentProvider provider,
                                              String externalTxId) {
         Instant now = Instant.now();
         Instant expiry = now.plus(30, ChronoUnit.DAYS);
+
+        Transaction sourceTx = externalTxId != null
+                ? transactionRepository.findByTransactionId(externalTxId).orElse(null)
+                : null;
+        String couponApplied = sourceTx != null ? sourceTx.getPromoCode() : null;
+        boolean couponLifetime = sourceTx != null && sourceTx.isCouponLifetime();
 
         Subscription subscription = subscriptionRepository.findByUserId(userId)
                 .map(existing -> {
@@ -62,6 +70,10 @@ public class SubscriptionService {
                     existing.setCancelAtPeriodEnd(false);
                     existing.setCancelledAt(null);
                     existing.setAutoRenew(true);
+                    if (couponApplied != null) {
+                        existing.setCouponApplied(couponApplied);
+                        existing.setCouponLifetime(couponLifetime);
+                    }
                     return existing;
                 })
                 .orElseGet(() -> Subscription.builder()
@@ -74,20 +86,21 @@ public class SubscriptionService {
                         .currentPeriodStart(now)
                         .currentPeriodEnd(expiry)
                         .autoRenew(true)
+                        .couponApplied(couponApplied)
+                        .couponLifetime(couponLifetime)
                         .build());
 
         Subscription saved = subscriptionRepository.save(subscription);
 
-        if (externalTxId != null) {
-            transactionRepository.findByTransactionId(externalTxId).ifPresent(tx -> {
-                tx.setStatus(TransactionStatus.SUCCEEDED);
-                tx.setSubscriptionId(saved.getId());
-                transactionRepository.save(tx);
-            });
+        if (sourceTx != null) {
+            sourceTx.setStatus(TransactionStatus.SUCCEEDED);
+            sourceTx.setSubscriptionId(saved.getId());
+            transactionRepository.save(sourceTx);
         }
 
         syncPlanWithAuthService(userId, plan);
-        log.info("Subscription activée userId={} plan={} provider={}", userId, plan, provider);
+        log.info("Subscription activée userId={} plan={} provider={} coupon={} lifetime={}",
+                userId, plan, provider, couponApplied, couponLifetime);
         return saved;
     }
 
@@ -150,6 +163,7 @@ public class SubscriptionService {
                 .promoCode(params.getPromoCode())
                 .discountPercent(params.getDiscountPercent())
                 .originalAmount(params.getOriginalAmount())
+                .couponLifetime(params.isCouponLifetime())
                 .build();
         return transactionRepository.save(tx);
     }

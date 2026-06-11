@@ -29,4 +29,7 @@ public class PromoCodeRequest {
     private Integer maxUses;
 
     private Instant expiresAt;
+
+    @Builder.Default
+    private boolean lifetime = false;
 }

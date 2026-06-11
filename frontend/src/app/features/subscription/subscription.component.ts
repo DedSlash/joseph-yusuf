@@ -207,23 +207,29 @@ const METHOD_ICON: Record<string, string> = {
           </div>
         </div>
 
-        <!-- Toggle renouvellement automatique -->
+        <!-- Toggle rappel renouvellement (PayTech ne débite pas automatiquement) -->
         <div class="renew-toggle-card" *ngIf="sub.status === 'ACTIVE' || sub.status === 'CANCELLED'">
           <div class="renew-toggle-left">
             <div class="renew-toggle-title">
-              <span class="renew-icon">{{ sub.autoRenew ? '🔄' : '⏸' }}</span>
-              Renouvellement automatique
+              <span class="renew-icon">{{ sub.autoRenew ? '🔔' : '🔕' }}</span>
+              Me rappeler avant expiration
               <span class="renew-status-badge" [ngClass]="sub.autoRenew ? 'renew-on' : 'renew-off'">
                 {{ sub.autoRenew ? 'Activé' : 'Désactivé' }}
               </span>
             </div>
             <p class="renew-toggle-desc" *ngIf="sub.autoRenew">
-              Votre abonnement sera renouvelé automatiquement le
-              <strong>{{ sub.expiresAt | date:'dd MMMM yyyy' }}</strong>.
+              On vous envoie un email J-3 et J-1 avant le
+              <strong>{{ sub.expiresAt | date:'dd MMMM yyyy' }}</strong>
+              pour que vous renouveliez à temps. PayTech ne débite pas
+              automatiquement — chaque renouvellement passe par la page de paiement.
             </p>
             <p class="renew-toggle-desc" *ngIf="!sub.autoRenew">
-              Votre abonnement <strong>ne sera pas renouvelé</strong> automatiquement.
+              <strong>Aucun rappel</strong> ne vous sera envoyé.
               Accès maintenu jusqu'au {{ sub.expiresAt | date:'dd MMMM yyyy' }}.
+            </p>
+            <p class="renew-toggle-desc renew-coupon-note"
+               *ngIf="sub.couponLifetime && sub.couponApplied">
+              🏷 Coupon <strong>{{ sub.couponApplied }}</strong> à vie — appliqué automatiquement à chaque renouvellement.
             </p>
           </div>
           <button class="renew-toggle-btn"
@@ -1130,6 +1136,22 @@ export class SubscriptionComponent implements OnInit {
     this.subscriptionService.getCurrent().subscribe({
       next: sub => {
         this.sub = sub;
+        // Coupon lifetime (ex: EARLY50) : pré-rempli pour le renouvellement.
+        // L'admin-service le réappliquera même si l'usage a déjà été
+        // enregistré sur le premier paiement (validateUsage ignore le check
+        // "déjà utilisé" quand promo.lifetime=true).
+        if (sub.couponLifetime && sub.couponApplied && !this.promoApplied) {
+          this.promoCode = sub.couponApplied;
+          this.showPromo = true;
+          this.subscriptionService.validatePromoCode(sub.couponApplied).subscribe({
+            next: res => {
+              if (res.valid && res.discountPercent) {
+                this.promoDiscount = res.discountPercent;
+                this.promoApplied = true;
+              }
+            }
+          });
+        }
         const plan = sub.plan as PlanId;
         const isPaid = plan !== 'FREE';
         const isActive = sub.status === 'ACTIVE' || sub.status === 'CANCELLED';

@@ -198,4 +198,105 @@ class PromoCodeServiceTest {
         assertThatThrownBy(() -> service.toggle(id))
                 .isInstanceOf(PromoCodeNotFoundException.class);
     }
+
+    @Test
+    @DisplayName("validate - lifetime code already used → valid (réapplication renouvellement)")
+    void validate_lifetimeAlreadyUsed_returnsValid() {
+        promo.setLifetime(true);
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+        when(promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)).thenReturn(true);
+
+        PromoCodeValidation result = service.validate("JOSEPH20", userId);
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.isLifetime()).isTrue();
+        assertThat(result.getDiscountPercent()).isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("validate - lifetime + maxUses atteint mais déjà utilisé par ce user → toujours valide")
+    void validate_lifetimeAlreadyUsedAndExhausted_returnsValid() {
+        promo.setLifetime(true);
+        promo.setMaxUses(5);
+        promo.setUsedCount(5);
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+        when(promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)).thenReturn(true);
+
+        PromoCodeValidation result = service.validate("JOSEPH20", userId);
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.isLifetime()).isTrue();
+    }
+
+    @Test
+    @DisplayName("validate - lifetime mais maxUses atteint et user non utilisateur → invalide")
+    void validate_lifetimeExhaustedAndNewUser_returnsInvalid() {
+        promo.setLifetime(true);
+        promo.setMaxUses(5);
+        promo.setUsedCount(5);
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+        when(promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)).thenReturn(false);
+
+        PromoCodeValidation result = service.validate("JOSEPH20", userId);
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.getReason()).contains("épuisé");
+    }
+
+    @Test
+    @DisplayName("apply - lifetime code réappliqué : pas de double comptage usage")
+    void apply_lifetimeReapply_skipsIncrement() {
+        promo.setLifetime(true);
+        int initialCount = promo.getUsedCount();
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+        when(promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)).thenReturn(true);
+
+        PromoCodeValidation result = service.apply(PromoCodeApplyRequest.builder()
+                .code("JOSEPH20").userId(userId).transactionId("tx_renew").build());
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(promo.getUsedCount()).isEqualTo(initialCount);
+        verify(promoCodeUsageRepository, never()).save(any());
+        verify(promoCodeRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("apply - lifetime code première utilisation : incrément normal")
+    void apply_lifetimeFirstUse_incrementsNormally() {
+        promo.setLifetime(true);
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+        when(promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)).thenReturn(false);
+
+        service.apply(PromoCodeApplyRequest.builder()
+                .code("JOSEPH20").userId(userId).transactionId("tx_first").build());
+
+        assertThat(promo.getUsedCount()).isEqualTo(1);
+        verify(promoCodeUsageRepository).save(any());
+        verify(promoCodeRepository).save(promo);
+    }
+
+    @Test
+    @DisplayName("validatePublic - lifetime flag remonté dans la réponse")
+    void validatePublic_lifetimeFlagInResponse() {
+        promo.setLifetime(true);
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+
+        PromoCodeValidation result = service.validatePublic("JOSEPH20");
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.isLifetime()).isTrue();
+    }
+
+    @Test
+    @DisplayName("validate - non-lifetime code déjà utilisé reste invalide")
+    void validate_nonLifetimeAlreadyUsed_returnsInvalid() {
+        promo.setLifetime(false);
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+        when(promoCodeUsageRepository.existsByPromoCodeIdAndUserId(promo.getId(), userId)).thenReturn(true);
+
+        PromoCodeValidation result = service.validate("JOSEPH20", userId);
+
+        assertThat(result.isValid()).isFalse();
+        assertThat(result.getReason()).contains("déjà utilisé");
+    }
 }

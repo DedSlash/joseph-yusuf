@@ -32,4 +32,9 @@ public class SubscriptionResponse {
 
     private BigDecimal nextInvoiceAmount;
     private String currency;
+
+    /** Code coupon appliqué sur l'abonnement courant (ex: EARLY50). */
+    private String couponApplied;
+    /** Si vrai, le coupon est réappliqué automatiquement au renouvellement. */
+    private boolean couponLifetime;
 }
