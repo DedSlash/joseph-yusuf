@@ -28,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,8 +92,8 @@ class PaddleWebhookServiceTest {
         Subscription sub = Subscription.builder()
                 .userId(userId).plan(PlanTier.PREMIUM).status(SubscriptionStatus.ACTIVE)
                 .build();
-        when(subscriptionService.activateAfterPayment(eq(userId), eq(PlanTier.PREMIUM),
-                eq(PaymentProvider.PADDLE), eq("txn_abc"))).thenReturn(sub);
+        when(subscriptionService.activateAfterPayment(userId, PlanTier.PREMIUM,
+                PaymentProvider.PADDLE, "txn_abc")).thenReturn(sub);
 
         webhookService.handleWebhook(body, signedHeader(body));
 

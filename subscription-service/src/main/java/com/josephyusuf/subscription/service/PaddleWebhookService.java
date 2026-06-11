@@ -7,6 +7,7 @@ import com.josephyusuf.subscription.entity.Subscription;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.enums.SubscriptionStatus;
+import com.josephyusuf.subscription.exception.PaymentException;
 import com.josephyusuf.subscription.repository.ProcessedWebhookEventRepository;
 import com.josephyusuf.subscription.repository.SubscriptionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -215,7 +216,7 @@ public class PaddleWebhookService {
             return objectMapper.readValue(payload, new TypeReference<>() {});
         } catch (Exception e) {
             log.error("Erreur parsing payload Paddle webhook : {}", e.getMessage());
-            throw new RuntimeException("Payload Paddle invalide", e);
+            throw new PaymentException("Payload Paddle invalide", e);
         }
     }
 

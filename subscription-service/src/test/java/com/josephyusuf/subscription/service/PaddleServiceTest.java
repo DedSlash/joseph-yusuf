@@ -115,20 +115,21 @@ class PaddleServiceTest {
                 eq(HttpMethod.POST), captor.capture(), any(ParameterizedTypeReference.class));
 
         Map<String, Object> body = (Map<String, Object>) captor.getValue().getBody();
-        assertThat(body).doesNotContainKey("discount_id");
-        assertThat(body).doesNotContainKey("customer_email");
-        assertThat(body).doesNotContainKey("customer");
-        assertThat(body.get("collection_mode")).isEqualTo("automatic");
+        assertThat(body)
+                .doesNotContainKeys("discount_id", "customer_email", "customer")
+                .containsEntry("collection_mode", "automatic");
 
         List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
         assertThat(items).hasSize(1);
-        assertThat(items.get(0)).containsEntry("price_id", "pri_premium_test");
-        assertThat(items.get(0)).containsEntry("quantity", 1);
+        assertThat(items.get(0))
+                .containsEntry("price_id", "pri_premium_test")
+                .containsEntry("quantity", 1);
 
         Map<String, Object> customData = (Map<String, Object>) body.get("custom_data");
-        assertThat(customData).containsEntry("userId", userId.toString());
-        assertThat(customData).containsEntry("planTier", "PREMIUM");
-        assertThat(customData).doesNotContainKey("couponCode");
+        assertThat(customData)
+                .containsEntry("userId", userId.toString())
+                .containsEntry("planTier", "PREMIUM")
+                .doesNotContainKey("couponCode");
     }
 
     @Test
@@ -193,8 +194,9 @@ class PaddleServiceTest {
         when(restTemplate.exchange(any(String.class), eq(HttpMethod.POST),
                 any(HttpEntity.class), any(ParameterizedTypeReference.class)))
                 .thenReturn((ResponseEntity) new ResponseEntity<>(new HashMap<>(), HttpStatus.OK));
+        UUID userId = UUID.randomUUID();
 
-        assertThatThrownBy(() -> paddleService.createPayment(UUID.randomUUID(), PlanTier.PREMIUM, null))
+        assertThatThrownBy(() -> paddleService.createPayment(userId, PlanTier.PREMIUM, null))
                 .isInstanceOf(PaymentException.class)
                 .hasMessageContaining("data");
     }
