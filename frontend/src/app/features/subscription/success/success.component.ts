@@ -5,8 +5,6 @@ import { SubscriptionService } from '../../../core/services/subscription.service
 import { AuthService } from '../../../core/auth/auth.service';
 import { SubscriptionInfo } from '../../../shared/models/subscription.model';
 
-const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
-
 @Component({
   selector: 'app-subscription-success',
   standalone: true,
@@ -22,7 +20,7 @@ const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
       </div>
 
       <div class="success-card">
-        <span class="founder-badge" *ngIf="hasForeverCoupon()">
+        <span class="founder-badge" *ngIf="hasFounderCoupon()">
           <span class="founder-dot"></span> Membre Fondateur
         </span>
 
@@ -33,14 +31,6 @@ const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
         <p class="success-subtitle">
           Votre abonnement est actif. Profitez de toutes les fonctionnalités Joseph&middot;Yusuf.
         </p>
-
-        <div class="forever-banner" *ngIf="hasForeverCoupon()">
-          <span class="forever-icon">🎉</span>
-          <p>
-            Votre réduction <strong>{{ subscription?.couponApplied }}</strong>
-            est appliquée à vie sur votre abonnement !
-          </p>
-        </div>
 
         <div class="period-info" *ngIf="subscription?.currentPeriodEnd">
           Prochain renouvellement le
@@ -90,7 +80,6 @@ const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
       font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
     }
 
-    /* Decorative glows */
     .glow {
       position: absolute;
       width: 480px;
@@ -169,26 +158,6 @@ const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
       margin: 0 0 1.5rem;
     }
 
-    .forever-banner {
-      display: flex;
-      gap: 0.75rem;
-      align-items: flex-start;
-      background: rgba(201, 168, 76, 0.10);
-      border: 1px solid rgba(201, 168, 76, 0.30);
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-      text-align: left;
-    }
-    .forever-icon { font-size: 1.5rem; flex-shrink: 0; }
-    .forever-banner p {
-      margin: 0;
-      color: var(--text-0);
-      font-size: 0.9rem;
-      line-height: 1.55;
-    }
-    .forever-banner strong { color: var(--gold-light); }
-
     .period-info {
       color: var(--text-2);
       font-size: 0.88rem;
@@ -260,7 +229,6 @@ const PENDING_SUB_KEY = 'joseph_pending_subscription_id';
       border-color: var(--gold);
     }
 
-    /* Confetti (palette ajustée navy/gold) */
     .confetti { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
     .confetti span {
       position: absolute;
@@ -309,7 +277,6 @@ export class SuccessComponent implements OnInit {
   subscription: SubscriptionInfo | null = null;
   confirming = false;
   error = '';
-  // Confetti purement décoratifs : valeurs déterministes (pas de PRNG).
   confettiPieces = Array.from({ length: 30 }, (_, i) => ({
     left: (i * 17 + 7) % 100,
     color: ['#C9A84C', '#DAC372', '#F0E8D0', '#5cdb6f'][i % 4],
@@ -326,7 +293,6 @@ export class SuccessComponent implements OnInit {
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParams;
-    const subId = localStorage.getItem(PENDING_SUB_KEY);
 
     // Retour PayTech : query param ?ref=JY-... (IPN active l'abo en arrière-plan, on recharge).
     if (params['ref']) {
@@ -338,53 +304,20 @@ export class SuccessComponent implements OnInit {
     }
 
     // Retour PayDunya (paramètre plan présent, pas de redirect_status)
-    if (params['plan'] && !params['redirect_status']) {
+    if (params['plan']) {
       this.confirming = true;
       this.loadCurrent();
       this.authService.refreshSession().subscribe();
       return;
     }
 
-    // Retour 3DS depuis Stripe (paramètres redirect_status + payment_intent)
-    if (params['redirect_status'] === 'succeeded' || params['redirect_status'] === 'pending') {
-      this.confirmAndLoad(subId);
-    } else if (params['redirect_status'] && params['redirect_status'] !== 'succeeded') {
-      this.error = "Le paiement n'a pas abouti. Vous allez être redirigé pour réessayer.";
-      setTimeout(() => this.router.navigate(['/subscription']), 3000);
-      return;
-    } else if (subId) {
-      this.confirmAndLoad(subId);
-    } else {
-      this.loadCurrent();
-    }
-  }
-
-  private confirmAndLoad(subId: string | null): void {
-    if (!subId) {
-      this.loadCurrent();
-      return;
-    }
-    this.confirming = true;
-    this.subscriptionService.confirmSubscription(subId).subscribe({
-      next: sub => {
-        this.subscription = sub;
-        this.confirming = false;
-        localStorage.removeItem(PENDING_SUB_KEY);
-        this.authService.refreshSession().subscribe();
-      },
-      error: () => {
-        // Le webhook finira par activer ; on continue
-        this.confirming = false;
-        localStorage.removeItem(PENDING_SUB_KEY);
-        this.loadCurrent();
-      }
-    });
+    this.loadCurrent();
   }
 
   private loadCurrent(): void {
     this.subscriptionService.getCurrent().subscribe({
-      next: sub => this.subscription = sub,
-      error: () => undefined
+      next: sub => { this.subscription = sub; this.confirming = false; },
+      error: () => { this.confirming = false; }
     });
   }
 
@@ -395,7 +328,7 @@ export class SuccessComponent implements OnInit {
     return 'Premium';
   }
 
-  hasForeverCoupon(): boolean {
-    return !!this.subscription?.couponApplied && this.subscription?.couponDuration === 'FOREVER';
+  hasFounderCoupon(): boolean {
+    return localStorage.getItem('joseph_promo_code')?.toUpperCase() === 'EARLY50';
   }
 }

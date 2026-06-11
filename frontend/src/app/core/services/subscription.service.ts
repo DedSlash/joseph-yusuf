@@ -6,8 +6,6 @@ import {
   SubscriptionInfo,
   PaymentProviderResult,
   PaymentMethodConfig,
-  CreateSubscriptionRequest,
-  CreateSubscriptionResponse,
   PayTechRequest,
   PayTechPaymentResponse
 } from '../../shared/models/subscription.model';
@@ -22,18 +20,8 @@ export class SubscriptionService {
     return this.http.get<SubscriptionInfo>(`${this.apiUrl}/current`);
   }
 
-  createSubscription(request: CreateSubscriptionRequest): Observable<CreateSubscriptionResponse> {
-    return this.http.post<CreateSubscriptionResponse>(`${this.apiUrl}/stripe/create`, request);
-  }
-
-  confirmSubscription(subscriptionId: string): Observable<SubscriptionInfo> {
-    return this.http.post<SubscriptionInfo>(`${this.apiUrl}/stripe/confirm/${subscriptionId}`, {});
-  }
-
   cancelSubscription(immediately = false): Observable<SubscriptionInfo> {
-    return this.http.request<SubscriptionInfo>('DELETE', `${this.apiUrl}/stripe/cancel`, {
-      body: { immediately }
-    });
+    return this.http.delete<SubscriptionInfo>(`${this.apiUrl}/cancel?immediately=${immediately}`);
   }
 
   initiateWave(plan: string, phoneNumber: string): Observable<PaymentProviderResult> {
@@ -60,7 +48,7 @@ export class SubscriptionService {
     );
   }
 
-  getPaymentMethods(): Observable<PaymentMethodConfig[]> {
+  getAvailablePaymentMethods(): Observable<PaymentMethodConfig[]> {
     return this.http.get<PaymentMethodConfig[]>(`${this.apiUrl}/payment-methods`);
   }
 

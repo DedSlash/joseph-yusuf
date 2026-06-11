@@ -1,6 +1,7 @@
 package com.josephyusuf.subscription.controller;
 
-import com.josephyusuf.subscription.service.WebhookService;
+import com.josephyusuf.subscription.service.PayDunyaWebhookService;
+import com.josephyusuf.subscription.service.PayTechWebhookService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +10,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -16,31 +19,55 @@ import static org.mockito.Mockito.*;
 @DisplayName("WebhookController")
 class WebhookControllerTest {
 
-    @Mock
-    private WebhookService webhookService;
+    @Mock private PayDunyaWebhookService payDunyaWebhookService;
+    @Mock private PayTechWebhookService payTechWebhookService;
 
     @InjectMocks
     private WebhookController controller;
 
     @Test
-    @DisplayName("stripe webhook success → 200 ok")
-    void stripeSuccess() {
-        doNothing().when(webhookService).processStripeWebhook("payload", "sig_123");
+    @DisplayName("paydunya success → 200 ok")
+    void paydunyaSuccess() {
+        Map<String, Object> payload = Map.of("status", "completed");
+        doNothing().when(payDunyaWebhookService).handleCallback(payload);
 
-        ResponseEntity<String> response = controller.stripe("payload", "sig_123");
+        ResponseEntity<String> response = controller.paydunya(payload);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).isEqualTo("ok");
     }
 
     @Test
-    @DisplayName("stripe webhook error → 400 invalid")
-    void stripeError() {
-        doThrow(new RuntimeException("bad sig")).when(webhookService).processStripeWebhook("bad", "sig");
+    @DisplayName("paydunya error → 400 invalid")
+    void paydunyaError() {
+        Map<String, Object> payload = Map.of("status", "bad");
+        doThrow(new RuntimeException("oops")).when(payDunyaWebhookService).handleCallback(payload);
 
-        ResponseEntity<String> response = controller.stripe("bad", "sig");
+        ResponseEntity<String> response = controller.paydunya(payload);
 
         assertThat(response.getStatusCode().value()).isEqualTo(400);
         assertThat(response.getBody()).isEqualTo("invalid");
+    }
+
+    @Test
+    @DisplayName("paytech success → 200 ok")
+    void paytechSuccess() {
+        Map<String, Object> payload = Map.of("type_event", "sale_complete");
+        doNothing().when(payTechWebhookService).handleIPN(payload);
+
+        ResponseEntity<String> response = controller.paytech(payload);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("paytech signature invalide → 401")
+    void paytechInvalidSignature() {
+        Map<String, Object> payload = Map.of("type_event", "sale_complete");
+        doThrow(new SecurityException("bad sig")).when(payTechWebhookService).handleIPN(payload);
+
+        ResponseEntity<String> response = controller.paytech(payload);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(401);
     }
 }

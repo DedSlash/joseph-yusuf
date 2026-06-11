@@ -7,9 +7,6 @@ import com.josephyusuf.subscription.enums.TransactionStatus;
 import com.josephyusuf.subscription.exception.PaymentException;
 import com.josephyusuf.subscription.exception.SubscriptionNotFoundException;
 import com.josephyusuf.subscription.repository.TransactionRepository;
-import com.stripe.exception.StripeException;
-import com.stripe.model.Refund;
-import com.stripe.param.RefundCreateParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -53,24 +50,20 @@ public class AdminTransactionService {
         return toDto(findById(id));
     }
 
+    /**
+     * Marquage local d'un remboursement. L'administrateur doit avoir préalablement
+     * effectué le remboursement réel sur le dashboard PayTech ; cet endpoint sert
+     * uniquement à refléter cet état côté Joseph·Yusuf.
+     */
     @Transactional
     public AdminTransactionDto refund(UUID id) {
         Transaction transaction = findById(id);
         if (transaction.getStatus() != TransactionStatus.SUCCEEDED) {
             throw new PaymentException("Seules les transactions SUCCEEDED peuvent être remboursées");
         }
-        try {
-            Refund.create(RefundCreateParams.builder()
-                    .setPaymentIntent(transaction.getTransactionId())
-                    .build());
-            log.info("Stripe refund créé pour PI={}", transaction.getTransactionId());
-        } catch (StripeException e) {
-            log.error("Échec remboursement Stripe PI={} : {}", transaction.getTransactionId(), e.getMessage());
-            throw new PaymentException("Le remboursement n'a pas pu être effectué. Veuillez réessayer.", e);
-        }
-
         transaction.setStatus(TransactionStatus.REFUNDED);
         transactionRepository.save(transaction);
+        log.info("Transaction marquée REFUNDED localement id={} provider={}", id, transaction.getProvider());
         return toDto(transaction);
     }
 
@@ -100,7 +93,6 @@ public class AdminTransactionService {
                 transaction.getPlan(),
                 transaction.getProvider(),
                 transaction.getTransactionId());
-        // recharger après mise à jour par activateAfterPayment
         Transaction updated = findById(id);
         log.info("Abonnement activé manuellement pour userId={} plan={}", transaction.getUserId(), transaction.getPlan());
         return toDto(updated);

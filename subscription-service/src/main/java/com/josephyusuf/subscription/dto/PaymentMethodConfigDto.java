@@ -13,5 +13,8 @@ import java.time.Instant;
 public class PaymentMethodConfigDto {
     private PaymentProvider provider;
     private boolean enabled;
+    private String displayName;
+    private int displayOrder;
+    private String paytechMethodCode;
     private Instant updatedAt;
 }

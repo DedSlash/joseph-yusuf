@@ -10,7 +10,6 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface SubscriptionMapper {
 
-    @Mapping(target = "couponApplied", source = "stripeCouponId")
     @Mapping(target = "nextInvoiceAmount", ignore = true)
     SubscriptionResponse toResponse(Subscription subscription);
 

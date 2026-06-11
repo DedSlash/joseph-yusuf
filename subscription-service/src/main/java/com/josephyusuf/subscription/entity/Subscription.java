@@ -1,6 +1,5 @@
 package com.josephyusuf.subscription.entity;
 
-import com.josephyusuf.subscription.enums.CouponDuration;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.enums.SubscriptionStatus;
@@ -38,15 +37,6 @@ public class Subscription {
     @Column(length = 20)
     private PaymentProvider provider;
 
-    @Column(name = "stripe_customer_id", length = 255)
-    private String stripeCustomerId;
-
-    @Column(name = "stripe_subscription_id", length = 255)
-    private String stripeSubscriptionId;
-
-    @Column(name = "stripe_price_id", length = 255)
-    private String stripePriceId;
-
     @Column(name = "current_period_start")
     private Instant currentPeriodStart;
 
@@ -56,13 +46,6 @@ public class Subscription {
     @Column(name = "cancel_at_period_end", nullable = false)
     @Builder.Default
     private boolean cancelAtPeriodEnd = false;
-
-    @Column(name = "stripe_coupon_id", length = 255)
-    private String stripeCouponId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "coupon_duration", length = 20)
-    private CouponDuration couponDuration;
 
     @Column(length = 10)
     private String currency;

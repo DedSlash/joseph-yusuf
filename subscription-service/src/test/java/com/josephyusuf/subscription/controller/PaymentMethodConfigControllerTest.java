@@ -32,21 +32,24 @@ class PaymentMethodConfigControllerTest {
     private PaymentMethodConfigController controller;
 
     @Test
-    @DisplayName("getAll → returns payment methods")
-    void getAll() {
+    @DisplayName("getAvailable → renvoie la liste filtrée pour le client")
+    void getAvailable() {
         List<PaymentMethodConfigDto> configs = List.of(
-                PaymentMethodConfigDto.builder().provider(PaymentProvider.STRIPE).enabled(true).build()
+                PaymentMethodConfigDto.builder().provider(PaymentProvider.WAVE)
+                        .enabled(true).displayName("Wave").displayOrder(1)
+                        .paytechMethodCode("wave").build()
         );
-        when(service.getAll()).thenReturn(configs);
+        when(service.getAvailableForClient()).thenReturn(configs);
 
-        ResponseEntity<List<PaymentMethodConfigDto>> response = controller.getAll();
+        ResponseEntity<List<PaymentMethodConfigDto>> response = controller.getAvailable();
 
         assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().get(0).getProvider()).isEqualTo(PaymentProvider.STRIPE);
+        assertThat(response.getBody().get(0).getProvider()).isEqualTo(PaymentProvider.WAVE);
+        assertThat(response.getBody().get(0).getPaytechMethodCode()).isEqualTo("wave");
     }
 
     @Test
-    @DisplayName("validatePromo → delegates to adminClient with userId")
+    @DisplayName("validatePromo → délègue à adminClient avec userId")
     void validatePromo() {
         UUID userId = UUID.randomUUID();
         when(auth.getPrincipal()).thenReturn(userId.toString());
@@ -61,10 +64,11 @@ class PaymentMethodConfigControllerTest {
     }
 
     @Test
-    @DisplayName("getAllAdmin → returns payment methods")
+    @DisplayName("getAllAdmin → renvoie tous les moyens (sans filtre)")
     void getAllAdmin() {
         List<PaymentMethodConfigDto> configs = List.of(
-                PaymentMethodConfigDto.builder().provider(PaymentProvider.WAVE).enabled(false).build()
+                PaymentMethodConfigDto.builder().provider(PaymentProvider.PAYTECH)
+                        .enabled(false).displayName("PayTech").displayOrder(98).build()
         );
         when(service.getAll()).thenReturn(configs);
 
@@ -74,13 +78,13 @@ class PaymentMethodConfigControllerTest {
     }
 
     @Test
-    @DisplayName("toggle → toggles provider")
+    @DisplayName("toggle → bascule l'état du provider")
     void toggle() {
         PaymentMethodConfigDto dto = PaymentMethodConfigDto.builder()
-                .provider(PaymentProvider.STRIPE).enabled(false).build();
-        when(service.toggle(PaymentProvider.STRIPE)).thenReturn(dto);
+                .provider(PaymentProvider.WAVE).enabled(false).build();
+        when(service.toggle(PaymentProvider.WAVE)).thenReturn(dto);
 
-        ResponseEntity<PaymentMethodConfigDto> response = controller.toggle(PaymentProvider.STRIPE);
+        ResponseEntity<PaymentMethodConfigDto> response = controller.toggle(PaymentProvider.WAVE);
 
         assertThat(response.getBody().isEnabled()).isFalse();
     }

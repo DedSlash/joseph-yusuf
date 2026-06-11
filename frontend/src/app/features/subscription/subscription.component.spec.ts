@@ -15,13 +15,12 @@ describe('SubscriptionComponent', () => {
   beforeEach(async () => {
     subscriptionSpy = jasmine.createSpyObj<SubscriptionService>('SubscriptionService', [
       'getCurrent', 'cancelSubscription', 'setAutoRenew',
-      'createSubscription', 'confirmSubscription',
       'initiateWave', 'initiateOrange',
-      'validatePromoCode', 'getPaymentMethods',
+      'validatePromoCode', 'getAvailablePaymentMethods',
       'createPayTechPayment'
     ]);
     subscriptionSpy.getCurrent.and.returnValue(EMPTY);
-    subscriptionSpy.getPaymentMethods.and.returnValue(of([]));
+    subscriptionSpy.getAvailablePaymentMethods.and.returnValue(of([]));
 
     authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'getCurrentUser', 'refreshSession', 'isLoggedIn', 'getTrialStatus']);
     authSpy.getPlan.and.returnValue('FREE');
@@ -65,27 +64,26 @@ describe('SubscriptionComponent', () => {
       expect(authSpy.refreshSession).toHaveBeenCalled();
     });
 
-    it('utilise le message du backend si présent (?? nullish)', () => {
+    it('utilise le message du backend si présent', () => {
       subscriptionSpy.cancelSubscription.and.returnValue(
-        throwError(() => ({ error: { message: 'Stripe a renvoyé une erreur.' } }))
+        throwError(() => ({ error: { message: 'Backend KO' } }))
       );
 
       component.doCancel();
 
       expect(component.cancelling).toBe(false);
-      expect(component.cancelError).toBe('Stripe a renvoyé une erreur.');
+      expect(component.cancelError).toBe('Backend KO');
     });
 
-    it("tombe sur le message par défaut \"Échec de l'annulation.\" si le backend ne fournit rien", () => {
+    it("tombe sur le défaut si le backend ne fournit rien", () => {
       subscriptionSpy.cancelSubscription.and.returnValue(throwError(() => ({ error: null })));
 
       component.doCancel();
 
-      expect(component.cancelling).toBe(false);
       expect(component.cancelError).toBe("Échec de l'annulation.");
     });
 
-    it('tombe sur le défaut si error est totalement absent (?? null → fallback)', () => {
+    it('tombe sur le défaut si error est totalement absent', () => {
       subscriptionSpy.cancelSubscription.and.returnValue(throwError(() => ({})));
 
       component.doCancel();
@@ -119,152 +117,7 @@ describe('SubscriptionComponent', () => {
       expect(component.promoApplied).toBe(false);
       expect(component.promoError).toBe('Code expiré');
     });
-  });
 
-  describe('initiatePayment - flow Stripe PM-first', () => {
-    it('Stripe : transition directe vers step "confirm" sans appel backend', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.paymentMethod = 'stripe';
-
-      component.initiatePayment();
-
-      expect(component.step).toBe('confirm');
-      expect(subscriptionSpy.createSubscription).not.toHaveBeenCalled();
-      expect(component.paying).toBe(false);
-    });
-
-    it('Wave : appel backend et passage à step "confirm"', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.paymentMethod = 'wave';
-      component.phoneNumber = '+221770000000';
-      subscriptionSpy.initiateWave.and.returnValue(of({
-        provider: 'WAVE', transactionId: 'w_1', status: 'PENDING',
-        amount: 3000, currency: 'XOF', redirectUrl: null, message: 'Confirmez'
-      }));
-
-      component.initiatePayment();
-
-      expect(subscriptionSpy.initiateWave).toHaveBeenCalledWith('PREMIUM', '+221770000000');
-      expect(component.step).toBe('confirm');
-      expect(component.mobileResult?.transactionId).toBe('w_1');
-    });
-  });
-
-  describe('getPriceDisplay', () => {
-    it('affiche le prix de base sans coupon', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.currencyMode = 'EUR';
-
-      expect(component.getPriceDisplay()).toBe('4.99 €');
-    });
-
-    it('applique le pourcentage de réduction quand promoDiscount défini', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.currencyMode = 'EUR';
-      component.promoDiscount = 50;
-
-      expect(component.getPriceDisplay()).toBe('2.50 €');
-    });
-
-    it('retourne "" si aucun plan sélectionné', () => {
-      component.selectedPlan = null;
-      expect(component.getPriceDisplay()).toBe('');
-    });
-
-    it('XOF sans promo → formatXof appliqué', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.currencyMode = 'XOF';
-      expect(component.getPriceDisplay()).toContain('3');
-    });
-
-    it('XOF avec promo → applique le facteur sur priceXof', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.currencyMode = 'XOF';
-      component.promoDiscount = 50;
-      // 3000 * 0.5 = 1500
-      expect(component.getPriceDisplay()).toContain('1');
-    });
-  });
-
-  describe('getOriginalPriceDisplay', () => {
-    it('vide sans promo', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.promoDiscount = null;
-      expect(component.getOriginalPriceDisplay()).toBe('');
-    });
-
-    it('vide sans plan', () => {
-      component.selectedPlan = null;
-      component.promoDiscount = 50;
-      expect(component.getOriginalPriceDisplay()).toBe('');
-    });
-
-    it('EUR avec promo → renvoie le prix original', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.currencyMode = 'EUR';
-      component.promoDiscount = 50;
-      expect(component.getOriginalPriceDisplay()).toBe('4.99 €');
-    });
-
-    it('XOF avec promo → formatXof', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.currencyMode = 'XOF';
-      component.promoDiscount = 50;
-      expect(component.getOriginalPriceDisplay()).toContain('3');
-    });
-  });
-
-  describe('initiatePayment - branches manquantes', () => {
-    it('no-op si aucun plan ou méthode sélectionnée', () => {
-      component.selectedPlan = null;
-      component.paymentMethod = 'stripe';
-      component.initiatePayment();
-      expect(subscriptionSpy.createSubscription).not.toHaveBeenCalled();
-    });
-
-    it('Orange : appel backend et passage à confirm', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.paymentMethod = 'orange';
-      component.phoneNumber = '+221780000000';
-      subscriptionSpy.initiateOrange.and.returnValue(of({
-        provider: 'ORANGE_MONEY', transactionId: 'o_1', status: 'PENDING',
-        amount: 3000, currency: 'XOF', redirectUrl: null, message: null
-      }));
-
-      component.initiatePayment();
-
-      expect(subscriptionSpy.initiateOrange).toHaveBeenCalledWith('PREMIUM', '+221780000000');
-      expect(component.step).toBe('confirm');
-      expect(component.mobileResult?.transactionId).toBe('o_1');
-    });
-
-    it('Wave en erreur → paymentError prend le message backend', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.paymentMethod = 'wave';
-      component.phoneNumber = '+221770000000';
-      subscriptionSpy.initiateWave.and.returnValue(
-        throwError(() => ({ error: { message: 'Provider Wave indisponible' } }))
-      );
-
-      component.initiatePayment();
-
-      expect(component.paying).toBe(false);
-      expect(component.paymentError).toBe('Provider Wave indisponible');
-    });
-
-    it('Orange en erreur sans message → fallback "Erreur Orange Money."', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.paymentMethod = 'orange';
-      component.phoneNumber = '+221780000000';
-      subscriptionSpy.initiateOrange.and.returnValue(throwError(() => ({})));
-
-      component.initiatePayment();
-
-      expect(component.paymentError).toBe('Erreur Orange Money.');
-    });
-  });
-
-  describe('validatePromo - branches', () => {
     it('no-op si code vide', () => {
       component.promoCode = '   ';
       component.validatePromo();
@@ -305,57 +158,142 @@ describe('SubscriptionComponent', () => {
     });
   });
 
-  describe('canPay', () => {
-    it('false si aucun paymentMethod', () => {
-      component.paymentMethod = null;
-      expect(component.canPay()).toBe(false);
+  describe('initiatePayment (PayTech-only)', () => {
+    it('no-op si aucun plan sélectionné', () => {
+      component.selectedPlan = null;
+      component.selectedMethodCode = 'wave';
+      component.initiatePayment();
+      expect(subscriptionSpy.createPayTechPayment).not.toHaveBeenCalled();
     });
 
-    it('false si wave/orange sans numéro', () => {
-      component.paymentMethod = 'wave';
-      component.phoneNumber = '   ';
-      expect(component.canPay()).toBe(false);
+    it('no-op si aucun méthode sélectionnée', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.selectedMethodCode = null;
+      component.initiatePayment();
+      expect(subscriptionSpy.createPayTechPayment).not.toHaveBeenCalled();
     });
 
-    it('true si stripe (pas de numéro requis)', () => {
-      component.paymentMethod = 'stripe';
-      expect(component.canPay()).toBe(true);
+    it('appelle createPayTechPayment avec planTier + couponCode + paytechMethodCode', () => {
+      component.selectedPlan = 'PREMIUM_PLUS';
+      component.selectedMethodCode = 'orange_money';
+      component.promoCode = '  EARLY50  ';
+      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
+
+      component.initiatePayment();
+
+      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
+        planTier: 'PREMIUM_PLUS',
+        couponCode: 'EARLY50',
+        paytechMethodCode: 'orange_money'
+      });
     });
 
-    it('true si wave + numéro renseigné', () => {
-      component.paymentMethod = 'wave';
-      component.phoneNumber = '+221770000000';
-      expect(component.canPay()).toBe(true);
+    it('couponCode vide → null transmis', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.selectedMethodCode = 'wave';
+      component.promoCode = '   ';
+      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
+
+      component.initiatePayment();
+
+      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
+        planTier: 'PREMIUM',
+        couponCode: null,
+        paytechMethodCode: 'wave'
+      });
+    });
+
+    it('erreur → paymentError prend le message backend', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.selectedMethodCode = 'wave';
+      subscriptionSpy.createPayTechPayment.and.returnValue(
+        throwError(() => ({ error: { message: 'PayTech KO' } }))
+      );
+
+      component.initiatePayment();
+
+      expect(component.payTechLoading).toBe(false);
+      expect(component.paymentError).toBe('PayTech KO');
+    });
+
+    it('erreur sans message → fallback générique', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.selectedMethodCode = 'card';
+      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
+
+      component.initiatePayment();
+
+      expect(component.paymentError).toBe('Erreur lors de la création du paiement.');
     });
   });
 
-  describe('isEnabled / allMethodsUnavailable', () => {
-    it('isEnabled=true par défaut si paymentMethods vide', () => {
-      component.paymentMethods = [];
-      expect(component.isEnabled('STRIPE')).toBe(true);
+  describe('getPriceDisplay (XOF only)', () => {
+    it('affiche le prix XOF sans coupon', () => {
+      component.selectedPlan = 'PREMIUM';
+      expect(component.getPriceDisplay()).toContain('2');
     });
 
-    it('isEnabled reflète le flag enabled du provider', () => {
-      component.paymentMethods = [
-        { provider: 'STRIPE', enabled: true },
-        { provider: 'WAVE', enabled: false }
-      ];
-      expect(component.isEnabled('STRIPE')).toBe(true);
-      expect(component.isEnabled('WAVE')).toBe(false);
-      expect(component.isEnabled('INCONNU')).toBe(false);
+    it('XOF avec promo → applique le facteur sur priceXof', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.promoDiscount = 50;
+      // 2990 * 0.5 = 1495
+      expect(component.getPriceDisplay()).toContain('1');
     });
 
-    it('allMethodsUnavailable=false si liste vide', () => {
-      component.paymentMethods = [];
-      expect(component.allMethodsUnavailable).toBe(false);
+    it('retourne "" si aucun plan sélectionné', () => {
+      component.selectedPlan = null;
+      expect(component.getPriceDisplay()).toBe('');
+    });
+  });
+
+  describe('getOriginalPriceDisplay', () => {
+    it('vide sans promo', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.promoDiscount = null;
+      expect(component.getOriginalPriceDisplay()).toBe('');
     });
 
-    it('allMethodsUnavailable=true si tous désactivés', () => {
-      component.paymentMethods = [
-        { provider: 'STRIPE', enabled: false },
-        { provider: 'WAVE', enabled: false }
-      ];
-      expect(component.allMethodsUnavailable).toBe(true);
+    it('vide sans plan', () => {
+      component.selectedPlan = null;
+      component.promoDiscount = 50;
+      expect(component.getOriginalPriceDisplay()).toBe('');
+    });
+
+    it('avec promo → renvoie le prix XOF original', () => {
+      component.selectedPlan = 'PREMIUM';
+      component.promoDiscount = 50;
+      expect(component.getOriginalPriceDisplay()).toContain('2');
+    });
+  });
+
+  describe('canPay / selectMethod', () => {
+    it('canPay false sans méthode', () => {
+      component.selectedMethodCode = null;
+      expect(component.canPay()).toBe(false);
+    });
+
+    it('canPay true avec méthode', () => {
+      component.selectedMethodCode = 'wave';
+      expect(component.canPay()).toBe(true);
+    });
+
+    it('selectMethod met à jour selectedMethodCode et reset paymentError', () => {
+      component.paymentError = 'previous';
+      component.selectMethod({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'wave' });
+      expect(component.selectedMethodCode).toBe('wave');
+      expect(component.paymentError).toBe('');
+    });
+  });
+
+  describe('iconFor', () => {
+    it('renvoie l\'icône mappée si paytechMethodCode connu', () => {
+      expect(component.iconFor({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'wave' })).toBe('🌊');
+      expect(component.iconFor({ provider: 'ORANGE_MONEY', enabled: true, displayName: 'Orange', displayOrder: 2, paytechMethodCode: 'orange_money' })).toBe('🟠');
+    });
+
+    it('fallback 💳 si code inconnu ou null', () => {
+      expect(component.iconFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: null })).toBe('💳');
+      expect(component.iconFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: 'unknown' })).toBe('💳');
     });
   });
 
@@ -369,13 +307,6 @@ describe('SubscriptionComponent', () => {
     it('selectPlan met à jour selectedPlan', () => {
       component.selectPlan('PREMIUM_PLUS');
       expect(component.selectedPlan).toBe('PREMIUM_PLUS');
-    });
-
-    it('selectMobile force XOF', () => {
-      component.currencyMode = 'EUR';
-      component.selectMobile('wave');
-      expect(component.paymentMethod).toBe('wave');
-      expect(component.currencyMode).toBe('XOF');
     });
 
     it('onPromoInput remet les flags promo à zéro', () => {
@@ -422,11 +353,12 @@ describe('SubscriptionComponent', () => {
       expect(component.planBadgeClass('FREE')).toContain('badge-free');
     });
 
-    it('providerLabel mappe les 4 providers + fallback', () => {
-      expect(component.providerLabel('STRIPE')).toBe('Carte bancaire');
+    it('providerLabel mappe les providers + fallback', () => {
       expect(component.providerLabel('WAVE')).toBe('Wave');
       expect(component.providerLabel('ORANGE_MONEY')).toBe('Orange Money');
-      expect(component.providerLabel('PAYDUNYA')).toContain('PayDunya');
+      expect(component.providerLabel('FREE_MONEY')).toBe('Free Money');
+      expect(component.providerLabel('CARTE')).toBe('Carte bancaire');
+      expect(component.providerLabel('PAYTECH')).toBe('PayTech');
       expect(component.providerLabel('AUTRE')).toBe('AUTRE');
     });
 
@@ -566,7 +498,7 @@ describe('SubscriptionComponent', () => {
     });
   });
 
-  describe('loadSubscription via ngOnInit', () => {
+  describe('ngOnInit branches', () => {
     it('plan payant actif → view=manage', () => {
       subscriptionSpy.getCurrent.and.returnValue(of({
         plan: 'PREMIUM', status: 'ACTIVE'
@@ -588,7 +520,7 @@ describe('SubscriptionComponent', () => {
       expect(component.upgradeContext).toBe('new');
     });
 
-    it('erreur API → view=upgrade (nouveau client)', () => {
+    it('erreur getCurrent → view=upgrade (nouveau client)', () => {
       subscriptionSpy.getCurrent.and.returnValue(throwError(() => new Error()));
 
       component.ngOnInit();
@@ -596,14 +528,27 @@ describe('SubscriptionComponent', () => {
       expect(component.view).toBe('upgrade');
     });
 
-    it('getPaymentMethods en erreur → liste fallback (Stripe activé)', () => {
-      subscriptionSpy.getPaymentMethods.and.returnValue(throwError(() => new Error()));
+    it('getAvailablePaymentMethods en erreur → liste vide', () => {
+      subscriptionSpy.getAvailablePaymentMethods.and.returnValue(throwError(() => new Error()));
       subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
 
       component.ngOnInit();
 
-      expect(component.paymentMethods.length).toBe(3);
-      expect(component.paymentMethods.find(m => m.provider === 'STRIPE')?.enabled).toBe(true);
+      expect(component.paymentMethods).toEqual([]);
+      expect(component.paymentMethodsLoading).toBe(false);
+    });
+
+    it('getAvailablePaymentMethods succès → liste hydratée', () => {
+      const methods = [
+        { provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'wave' }
+      ];
+      subscriptionSpy.getAvailablePaymentMethods.and.returnValue(of(methods));
+      subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
+
+      component.ngOnInit();
+
+      expect(component.paymentMethods).toEqual(methods);
+      expect(component.paymentMethodsLoading).toBe(false);
     });
   });
 
@@ -651,146 +596,6 @@ describe('SubscriptionComponent', () => {
     });
   });
 
-  describe('payWithPayDunya', () => {
-    it('no-op si pas de plan sélectionné', () => {
-      component.selectedPlan = null;
-      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice');
-      component.payWithPayDunya();
-      expect((subscriptionSpy as any).createPayDunyaInvoice).not.toHaveBeenCalled();
-    });
-
-    it('erreur → paymentError prend le message backend', () => {
-      component.selectedPlan = 'PREMIUM';
-      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice')
-        .and.returnValue(throwError(() => ({ error: { message: 'PayDunya KO' } })));
-
-      component.payWithPayDunya();
-
-      expect(component.payDunyaLoading).toBe(false);
-      expect(component.paymentError).toBe('PayDunya KO');
-    });
-
-    it('erreur sans message → fallback générique', () => {
-      component.selectedPlan = 'PREMIUM';
-      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice')
-        .and.returnValue(throwError(() => ({})));
-
-      component.payWithPayDunya();
-
-      expect(component.paymentError).toBe('Erreur lors de la création du paiement.');
-    });
-  });
-
-  describe('payWithPayTech', () => {
-    afterEach(() => localStorage.removeItem('paytech_ref'));
-
-    it('no-op si pas de plan sélectionné', () => {
-      component.selectedPlan = null;
-      component.payWithPayTech();
-      expect(subscriptionSpy.createPayTechPayment).not.toHaveBeenCalled();
-    });
-
-    it('erreur → paymentError prend le message backend', () => {
-      component.selectedPlan = 'PREMIUM';
-      subscriptionSpy.createPayTechPayment.and.returnValue(
-        throwError(() => ({ error: { message: 'PayTech KO' } }))
-      );
-
-      component.payWithPayTech();
-
-      expect(component.payTechLoading).toBe(false);
-      expect(component.paymentError).toBe('PayTech KO');
-    });
-
-    it('erreur sans message → fallback générique', () => {
-      component.selectedPlan = 'PREMIUM';
-      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
-
-      component.payWithPayTech();
-
-      expect(component.paymentError).toBe('Erreur lors de la création du paiement.');
-    });
-
-    it('appelle le service avec planTier + couponCode trimé', () => {
-      component.selectedPlan = 'PREMIUM_PLUS';
-      component.promoCode = '  EARLY50  ';
-      // L'observable next() écrit window.location.href → on coupe avant en levant une erreur
-      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
-
-      component.payWithPayTech();
-
-      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
-        planTier: 'PREMIUM_PLUS',
-        couponCode: 'EARLY50'
-      });
-    });
-
-    it('couponCode vide → null transmis au service', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.promoCode = '   ';
-      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
-
-      component.payWithPayTech();
-
-      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
-        planTier: 'PREMIUM',
-        couponCode: null
-      });
-    });
-  });
-
-  describe('initiatePayment - routing vers les agrégateurs XOF', () => {
-    it('paymentMethod=paytech → appelle payWithPayTech', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.paymentMethod = 'paytech';
-      // Force erreur pour éviter la navigation
-      subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
-
-      component.initiatePayment();
-
-      expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalled();
-      expect(component.paying).toBe(false);
-    });
-
-    it('paymentMethod=paydunya → appelle payWithPayDunya', () => {
-      component.selectedPlan = 'PREMIUM';
-      component.paymentMethod = 'paydunya';
-      (subscriptionSpy as any).createPayDunyaInvoice = jasmine.createSpy('createPayDunyaInvoice')
-        .and.returnValue(throwError(() => ({})));
-
-      component.initiatePayment();
-
-      expect((subscriptionSpy as any).createPayDunyaInvoice).toHaveBeenCalled();
-      expect(component.paying).toBe(false);
-    });
-  });
-
-  describe('providerLabel - PAYTECH', () => {
-    it('PAYTECH → label dédié', () => {
-      expect(component.providerLabel('PAYTECH')).toContain('PayTech');
-    });
-  });
-
-  describe('ngAfterViewChecked early-return branches', () => {
-    it('step != confirm → no-op (early return sans effet de bord)', () => {
-      component.step = 'plan';
-      expect(() => component.ngAfterViewChecked()).not.toThrow();
-    });
-
-    it('step=confirm mais paymentMethod != stripe → no-op', () => {
-      component.step = 'confirm';
-      component.paymentMethod = 'paytech';
-      expect(() => component.ngAfterViewChecked()).not.toThrow();
-    });
-
-    it('step=confirm + stripe + selectedPlan null → no-op', () => {
-      component.step = 'confirm';
-      component.paymentMethod = 'stripe';
-      component.selectedPlan = null;
-      expect(() => component.ngAfterViewChecked()).not.toThrow();
-    });
-  });
-
   describe('finish + formatXof', () => {
     it('finish → navigate /dashboard', () => {
       const router = TestBed.inject(Router);
@@ -802,7 +607,6 @@ describe('SubscriptionComponent', () => {
     it('formatXof formate en XOF sans décimale', () => {
       const out = component.formatXof(3000);
       expect(out).toContain('3');
-      // Intl peut ajouter un espace insécable ; on vérifie surtout que la valeur est présente
     });
   });
 });

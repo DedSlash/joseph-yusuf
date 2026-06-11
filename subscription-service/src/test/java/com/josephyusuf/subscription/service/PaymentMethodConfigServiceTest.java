@@ -29,57 +29,75 @@ class PaymentMethodConfigServiceTest {
     @InjectMocks
     private PaymentMethodConfigService service;
 
+    private PaymentMethodConfig cfg(PaymentProvider p, boolean enabled, String displayName,
+                                     int order, String methodCode) {
+        return PaymentMethodConfig.builder()
+                .provider(p).enabled(enabled)
+                .displayName(displayName).displayOrder(order)
+                .paytechMethodCode(methodCode)
+                .updatedAt(Instant.now()).build();
+    }
+
     @Test
-    @DisplayName("getAll → returns all configs mapped to DTOs")
-    void getAll() {
-        PaymentMethodConfig stripe = PaymentMethodConfig.builder()
-                .provider(PaymentProvider.STRIPE).enabled(true).updatedAt(Instant.now()).build();
-        PaymentMethodConfig wave = PaymentMethodConfig.builder()
-                .provider(PaymentProvider.WAVE).enabled(false).updatedAt(Instant.now()).build();
-        when(repository.findAll()).thenReturn(List.of(stripe, wave));
+    @DisplayName("getAll → trie par displayOrder et mappe tout (admin)")
+    void getAll_sortsAndMaps() {
+        when(repository.findAll()).thenReturn(List.of(
+                cfg(PaymentProvider.PAYTECH, false, "PayTech", 98, null),
+                cfg(PaymentProvider.WAVE, true, "Wave", 1, "wave"),
+                cfg(PaymentProvider.CARTE, true, "Carte bancaire", 4, "card")
+        ));
 
         List<PaymentMethodConfigDto> result = service.getAll();
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getProvider()).isEqualTo(PaymentProvider.STRIPE);
-        assertThat(result.get(0).isEnabled()).isTrue();
-        assertThat(result.get(1).getProvider()).isEqualTo(PaymentProvider.WAVE);
-        assertThat(result.get(1).isEnabled()).isFalse();
+        assertThat(result).extracting(PaymentMethodConfigDto::getProvider)
+                .containsExactly(PaymentProvider.WAVE, PaymentProvider.CARTE, PaymentProvider.PAYTECH);
+        assertThat(result.get(0).getDisplayName()).isEqualTo("Wave");
+        assertThat(result.get(0).getPaytechMethodCode()).isEqualTo("wave");
     }
 
     @Test
-    @DisplayName("isEnabled → true when provider exists and enabled")
+    @DisplayName("getAvailableForClient → enabled=true ET displayOrder<=97 (agrégateurs exclus)")
+    void getAvailableForClient_filtersAndSorts() {
+        when(repository.findAll()).thenReturn(List.of(
+                cfg(PaymentProvider.PAYTECH, true, "PayTech", 98, null),       // exclus : agrégateur
+                cfg(PaymentProvider.WAVE, true, "Wave", 1, "wave"),
+                cfg(PaymentProvider.FREE_MONEY, false, "Free Money", 3, "free_money"), // exclus : disabled
+                cfg(PaymentProvider.ORANGE_MONEY, true, "Orange Money", 2, "orange_money")
+        ));
+
+        List<PaymentMethodConfigDto> result = service.getAvailableForClient();
+
+        assertThat(result).extracting(PaymentMethodConfigDto::getProvider)
+                .containsExactly(PaymentProvider.WAVE, PaymentProvider.ORANGE_MONEY);
+    }
+
+    @Test
+    @DisplayName("isEnabled → true si provider existant et enabled")
     void isEnabled_true() {
-        PaymentMethodConfig config = PaymentMethodConfig.builder()
-                .provider(PaymentProvider.STRIPE).enabled(true).build();
-        when(repository.findById(PaymentProvider.STRIPE)).thenReturn(Optional.of(config));
-
-        assertThat(service.isEnabled(PaymentProvider.STRIPE)).isTrue();
+        when(repository.findById(PaymentProvider.WAVE)).thenReturn(Optional.of(
+                cfg(PaymentProvider.WAVE, true, "Wave", 1, "wave")));
+        assertThat(service.isEnabled(PaymentProvider.WAVE)).isTrue();
     }
 
     @Test
-    @DisplayName("isEnabled → false when provider exists but disabled")
+    @DisplayName("isEnabled → false si provider désactivé")
     void isEnabled_disabled() {
-        PaymentMethodConfig config = PaymentMethodConfig.builder()
-                .provider(PaymentProvider.STRIPE).enabled(false).build();
-        when(repository.findById(PaymentProvider.STRIPE)).thenReturn(Optional.of(config));
-
-        assertThat(service.isEnabled(PaymentProvider.STRIPE)).isFalse();
+        when(repository.findById(PaymentProvider.PAYTECH)).thenReturn(Optional.of(
+                cfg(PaymentProvider.PAYTECH, false, "PayTech", 98, null)));
+        assertThat(service.isEnabled(PaymentProvider.PAYTECH)).isFalse();
     }
 
     @Test
-    @DisplayName("isEnabled → false when provider not found")
+    @DisplayName("isEnabled → false si provider absent")
     void isEnabled_notFound() {
         when(repository.findById(PaymentProvider.ORANGE_MONEY)).thenReturn(Optional.empty());
-
         assertThat(service.isEnabled(PaymentProvider.ORANGE_MONEY)).isFalse();
     }
 
     @Test
-    @DisplayName("toggle → flips enabled and returns DTO")
+    @DisplayName("toggle → flip enabled sur config existante")
     void toggle_existing() {
-        PaymentMethodConfig config = PaymentMethodConfig.builder()
-                .provider(PaymentProvider.WAVE).enabled(false).updatedAt(Instant.now()).build();
+        PaymentMethodConfig config = cfg(PaymentProvider.WAVE, false, "Wave", 1, "wave");
         when(repository.findById(PaymentProvider.WAVE)).thenReturn(Optional.of(config));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -90,7 +108,7 @@ class PaymentMethodConfigServiceTest {
     }
 
     @Test
-    @DisplayName("toggle → creates new config if not found")
+    @DisplayName("toggle → crée nouvelle config si absente")
     void toggle_new() {
         when(repository.findById(PaymentProvider.ORANGE_MONEY)).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));

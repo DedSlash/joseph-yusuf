@@ -6,6 +6,7 @@ import com.josephyusuf.subscription.config.PayTechConfig;
 import com.josephyusuf.subscription.dto.PayTechPaymentResponse;
 import com.josephyusuf.subscription.dto.PendingTransactionParams;
 import com.josephyusuf.subscription.dto.PromoCodeValidation;
+import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.exception.InvalidPlanException;
 import com.josephyusuf.subscription.exception.PaymentException;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,48 +58,40 @@ class PayTechServiceTest {
                 adminClient, new ObjectMapper());
     }
 
-    @Test
-    @DisplayName("createPayment PREMIUM → 2990 XOF + ref JY-* + redirect_url régulier")
     @SuppressWarnings("unchecked")
-    void createPayment_premium_success() {
-        UUID userId = UUID.randomUUID();
-        Map<String, Object> redirect = new HashMap<>();
-        redirect.put("regular", "https://paytech.sn/payment/checkout/abc");
-        redirect.put("express", "https://paytech.sn/payment/mobile/abc");
+    private void stubPayTechOk() {
         Map<String, Object> body = new HashMap<>();
         body.put("success", 1);
-        body.put("redirect_url", redirect);
-
+        body.put("redirect_url", Map.of("regular", "https://paytech.sn/payment/checkout/abc",
+                "express", "https://paytech.sn/payment/mobile/abc"));
         when(restTemplate.postForEntity(anyString(), any(HttpEntity.class),
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
+    }
 
-        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null);
+    @Test
+    @DisplayName("createPayment PREMIUM sans method code → 2990 XOF + provider PAYTECH (agrégateur)")
+    void createPayment_premium_noMethodCode() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null, null);
 
         assertThat(result.getRefCommand()).startsWith("JY-");
-        assertThat(result.getRedirectUrl()).isEqualTo("https://paytech.sn/payment/checkout/abc");
-        assertThat(result.getMobileRedirectUrl()).isEqualTo("https://paytech.sn/payment/mobile/abc");
-
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
         verify(subscriptionService).recordPendingTransaction(captor.capture());
         assertThat(captor.getValue().getAmount()).isEqualByComparingTo(new BigDecimal("2990"));
-        assertThat(captor.getValue().getCurrency()).isEqualTo("XOF");
+        assertThat(captor.getValue().getProvider()).isEqualTo(PaymentProvider.PAYTECH);
     }
 
     @Test
     @DisplayName("createPayment PREMIUM_PLUS → 5990 XOF")
-    @SuppressWarnings("unchecked")
-    void createPayment_premiumPlus_success() {
+    void createPayment_premiumPlus() {
         UUID userId = UUID.randomUUID();
-        Map<String, Object> body = new HashMap<>();
-        body.put("success", "1");
-        body.put("redirect_url", Map.of("regular", "u", "express", "m"));
-        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class),
-                eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
-                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
+        stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM_PLUS", null);
+        payTechService.createPayment(userId, "PREMIUM_PLUS", null, null);
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -107,21 +100,75 @@ class PayTechServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment avec EARLY50 → 1495 XOF (50% sur 2990)")
-    @SuppressWarnings("unchecked")
-    void createPayment_withCoupon_appliesDiscount() {
+    @DisplayName("createPayment avec method code 'wave' → provider WAVE + target_payment dans payload")
+    void createPayment_withMethodCodeWave_setsTargetPayment() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, "wave");
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
+        Map<String, Object> sentBody = reqCaptor.getValue().getBody();
+        assertThat(sentBody).containsEntry("target_payment", "wave");
+
+        ArgumentCaptor<PendingTransactionParams> txCaptor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(txCaptor.capture());
+        assertThat(txCaptor.getValue().getProvider()).isEqualTo(PaymentProvider.WAVE);
+    }
+
+    @Test
+    @DisplayName("createPayment avec method code 'orange_money' → provider ORANGE_MONEY")
+    void createPayment_orangeMoney() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, "orange_money");
+
+        ArgumentCaptor<PendingTransactionParams> txCaptor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(txCaptor.capture());
+        assertThat(txCaptor.getValue().getProvider()).isEqualTo(PaymentProvider.ORANGE_MONEY);
+    }
+
+    @Test
+    @DisplayName("createPayment avec method code 'free_money' → provider FREE_MONEY")
+    void createPayment_freeMoney() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, "free_money");
+
+        ArgumentCaptor<PendingTransactionParams> txCaptor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(txCaptor.capture());
+        assertThat(txCaptor.getValue().getProvider()).isEqualTo(PaymentProvider.FREE_MONEY);
+    }
+
+    @Test
+    @DisplayName("createPayment avec method code 'card' → provider CARTE")
+    void createPayment_card() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, "card");
+
+        ArgumentCaptor<PendingTransactionParams> txCaptor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(txCaptor.capture());
+        assertThat(txCaptor.getValue().getProvider()).isEqualTo(PaymentProvider.CARTE);
+    }
+
+    @Test
+    @DisplayName("createPayment EARLY50 → 1495 XOF + discount tracé")
+    void createPayment_withCoupon() {
         UUID userId = UUID.randomUUID();
         when(adminClient.validatePublic("EARLY50")).thenReturn(
                 PromoCodeValidation.builder().valid(true).discountPercent(50).code("EARLY50").build());
+        stubPayTechOk();
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("success", 1);
-        body.put("redirect_url", Map.of("regular", "u", "express", "m"));
-        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class),
-                eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
-                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
-
-        payTechService.createPayment(userId, "PREMIUM", "EARLY50");
+        payTechService.createPayment(userId, "PREMIUM", "EARLY50", "wave");
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -135,7 +182,7 @@ class PayTechServiceTest {
     @DisplayName("createPayment FREE → InvalidPlanException")
     void createPayment_free_throws() {
         UUID userId = UUID.randomUUID();
-        assertThatThrownBy(() -> payTechService.createPayment(userId, "FREE", null))
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "FREE", null, null))
                 .isInstanceOf(InvalidPlanException.class);
     }
 
@@ -151,7 +198,7 @@ class PayTechServiceTest {
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
 
-        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null))
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null))
                 .isInstanceOf(PaymentException.class)
                 .hasMessageContaining("Clés API invalides");
     }
@@ -165,7 +212,7 @@ class PayTechServiceTest {
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenThrow(new RuntimeException("Connection refused"));
 
-        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null))
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null))
                 .isInstanceOf(PaymentException.class)
                 .hasMessageContaining("Impossible de contacter PayTech");
     }
@@ -182,28 +229,21 @@ class PayTechServiceTest {
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
 
-        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null);
+        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null, null);
 
         assertThat(result.getRedirectUrl()).isEqualTo("https://paytech.sn/single-url");
         assertThat(result.getMobileRedirectUrl()).isEqualTo("https://paytech.sn/single-url");
     }
 
     @Test
-    @DisplayName("createPayment coupon invalide → pas de réduction appliquée")
-    @SuppressWarnings("unchecked")
+    @DisplayName("createPayment coupon invalide → pas de réduction")
     void createPayment_invalidCoupon_noDiscount() {
         UUID userId = UUID.randomUUID();
         when(adminClient.validatePublic("EXPIRED")).thenReturn(
                 PromoCodeValidation.builder().valid(false).reason("Expiré").build());
+        stubPayTechOk();
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("success", 1);
-        body.put("redirect_url", Map.of("regular", "u", "express", "m"));
-        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class),
-                eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
-                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
-
-        payTechService.createPayment(userId, "PREMIUM", "EXPIRED");
+        payTechService.createPayment(userId, "PREMIUM", "EXPIRED", null);
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -213,7 +253,7 @@ class PayTechServiceTest {
     }
 
     @Test
-    @DisplayName("baseUrl est toujours paytech.sn/api (env juste dans le payload)")
+    @DisplayName("baseUrl est toujours paytech.sn/api")
     void baseUrl_isAlwaysPaytechSn() {
         assertThat(config.getBaseUrl()).isEqualTo("https://paytech.sn/api");
     }
