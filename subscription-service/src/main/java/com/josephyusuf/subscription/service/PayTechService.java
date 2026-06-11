@@ -120,15 +120,17 @@ public class PayTechService {
 
     /**
      * Mapping inverse code PayTech → PaymentProvider pour tracer le moyen réellement choisi.
+     * Les codes attendus sont littéralement ceux de la doc officielle (§TARGET PAYMENT LIST) :
+     * "Wave", "Orange Money", "Free Money", "Carte Bancaire".
      * Si l'utilisateur n'a pas pré-sélectionné de moyen, on retombe sur PAYTECH (agrégateur).
      */
     private PaymentProvider providerFromMethodCode(String paytechMethodCode) {
         if (paytechMethodCode == null) return PaymentProvider.PAYTECH;
         return switch (paytechMethodCode) {
-            case "wave" -> PaymentProvider.WAVE;
-            case "orange_money" -> PaymentProvider.ORANGE_MONEY;
-            case "free_money" -> PaymentProvider.FREE_MONEY;
-            case "card" -> PaymentProvider.CARTE;
+            case "Wave" -> PaymentProvider.WAVE;
+            case "Orange Money" -> PaymentProvider.ORANGE_MONEY;
+            case "Free Money" -> PaymentProvider.FREE_MONEY;
+            case "Carte Bancaire" -> PaymentProvider.CARTE;
             default -> PaymentProvider.PAYTECH;
         };
     }

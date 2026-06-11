@@ -100,17 +100,17 @@ class PayTechServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment avec method code 'wave' → provider WAVE + target_payment dans payload")
+    @DisplayName("createPayment avec method code 'Wave' → provider WAVE + target_payment dans payload")
     void createPayment_withMethodCodeWave_setsTargetPayment() {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "wave");
+        payTechService.createPayment(userId, "PREMIUM", null, "Wave");
 
         ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
         Map<String, Object> sentBody = reqCaptor.getValue().getBody();
-        assertThat(sentBody).containsEntry("target_payment", "wave");
+        assertThat(sentBody).containsEntry("target_payment", "Wave");
 
         ArgumentCaptor<PendingTransactionParams> txCaptor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -119,12 +119,12 @@ class PayTechServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment avec method code 'orange_money' → provider ORANGE_MONEY")
+    @DisplayName("createPayment avec method code 'Orange Money' → provider ORANGE_MONEY")
     void createPayment_orangeMoney() {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "orange_money");
+        payTechService.createPayment(userId, "PREMIUM", null, "Orange Money");
 
         ArgumentCaptor<PendingTransactionParams> txCaptor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -133,12 +133,12 @@ class PayTechServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment avec method code 'free_money' → provider FREE_MONEY")
+    @DisplayName("createPayment avec method code 'Free Money' → provider FREE_MONEY")
     void createPayment_freeMoney() {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "free_money");
+        payTechService.createPayment(userId, "PREMIUM", null, "Free Money");
 
         ArgumentCaptor<PendingTransactionParams> txCaptor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -147,12 +147,12 @@ class PayTechServiceTest {
     }
 
     @Test
-    @DisplayName("createPayment avec method code 'card' → provider CARTE")
+    @DisplayName("createPayment avec method code 'Carte Bancaire' → provider CARTE")
     void createPayment_card() {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "card");
+        payTechService.createPayment(userId, "PREMIUM", null, "Carte Bancaire");
 
         ArgumentCaptor<PendingTransactionParams> txCaptor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -168,7 +168,7 @@ class PayTechServiceTest {
                 PromoCodeValidation.builder().valid(true).discountPercent(50).code("EARLY50").build());
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", "EARLY50", "wave");
+        payTechService.createPayment(userId, "PREMIUM", "EARLY50", "Wave");
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);

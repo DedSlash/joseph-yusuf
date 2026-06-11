@@ -28,6 +28,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -127,7 +128,7 @@ class PayTechWebhookServiceTest {
     }
 
     @Test
-    @DisplayName("handleIPN type_event != sale_complete → ignoré silencieusement")
+    @DisplayName("handleIPN type_event non documenté → ignoré silencieusement")
     void handleIPN_otherEvent_ignored() throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("type_event", "sale_pending");
@@ -137,6 +138,103 @@ class PayTechWebhookServiceTest {
         webhookService.handleIPN(payload);
 
         verify(subscriptionService, never()).activateAfterPayment(any(), any(), any(), any());
+        verify(subscriptionService, never()).markTransactionFailed(any(), any());
+        verify(subscriptionService, never()).markRefundAndDowngrade(any(), any());
+    }
+
+    @Test
+    @DisplayName("handleIPN sale_canceled → markTransactionFailed avec raison")
+    void handleIPN_saleCanceled_marksFailed() throws Exception {
+        String ref = "JY-cancel-1";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type_event", "sale_canceled");
+        payload.put("ref_command", ref);
+        payload.put("api_key_sha256", sha256(API_KEY));
+        payload.put("api_secret_sha256", sha256(API_SECRET));
+        when(transactionRepository.findByTransactionId(ref)).thenReturn(Optional.empty());
+
+        webhookService.handleIPN(payload);
+
+        verify(subscriptionService).markTransactionFailed(eq(ref), anyString());
+        verify(subscriptionService, never()).activateAfterPayment(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("handleIPN sale_canceled sur tx déjà SUCCEEDED → idempotence, no-op")
+    void handleIPN_saleCanceledOnSucceeded_ignored() throws Exception {
+        String ref = "JY-cancel-on-success";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type_event", "sale_canceled");
+        payload.put("ref_command", ref);
+        payload.put("api_key_sha256", sha256(API_KEY));
+        payload.put("api_secret_sha256", sha256(API_SECRET));
+
+        Transaction succeeded = Transaction.builder().transactionId(ref)
+                .status(TransactionStatus.SUCCEEDED).build();
+        when(transactionRepository.findByTransactionId(ref)).thenReturn(Optional.of(succeeded));
+
+        webhookService.handleIPN(payload);
+
+        verify(subscriptionService, never()).markTransactionFailed(any(), any());
+    }
+
+    @Test
+    @DisplayName("handleIPN refund_complete → markRefundAndDowngrade avec userId du custom_field")
+    void handleIPN_refundComplete_downgrades() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String ref = "JY-refund-1";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type_event", "refund_complete");
+        payload.put("ref_command", ref);
+        payload.put("api_key_sha256", sha256(API_KEY));
+        payload.put("api_secret_sha256", sha256(API_SECRET));
+
+        Map<String, String> custom = new HashMap<>();
+        custom.put("userId", userId.toString());
+        custom.put("planTier", "PREMIUM");
+        payload.put("custom_field", objectMapper.writeValueAsString(custom));
+
+        when(transactionRepository.findByTransactionId(ref)).thenReturn(Optional.empty());
+
+        webhookService.handleIPN(payload);
+
+        verify(subscriptionService).markRefundAndDowngrade(userId, ref);
+    }
+
+    @Test
+    @DisplayName("handleIPN refund_complete sur tx déjà REFUNDED → idempotence, no-op")
+    void handleIPN_refundCompleteAlreadyRefunded_ignored() throws Exception {
+        String ref = "JY-refund-dup";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type_event", "refund_complete");
+        payload.put("ref_command", ref);
+        payload.put("api_key_sha256", sha256(API_KEY));
+        payload.put("api_secret_sha256", sha256(API_SECRET));
+
+        Transaction refunded = Transaction.builder().transactionId(ref)
+                .status(TransactionStatus.REFUNDED).build();
+        when(transactionRepository.findByTransactionId(ref)).thenReturn(Optional.of(refunded));
+
+        webhookService.handleIPN(payload);
+
+        verify(subscriptionService, never()).markRefundAndDowngrade(any(), any());
+    }
+
+    @Test
+    @DisplayName("handleIPN refund_complete sans userId dans custom_field → fallback markTransactionRefunded")
+    void handleIPN_refundCompleteNoUserId_fallbackRefund() throws Exception {
+        String ref = "JY-refund-nouser";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type_event", "refund_complete");
+        payload.put("ref_command", ref);
+        payload.put("api_key_sha256", sha256(API_KEY));
+        payload.put("api_secret_sha256", sha256(API_SECRET));
+        when(transactionRepository.findByTransactionId(ref)).thenReturn(Optional.empty());
+
+        webhookService.handleIPN(payload);
+
+        verify(subscriptionService).markTransactionRefunded(ref);
+        verify(subscriptionService, never()).markRefundAndDowngrade(any(), any());
     }
 
     @Test

@@ -307,5 +307,41 @@ class SubscriptionServiceTest {
 
             verify(transactionRepository).save(argThat(t -> t.getStatus() == TransactionStatus.REFUNDED));
         }
+
+        @Test
+        @DisplayName("markRefundAndDowngrade → tx REFUNDED + plan FREE + sync auth")
+        void markRefundAndDowngrade_full() {
+            Transaction tx = Transaction.builder().status(TransactionStatus.SUCCEEDED).build();
+            when(transactionRepository.findByTransactionId("ref")).thenReturn(Optional.of(tx));
+            Subscription sub = Subscription.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM)
+                    .status(SubscriptionStatus.ACTIVE).autoRenew(true).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(sub));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            service.markRefundAndDowngrade(USER_ID, "ref");
+
+            verify(transactionRepository).save(argThat(t -> t.getStatus() == TransactionStatus.REFUNDED));
+            verify(subscriptionRepository).save(argThat(s ->
+                    s.getPlan() == PlanTier.FREE
+                            && s.getStatus() == SubscriptionStatus.CANCELLED
+                            && s.getCancelledAt() != null
+                            && !s.isAutoRenew()));
+            verify(authClient).updatePlan(argThat(req -> req.getPlan() == PlanTier.FREE));
+        }
+
+        @Test
+        @DisplayName("markRefundAndDowngrade sans subscription locale → tx REFUNDED + sync auth seulement")
+        void markRefundAndDowngrade_noSubscription() {
+            Transaction tx = Transaction.builder().status(TransactionStatus.SUCCEEDED).build();
+            when(transactionRepository.findByTransactionId("ref")).thenReturn(Optional.of(tx));
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+
+            service.markRefundAndDowngrade(USER_ID, "ref");
+
+            verify(transactionRepository).save(argThat(t -> t.getStatus() == TransactionStatus.REFUNDED));
+            verify(subscriptionRepository, never()).save(any(Subscription.class));
+            verify(authClient).updatePlan(argThat(req -> req.getPlan() == PlanTier.FREE));
+        }
     }
 }

@@ -29,6 +29,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PayTechWebhookService {
 
+    /** Événements PayTech documentés (doc.intech.sn/doc_paytech.php — §IPN). */
+    private static final String EVENT_SALE_COMPLETE = "sale_complete";
+    private static final String EVENT_SALE_CANCELED = "sale_canceled";
+    private static final String EVENT_REFUND_COMPLETE = "refund_complete";
+
     private final PayTechConfig config;
     private final TransactionRepository transactionRepository;
     private final SubscriptionService subscriptionService;
@@ -37,9 +42,16 @@ public class PayTechWebhookService {
     private final ObjectMapper objectMapper;
 
     /**
-     * Traite l'IPN PayTech : vérifie l'authenticité via SHA256(API_KEY/API_SECRET),
-     * filtre sur type_event=sale_complete, active l'abonnement, synchronise le plan.
-     * Idempotent : un même refCommand ne déclenche qu'une seule activation.
+     * Traite l'IPN PayTech : vérifie d'abord la signature via SHA256(API_KEY/API_SECRET),
+     * puis dispatche selon {@code type_event}.
+     * <p>
+     * Événements gérés :
+     * <ul>
+     *   <li>{@code sale_complete} : active l'abonnement + sync auth-service + enregistre coupon</li>
+     *   <li>{@code sale_canceled} : marque la transaction FAILED</li>
+     *   <li>{@code refund_complete} : marque la transaction REFUNDED + downgrade FREE</li>
+     * </ul>
+     * Toutes les opérations sont idempotentes via le {@code ref_command}.
      */
     @Transactional
     public void handleIPN(Map<String, Object> payload) {
@@ -50,14 +62,19 @@ public class PayTechWebhookService {
         }
 
         String typeEvent = String.valueOf(payload.get("type_event"));
-        if (!"sale_complete".equals(typeEvent)) {
-            log.info("PayTech IPN ignoré type_event={}", typeEvent);
-            return;
-        }
-
         String refCommand = String.valueOf(payload.get("ref_command"));
-        if (isAlreadyProcessed(refCommand)) {
-            log.info("PayTech IPN déjà traité ref={} — idempotence", refCommand);
+
+        switch (typeEvent) {
+            case EVENT_SALE_COMPLETE -> handleSaleComplete(refCommand, payload);
+            case EVENT_SALE_CANCELED -> handleSaleCanceled(refCommand);
+            case EVENT_REFUND_COMPLETE -> handleRefundComplete(refCommand, payload);
+            default -> log.info("PayTech IPN ignoré type_event={} ref={}", typeEvent, refCommand);
+        }
+    }
+
+    private void handleSaleComplete(String refCommand, Map<String, Object> payload) {
+        if (isAlreadySucceeded(refCommand)) {
+            log.info("PayTech sale_complete déjà traité ref={} — idempotence", refCommand);
             return;
         }
 
@@ -66,7 +83,8 @@ public class PayTechWebhookService {
         String planTier = customField.get("planTier");
         String couponCode = customField.get("couponCode");
         if (userIdStr == null || planTier == null) {
-            log.error("PayTech IPN custom_field absent ou incomplet ref={} : {}", refCommand, customField);
+            log.error("PayTech sale_complete custom_field absent ou incomplet ref={} : {}",
+                    refCommand, customField);
             return;
         }
 
@@ -96,9 +114,52 @@ public class PayTechWebhookService {
                 userId, planTier, refCommand);
     }
 
-    private boolean isAlreadyProcessed(String refCommand) {
+    private void handleSaleCanceled(String refCommand) {
+        if (isAlreadyTerminal(refCommand)) {
+            log.info("PayTech sale_canceled ignoré, tx déjà terminale ref={}", refCommand);
+            return;
+        }
+        subscriptionService.markTransactionFailed(refCommand, "Annulé par l'utilisateur sur PayTech");
+        log.info("PayTech sale_canceled traité ref={}", refCommand);
+    }
+
+    private void handleRefundComplete(String refCommand, Map<String, Object> payload) {
+        if (isAlreadyRefunded(refCommand)) {
+            log.info("PayTech refund_complete déjà traité ref={} — idempotence", refCommand);
+            return;
+        }
+
+        Map<String, String> customField = parseCustomField(payload.get("custom_field"));
+        String userIdStr = customField.get("userId");
+        if (userIdStr == null) {
+            log.error("PayTech refund_complete sans userId dans custom_field ref={}", refCommand);
+            subscriptionService.markTransactionRefunded(refCommand);
+            return;
+        }
+
+        UUID userId = UUID.fromString(userIdStr);
+        subscriptionService.markRefundAndDowngrade(userId, refCommand);
+        log.info("PayTech refund traité userId={} ref={}", userId, refCommand);
+    }
+
+    private boolean isAlreadySucceeded(String refCommand) {
         return transactionRepository.findByTransactionId(refCommand)
                 .map(tx -> tx.getStatus() == TransactionStatus.SUCCEEDED)
+                .orElse(false);
+    }
+
+    private boolean isAlreadyRefunded(String refCommand) {
+        return transactionRepository.findByTransactionId(refCommand)
+                .map(tx -> tx.getStatus() == TransactionStatus.REFUNDED)
+                .orElse(false);
+    }
+
+    private boolean isAlreadyTerminal(String refCommand) {
+        return transactionRepository.findByTransactionId(refCommand)
+                .map(tx -> tx.getStatus() == TransactionStatus.SUCCEEDED
+                        || tx.getStatus() == TransactionStatus.FAILED
+                        || tx.getStatus() == TransactionStatus.CANCELLED
+                        || tx.getStatus() == TransactionStatus.REFUNDED)
                 .orElse(false);
     }
 

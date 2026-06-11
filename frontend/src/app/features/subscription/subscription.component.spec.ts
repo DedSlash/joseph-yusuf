@@ -162,7 +162,7 @@ describe('SubscriptionComponent', () => {
   describe('initiatePayment (PayTech-only)', () => {
     it('no-op si aucun plan sélectionné', () => {
       component.selectedPlan = null;
-      component.selectedMethodCode = 'wave';
+      component.selectedMethodCode = 'Wave';
       component.initiatePayment();
       expect(subscriptionSpy.createPayTechPayment).not.toHaveBeenCalled();
     });
@@ -176,7 +176,7 @@ describe('SubscriptionComponent', () => {
 
     it('appelle createPayTechPayment avec planTier + couponCode + paytechMethodCode', () => {
       component.selectedPlan = 'PREMIUM_PLUS';
-      component.selectedMethodCode = 'orange_money';
+      component.selectedMethodCode = 'Orange Money';
       component.promoCode = '  EARLY50  ';
       subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
 
@@ -185,13 +185,13 @@ describe('SubscriptionComponent', () => {
       expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
         planTier: 'PREMIUM_PLUS',
         couponCode: 'EARLY50',
-        paytechMethodCode: 'orange_money'
+        paytechMethodCode: 'Orange Money'
       });
     });
 
     it('couponCode vide → null transmis', () => {
       component.selectedPlan = 'PREMIUM';
-      component.selectedMethodCode = 'wave';
+      component.selectedMethodCode = 'Wave';
       component.promoCode = '   ';
       subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
 
@@ -200,13 +200,13 @@ describe('SubscriptionComponent', () => {
       expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
         planTier: 'PREMIUM',
         couponCode: null,
-        paytechMethodCode: 'wave'
+        paytechMethodCode: 'Wave'
       });
     });
 
     it('erreur → paymentError prend le message backend', () => {
       component.selectedPlan = 'PREMIUM';
-      component.selectedMethodCode = 'wave';
+      component.selectedMethodCode = 'Wave';
       subscriptionSpy.createPayTechPayment.and.returnValue(
         throwError(() => ({ error: { message: 'PayTech KO' } }))
       );
@@ -274,22 +274,24 @@ describe('SubscriptionComponent', () => {
     });
 
     it('canPay true avec méthode', () => {
-      component.selectedMethodCode = 'wave';
+      component.selectedMethodCode = 'Wave';
       expect(component.canPay()).toBe(true);
     });
 
     it('selectMethod met à jour selectedMethodCode et reset paymentError', () => {
       component.paymentError = 'previous';
-      component.selectMethod({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'wave' });
-      expect(component.selectedMethodCode).toBe('wave');
+      component.selectMethod({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' });
+      expect(component.selectedMethodCode).toBe('Wave');
       expect(component.paymentError).toBe('');
     });
   });
 
   describe('iconFor', () => {
-    it('renvoie l\'icône mappée si paytechMethodCode connu', () => {
-      expect(component.iconFor({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'wave' })).toBe('🌊');
-      expect(component.iconFor({ provider: 'ORANGE_MONEY', enabled: true, displayName: 'Orange', displayOrder: 2, paytechMethodCode: 'orange_money' })).toBe('🟠');
+    it('renvoie l\'icône mappée si paytechMethodCode connu (valeurs doc PayTech)', () => {
+      expect(component.iconFor({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' })).toBe('🌊');
+      expect(component.iconFor({ provider: 'ORANGE_MONEY', enabled: true, displayName: 'Orange Money', displayOrder: 2, paytechMethodCode: 'Orange Money' })).toBe('🟠');
+      expect(component.iconFor({ provider: 'FREE_MONEY', enabled: true, displayName: 'Free Money', displayOrder: 3, paytechMethodCode: 'Free Money' })).toBe('💚');
+      expect(component.iconFor({ provider: 'CARTE', enabled: true, displayName: 'Carte bancaire', displayOrder: 4, paytechMethodCode: 'Carte Bancaire' })).toBe('💳');
     });
 
     it('fallback 💳 si code inconnu ou null', () => {
@@ -541,7 +543,7 @@ describe('SubscriptionComponent', () => {
 
     it('getAvailablePaymentMethods succès → liste hydratée', () => {
       const methods = [
-        { provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'wave' }
+        { provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' }
       ];
       subscriptionSpy.getAvailablePaymentMethods.and.returnValue(of(methods));
       subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));
