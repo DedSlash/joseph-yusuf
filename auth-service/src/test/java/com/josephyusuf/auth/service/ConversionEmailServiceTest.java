@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -97,7 +98,7 @@ class ConversionEmailServiceTest {
                 .thenReturn(List.of());
         doThrow(new MailSendException("SMTP down")).when(mailSender).send((SimpleMailMessage) any());
 
-        service.sendConversionEmails();
-        // pas d'exception remontée
+        assertThatCode(() -> service.sendConversionEmails())
+                .doesNotThrowAnyException();
     }
 }

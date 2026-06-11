@@ -125,8 +125,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
         when(userRepository.findById(userId)).thenReturn(Optional.of(userAfterTrial));
-        when(jwtService.generateAccessToken(eq(userId), eq("test@example.com"), eq(Plan.PREMIUM_PLUS), eq(Role.USER),
-                eq("SN"), eq("XOF"), eq(true), any(LocalDateTime.class))).thenReturn("access-token-value");
+        when(jwtService.generateAccessToken(any(AccessTokenClaims.class))).thenReturn("access-token-value");
         when(refreshTokenService.createRefreshToken(userAfterTrial)).thenReturn(refreshToken);
         when(userMapper.toDto(userAfterTrial)).thenReturn(testUserDto);
 
@@ -178,8 +177,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
-        when(jwtService.generateAccessToken(eq(userId), eq("test@example.com"), eq(Plan.FREE), eq(Role.USER),
-                eq("SN"), eq("XOF"), anyBoolean(), any())).thenReturn("access-token-value");
+        when(jwtService.generateAccessToken(any(AccessTokenClaims.class))).thenReturn("access-token-value");
         when(refreshTokenService.createRefreshToken(testUser)).thenReturn(refreshToken);
         when(userMapper.toDto(testUser)).thenReturn(testUserDto);
 
@@ -253,8 +251,7 @@ class AuthServiceTest {
                 .build();
 
         when(refreshTokenService.verifyRefreshToken("valid-refresh-token")).thenReturn(refreshToken);
-        when(jwtService.generateAccessToken(eq(userId), eq("test@example.com"), eq(Plan.FREE), eq(Role.USER),
-                eq("SN"), eq("XOF"), anyBoolean(), any())).thenReturn("new-access-token");
+        when(jwtService.generateAccessToken(any(AccessTokenClaims.class))).thenReturn("new-access-token");
 
         TokenResponse response = authService.refresh(request);
 

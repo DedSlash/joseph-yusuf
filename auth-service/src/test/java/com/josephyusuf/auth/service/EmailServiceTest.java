@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -260,9 +261,10 @@ class EmailServiceTest {
     @DisplayName("sendEmail : échec SMTP loggé sans lever d'exception")
     void send_failure_swallowed() {
         doThrow(new MailSendException("SMTP down")).when(mailSender).send((MimeMessage) org.mockito.ArgumentMatchers.any());
+        User user = trialUser();
 
-        emailService.sendTrialWelcome(trialUser());
-        // pas d'exception remontée → behavior fail-soft
+        assertThatCode(() -> emailService.sendTrialWelcome(user))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -270,8 +272,8 @@ class EmailServiceTest {
     void sendPasswordResetEmail_failureSwallowed() {
         doThrow(new MailSendException("SMTP down")).when(mailSender).send((MimeMessage) org.mockito.ArgumentMatchers.any());
 
-        emailService.sendPasswordResetEmail("user@example.com", "tok-fail");
-        // pas d'exception remontée
+        assertThatCode(() -> emailService.sendPasswordResetEmail("user@example.com", "tok-fail"))
+                .doesNotThrowAnyException();
     }
 
     @Test

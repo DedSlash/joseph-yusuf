@@ -28,7 +28,7 @@ public class ConversionEmailService {
     @Value("${spring.mail.from}")
     private String from;
 
-    @Value("${app.frontend-url:http://localhost:4200}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
     @Scheduled(cron = "0 0 9 * * *")
