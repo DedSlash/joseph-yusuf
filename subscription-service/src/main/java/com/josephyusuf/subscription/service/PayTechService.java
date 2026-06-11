@@ -87,12 +87,14 @@ public class PayTechService {
         }
 
         Map<String, String> redirectUrls = extractRedirectUrls(body);
+        String providerToken = extractToken(body);
 
         subscriptionService.recordPendingTransaction(PendingTransactionParams.builder()
                 .userId(userId)
                 .plan(plan)
                 .provider(providerFromMethodCode(paytechMethodCode))
                 .externalTxId(refCommand)
+                .providerToken(providerToken)
                 .amount(amount)
                 .currency("XOF")
                 .promoCode(couponCode)
@@ -146,6 +148,9 @@ public class PayTechService {
         params.put("command_name", "Abonnement " + planTier + " - Joseph·Yusuf");
         params.put("env", config.getEnv());
         params.put("ipn_url", config.getIpnUrl());
+        if (config.getRefundNotifUrl() != null && !config.getRefundNotifUrl().isBlank()) {
+            params.put("refund_notif_url", config.getRefundNotifUrl());
+        }
         params.put("success_url", config.getSuccessUrl() + "?ref=" + refCommand);
         params.put("cancel_url", config.getCancelUrl());
 
@@ -174,6 +179,11 @@ public class PayTechService {
         headers.set("API_KEY", config.getApiKey());
         headers.set("API_SECRET", config.getApiSecret());
         return headers;
+    }
+
+    private String extractToken(Map<String, Object> body) {
+        Object token = body.get("token");
+        return token == null ? null : String.valueOf(token);
     }
 
     private Map<String, String> extractRedirectUrls(Map<String, Object> body) {

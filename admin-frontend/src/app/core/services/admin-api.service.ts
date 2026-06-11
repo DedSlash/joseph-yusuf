@@ -64,6 +64,10 @@ export class AdminApiService {
     return this.http.post<Transaction>(`${this.apiUrl}/transactions/${id}/force-activate`, {});
   }
 
+  reconcileTransaction(id: string): Observable<Transaction> {
+    return this.http.post<Transaction>(`${this.apiUrl}/transactions/${id}/reconcile`, {});
+  }
+
   // Promo codes
   listPromoCodes(page = 0, size = 20, active?: boolean): Observable<PageResponse<PromoCode>> {
     let params = new HttpParams().set('page', page).set('size', size);

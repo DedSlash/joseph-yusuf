@@ -53,6 +53,13 @@ public class AdminTransactionController {
         return ResponseEntity.ok(service.forceActivate(id, adminId(auth), clientIp(http)));
     }
 
+    @PostMapping("/{id}/reconcile")
+    public ResponseEntity<TransactionDto> reconcile(@PathVariable UUID id,
+                                                    Authentication auth,
+                                                    HttpServletRequest http) {
+        return ResponseEntity.ok(service.reconcile(id, adminId(auth), clientIp(http)));
+    }
+
     private UUID adminId(Authentication auth) {
         return UUID.fromString((String) auth.getPrincipal());
     }

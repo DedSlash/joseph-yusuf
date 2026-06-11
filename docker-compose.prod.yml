@@ -440,6 +440,7 @@ services:
       - PAYTECH_SUCCESS_URL=${PAYTECH_SUCCESS_URL}
       - PAYTECH_CANCEL_URL=${PAYTECH_CANCEL_URL}
       - PAYTECH_IPN_URL=${PAYTECH_IPN_URL}
+      - PAYTECH_REFUND_NOTIF_URL=${PAYTECH_REFUND_NOTIF_URL}
     networks:
       - joseph-network
     healthcheck:

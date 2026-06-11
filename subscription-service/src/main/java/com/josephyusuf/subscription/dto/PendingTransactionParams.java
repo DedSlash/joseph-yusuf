@@ -16,6 +16,7 @@ public class PendingTransactionParams {
     private final PlanTier plan;
     private final PaymentProvider provider;
     private final String externalTxId;
+    private final String providerToken;
     private final BigDecimal amount;
     private final String currency;
     private final String promoCode;

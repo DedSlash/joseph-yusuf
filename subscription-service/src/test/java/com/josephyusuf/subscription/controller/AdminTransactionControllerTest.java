@@ -93,4 +93,16 @@ class AdminTransactionControllerTest {
 
         assertThat(response.getBody().getStatus()).isEqualTo(TransactionStatus.SUCCEEDED);
     }
+
+    @Test
+    @DisplayName("reconcile → 200")
+    void reconcile() {
+        UUID id = UUID.randomUUID();
+        AdminTransactionDto dto = AdminTransactionDto.builder().id(id).status(TransactionStatus.SUCCEEDED).build();
+        when(service.reconcile(id)).thenReturn(dto);
+
+        ResponseEntity<AdminTransactionDto> response = controller.reconcile(id);
+
+        assertThat(response.getBody().getStatus()).isEqualTo(TransactionStatus.SUCCEEDED);
+    }
 }
