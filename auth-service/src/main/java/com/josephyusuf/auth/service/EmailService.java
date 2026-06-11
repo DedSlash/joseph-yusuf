@@ -140,18 +140,30 @@ public class EmailService {
                 body);
     }
 
-    public void sendPaymentsActivated(User user) {
+    /**
+     * Email envoyé aux utilisateurs encore dans leur fenêtre de 7 jours initiale
+     * à l'ouverture des paiements : leur trial continue normalement jusqu'à sa
+     * date d'origine, mais ils peuvent souscrire dès maintenant.
+     */
+    public void sendPaymentsActivatedTrialActive(User user) {
+        String originalEnd = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy"));
         String body = "Bonjour " + user.getFirstName() + ",\n\n"
-                + "Bonne nouvelle — les paiements sont maintenant disponibles sur Joseph·Yusuf.\n\n"
-                + "Tu peux désormais activer ton abonnement Premium ou Premium+ directement "
-                + "depuis l'application via Wave, Orange Money ou carte bancaire.\n\n"
+                + "Bonne nouvelle — les paiements sont maintenant ouverts sur Joseph·Yusuf.\n\n"
+                + "Tu es encore dans ta période d'essai gratuite de 7 jours, qui se termine "
+                + "le " + originalEnd + ". Aucune action immédiate n'est nécessaire : "
+                + "ton accès PREMIUM+ continue jusqu'à cette date.\n\n"
+                + "Quand tu souhaiteras souscrire, tu pourras choisir parmi 4 moyens de paiement :\n"
+                + "→ Wave\n"
+                + "→ Orange Money\n"
+                + "→ Free Money\n"
+                + "→ Carte bancaire\n\n"
                 + "En tant qu'early adopter, ton coupon EARLY50 te donne -50% à vie sur ton "
-                + "abonnement.\n\n"
-                + "→ Premium : 1 500 FCFA/mois au lieu de 3 000\n"
-                + "→ Premium+ : 3 000 FCFA/mois au lieu de 6 000\n\n"
-                + "Ton accès continue normalement jusqu'à ce que tu choisisses de souscrire — "
-                + "aucune interruption.\n\n"
-                + "Active ton abonnement ici :\n"
+                + "abonnement :\n"
+                + "→ Premium : 1 495 FCFA/mois au lieu de 2 990\n"
+                + "→ Premium+ : 2 995 FCFA/mois au lieu de 5 990\n\n"
+                + "Sans souscription avant le " + originalEnd + ", ton compte passera "
+                + "automatiquement en FREE.\n\n"
+                + "Activer mon abonnement :\n"
                 + subscriptionUrl + "\n\n"
                 + "À très bientôt,\n"
                 + "Rey\n"
@@ -159,6 +171,40 @@ public class EmailService {
 
         sendEmail(user.getEmail(),
                 "🌾 Les paiements sont ouverts — ton coupon t'attend",
+                body);
+    }
+
+    /**
+     * Email envoyé aux utilisateurs dont la fenêtre de 7 jours initiale est
+     * dépassée (ils ont profité d'une prolongation pendant que les paiements
+     * étaient fermés). Délai de grâce de 24h pour souscrire ou downgrade FREE.
+     */
+    public void sendPaymentsActivatedGrace24h(User user) {
+        String body = "Bonjour " + user.getFirstName() + ",\n\n"
+                + "Les paiements viennent d'être ouverts sur Joseph·Yusuf.\n\n"
+                + "Tu as bénéficié d'une prolongation gratuite au-delà de tes 7 jours "
+                + "d'essai initiaux pendant que les paiements n'étaient pas encore "
+                + "disponibles. Maintenant qu'ils le sont, tu as 24h pour souscrire "
+                + "à ton abonnement, sans quoi ton compte passera automatiquement en FREE.\n\n"
+                + "4 moyens de paiement à ta disposition :\n"
+                + "→ Wave\n"
+                + "→ Orange Money\n"
+                + "→ Free Money\n"
+                + "→ Carte bancaire\n\n"
+                + "En tant qu'early adopter, ton coupon EARLY50 reste valable et te donne "
+                + "-50% à vie :\n"
+                + "→ Premium : 1 495 FCFA/mois au lieu de 2 990\n"
+                + "→ Premium+ : 2 995 FCFA/mois au lieu de 5 990\n\n"
+                + "Activer mon abonnement maintenant :\n"
+                + subscriptionUrl + "\n\n"
+                + "Tes données restent disponibles même en FREE — seules les fonctionnalités "
+                + "avancées seront désactivées si tu ne souscris pas.\n\n"
+                + "À très bientôt,\n"
+                + "Rey\n"
+                + "Fondateur — Joseph·Yusuf";
+
+        sendEmail(user.getEmail(),
+                "⏰ 24h pour activer ton abonnement Joseph·Yusuf",
                 body);
     }
 
