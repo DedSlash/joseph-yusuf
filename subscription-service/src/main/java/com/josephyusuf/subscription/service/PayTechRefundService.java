@@ -76,14 +76,19 @@ public class PayTechRefundService {
             throw new PaymentException("Réponse PayTech /refund-payment vide");
         }
 
-        if (!"1".equals(String.valueOf(responseBody.get("success")))) {
-            String message = String.valueOf(responseBody.getOrDefault("message", "erreur inconnue"));
+        String successVal = String.valueOf(responseBody.get("success"));
+        String message = String.valueOf(responseBody.getOrDefault("message", ""));
+
+        if ("1".equals(successVal) || message.toLowerCase().contains("remboursement en cours")) {
+            log.info("PayTech refund accepté/en cours ref={} message={}",
+                    transaction.getTransactionId(), message);
+        } else {
             log.error("PayTech refund refusé ref={} : {}",
                     transaction.getTransactionId(), message);
             throw new PaymentException("PayTech a refusé le remboursement : " + message);
         }
 
-        log.info("PayTech refund accepté ref={} provider={}",
+        log.info("PayTech refund terminé ref={} provider={}",
                 transaction.getTransactionId(), transaction.getProvider());
     }
 
