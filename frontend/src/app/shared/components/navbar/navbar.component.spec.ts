@@ -19,10 +19,13 @@ describe('NavbarComponent', () => {
   beforeEach(async () => {
     authSpy = jasmine.createSpyObj<AuthService>(
       'AuthService',
-      ['logout', 'getPlan', 'getCurrentUser', 'isLoggedIn'],
+      ['logout', 'getPlan', 'getCurrentUser', 'isLoggedIn', 'getTrialStatus'],
       { currentUser$: of(mockUser) }
     );
     authSpy.isLoggedIn.and.returnValue(true);
+    authSpy.getTrialStatus.and.returnValue(of({
+      isInTrial: false, trialEndsAt: null, daysRemaining: 0, hoursRemaining: 0, trialUsed: false, paymentsActive: true
+    } as any));
 
     await TestBed.configureTestingModule({
       imports: [NavbarComponent],
