@@ -36,6 +36,8 @@ export interface PaymentMethodConfig {
   displayName: string | null;
   displayOrder: number;
   paytechMethodCode: string | null;
+  /** Backend qui gère ce moyen : 'PAYTECH' (Wave/OM/Free Money) ou 'PADDLE' (carte). */
+  routing: 'PAYTECH' | 'PADDLE';
 }
 
 export interface PayTechRequest {
@@ -48,4 +50,15 @@ export interface PayTechPaymentResponse {
   refCommand: string;
   redirectUrl: string;
   mobileRedirectUrl: string;
+}
+
+export interface PaddleRequest {
+  planTier: string;
+  couponCode: string | null;
+}
+
+export interface PaddleCheckoutResponse {
+  transactionId: string;
+  status: string;
+  checkoutUrl: string | null;
 }

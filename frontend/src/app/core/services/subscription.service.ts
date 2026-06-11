@@ -7,7 +7,9 @@ import {
   PaymentProviderResult,
   PaymentMethodConfig,
   PayTechRequest,
-  PayTechPaymentResponse
+  PayTechPaymentResponse,
+  PaddleRequest,
+  PaddleCheckoutResponse
 } from '../../shared/models/subscription.model';
 
 @Injectable({ providedIn: 'root' })
@@ -62,5 +64,9 @@ export class SubscriptionService {
 
   createPayTechPayment(request: PayTechRequest): Observable<PayTechPaymentResponse> {
     return this.http.post<PayTechPaymentResponse>(`${this.apiUrl}/paytech/create`, request);
+  }
+
+  createPaddlePayment(request: PaddleRequest): Observable<PaddleCheckoutResponse> {
+    return this.http.post<PaddleCheckoutResponse>(`${this.apiUrl}/paddle/create`, request);
   }
 }

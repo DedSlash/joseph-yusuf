@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { SubscriptionService } from '../../core/services/subscription.service';
+import { PaddleService } from '../../core/services/paddle.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { TrialStatus } from '../../shared/models/user.model';
 import {
@@ -462,14 +463,14 @@ const METHOD_LOGO: Record<string, string> = {
           <div class="payment-methods-grid" *ngIf="!paymentMethodsLoading && paymentMethods.length > 0">
             <div class="pm-card"
                  *ngFor="let m of paymentMethods"
-                 [ngClass]="{ selected: selectedMethodCode === m.paytechMethodCode }"
+                 [ngClass]="{ selected: selectedProvider === m.provider }"
                  (click)="selectMethod(m)">
               <img class="pm-logo" [src]="logoFor(m)" [alt]="m.displayName || m.provider" />
               <div class="pm-info">
                 <strong>{{ m.displayName || m.provider }}</strong>
-                <span>XOF</span>
+                <span>{{ m.routing === 'PADDLE' ? 'EUR' : 'XOF' }}</span>
               </div>
-              <span class="pm-check" *ngIf="selectedMethodCode === m.paytechMethodCode">✓</span>
+              <span class="pm-check" *ngIf="selectedProvider === m.provider">✓</span>
             </div>
           </div>
 
@@ -1051,7 +1052,9 @@ export class SubscriptionComponent implements OnInit {
   // Payment methods (dynamiques depuis le backend)
   paymentMethods: PaymentMethodConfig[] = [];
   paymentMethodsLoading = true;
+  selectedProvider: string | null = null;
   selectedMethodCode: string | null = null;
+  selectedRouting: 'PAYTECH' | 'PADDLE' | null = null;
 
   // Trial
   trialStatus: TrialStatus | null = null;
@@ -1059,11 +1062,12 @@ export class SubscriptionComponent implements OnInit {
   // Admin preview mode
   isAdmin = false;
 
-  // PayTech
+  // Loading flag partagé PayTech + Paddle
   payTechLoading = false;
 
   constructor(
     private readonly subscriptionService: SubscriptionService,
+    private readonly paddleService: PaddleService,
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly route: ActivatedRoute
@@ -1196,7 +1200,9 @@ export class SubscriptionComponent implements OnInit {
     }
     this.step = 'plan';
     this.paymentError = '';
+    this.selectedProvider = null;
     this.selectedMethodCode = null;
+    this.selectedRouting = null;
   }
 
   askDisableRenew(): void { this.confirmDisableRenew = true; }
@@ -1300,7 +1306,9 @@ export class SubscriptionComponent implements OnInit {
   selectPlan(id: PlanId): void { this.selectedPlan = id; }
 
   selectMethod(m: PaymentMethodConfig): void {
+    this.selectedProvider = m.provider;
     this.selectedMethodCode = m.paytechMethodCode;
+    this.selectedRouting = m.routing;
     this.paymentError = '';
   }
 
@@ -1342,7 +1350,7 @@ export class SubscriptionComponent implements OnInit {
   }
 
   canPay(): boolean {
-    return this.selectedMethodCode !== null;
+    return this.selectedProvider !== null;
   }
 
   getPriceDisplay(): string {
@@ -1362,6 +1370,15 @@ export class SubscriptionComponent implements OnInit {
   }
 
   initiatePayment(): void {
+    if (!this.selectedPlan || !this.selectedProvider || !this.selectedRouting) return;
+    if (this.selectedRouting === 'PADDLE') {
+      this.payViaPaddle();
+    } else {
+      this.payViaPayTech();
+    }
+  }
+
+  private payViaPayTech(): void {
     if (!this.selectedPlan || !this.selectedMethodCode) return;
     this.payTechLoading = true;
     this.paymentError = '';
@@ -1380,6 +1397,34 @@ export class SubscriptionComponent implements OnInit {
       error: err => {
         this.payTechLoading = false;
         this.paymentError = err.error?.message ?? 'Erreur lors de la création du paiement.';
+      }
+    });
+  }
+
+  private payViaPaddle(): void {
+    if (!this.selectedPlan) return;
+    const user = this.authService.getCurrentUser();
+    if (!user?.email) {
+      this.paymentError = 'Email utilisateur introuvable. Reconnectez-vous.';
+      return;
+    }
+    this.payTechLoading = true;
+    this.paymentError = '';
+    this.subscriptionService.createPaddlePayment({
+      planTier: this.selectedPlan,
+      couponCode: this.promoCode.trim() || null
+    }).subscribe({
+      next: res => {
+        this.payTechLoading = false;
+        try {
+          this.paddleService.openCheckout(res.transactionId, user.email);
+        } catch (e: any) {
+          this.paymentError = e?.message ?? 'Erreur lors de l\'ouverture du paiement Paddle.';
+        }
+      },
+      error: err => {
+        this.payTechLoading = false;
+        this.paymentError = err.error?.message ?? 'Erreur lors de la création du paiement Paddle.';
       }
     });
   }

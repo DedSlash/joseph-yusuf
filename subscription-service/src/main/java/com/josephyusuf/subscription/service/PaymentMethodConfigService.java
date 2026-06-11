@@ -72,6 +72,7 @@ public class PaymentMethodConfigService {
                 .displayName(c.getDisplayName())
                 .displayOrder(c.getDisplayOrder())
                 .paytechMethodCode(c.getPaytechMethodCode())
+                .routing(c.getRouting())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }

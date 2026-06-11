@@ -6,5 +6,6 @@ public enum PaymentProvider {
     FREE_MONEY,
     CARTE,
     PAYDUNYA,
-    PAYTECH
+    PAYTECH,
+    PADDLE
 }

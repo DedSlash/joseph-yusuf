@@ -50,6 +50,12 @@ public class Subscription {
     @Column(length = 10)
     private String currency;
 
+    @Column(name = "paddle_subscription_id", length = 255)
+    private String paddleSubscriptionId;
+
+    @Column(name = "paddle_customer_id", length = 255)
+    private String paddleCustomerId;
+
     @Column(name = "started_at", nullable = false)
     private Instant startedAt;
 

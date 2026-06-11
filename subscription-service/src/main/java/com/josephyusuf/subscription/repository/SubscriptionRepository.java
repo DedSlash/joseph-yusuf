@@ -17,6 +17,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
 
     Optional<Subscription> findByUserId(UUID userId);
 
+    Optional<Subscription> findByPaddleSubscriptionId(String paddleSubscriptionId);
+
     @Query("""
             SELECT s FROM Subscription s
             WHERE s.status = :status
