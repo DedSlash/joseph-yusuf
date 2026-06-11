@@ -52,13 +52,11 @@ const PLANS: PlanMeta[] = [
   }
 ];
 
-// Iconographie par défaut — clé = paytech_method_code (valeurs littérales doc PayTech),
-// valeur = icône fallback.
-const METHOD_ICON: Record<string, string> = {
-  'Wave': '🌊',
-  'Orange Money': '🟠',
-  'Free Money': '💚',
-  'Carte Bancaire': '💳'
+const METHOD_LOGO: Record<string, string> = {
+  'Wave': 'assets/payment-logos/wave.png',
+  'Orange Money': 'assets/payment-logos/orange-money.svg',
+  'Free Money': 'assets/payment-logos/free-money.png',
+  'Carte Bancaire': 'assets/payment-logos/mastercard.svg'
 };
 
 @Component({
@@ -466,7 +464,7 @@ const METHOD_ICON: Record<string, string> = {
                  *ngFor="let m of paymentMethods"
                  [ngClass]="{ selected: selectedMethodCode === m.paytechMethodCode }"
                  (click)="selectMethod(m)">
-              <span class="pm-logo">{{ iconFor(m) }}</span>
+              <img class="pm-logo" [src]="logoFor(m)" [alt]="m.displayName || m.provider" />
               <div class="pm-info">
                 <strong>{{ m.displayName || m.provider }}</strong>
                 <span>XOF</span>
@@ -935,7 +933,7 @@ const METHOD_ICON: Record<string, string> = {
       background: linear-gradient(180deg, rgba(201, 168, 76, 0.12), rgba(157, 130, 53, 0.08));
       box-shadow: var(--shadow-glow);
     }
-    .pm-logo { font-size: 1.6rem; flex-shrink: 0; }
+    .pm-logo { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; border-radius: 8px; }
     .pm-info { flex: 1; display: flex; flex-direction: column; gap: 0.15rem; }
     .pm-info strong { font-size: 0.9rem; color: var(--text-0); }
     .pm-info span { font-size: 0.72rem; color: var(--text-3); }
@@ -1287,11 +1285,11 @@ export class SubscriptionComponent implements OnInit {
     }
   }
 
-  iconFor(m: PaymentMethodConfig): string {
-    if (m.paytechMethodCode && METHOD_ICON[m.paytechMethodCode]) {
-      return METHOD_ICON[m.paytechMethodCode];
+  logoFor(m: PaymentMethodConfig): string {
+    if (m.paytechMethodCode && METHOD_LOGO[m.paytechMethodCode]) {
+      return METHOD_LOGO[m.paytechMethodCode];
     }
-    return '💳';
+    return 'assets/payment-logos/mastercard.svg';
   }
 
   isStepDone(s: Step): boolean {

@@ -286,17 +286,17 @@ describe('SubscriptionComponent', () => {
     });
   });
 
-  describe('iconFor', () => {
-    it('renvoie l\'icône mappée si paytechMethodCode connu (valeurs doc PayTech)', () => {
-      expect(component.iconFor({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' })).toBe('🌊');
-      expect(component.iconFor({ provider: 'ORANGE_MONEY', enabled: true, displayName: 'Orange Money', displayOrder: 2, paytechMethodCode: 'Orange Money' })).toBe('🟠');
-      expect(component.iconFor({ provider: 'FREE_MONEY', enabled: true, displayName: 'Free Money', displayOrder: 3, paytechMethodCode: 'Free Money' })).toBe('💚');
-      expect(component.iconFor({ provider: 'CARTE', enabled: true, displayName: 'Carte bancaire', displayOrder: 4, paytechMethodCode: 'Carte Bancaire' })).toBe('💳');
+  describe('logoFor', () => {
+    it('renvoie le chemin logo si paytechMethodCode connu (valeurs doc PayTech)', () => {
+      expect(component.logoFor({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' })).toBe('assets/payment-logos/wave.png');
+      expect(component.logoFor({ provider: 'ORANGE_MONEY', enabled: true, displayName: 'Orange Money', displayOrder: 2, paytechMethodCode: 'Orange Money' })).toBe('assets/payment-logos/orange-money.svg');
+      expect(component.logoFor({ provider: 'FREE_MONEY', enabled: true, displayName: 'Free Money', displayOrder: 3, paytechMethodCode: 'Free Money' })).toBe('assets/payment-logos/free-money.png');
+      expect(component.logoFor({ provider: 'CARTE', enabled: true, displayName: 'Carte bancaire', displayOrder: 4, paytechMethodCode: 'Carte Bancaire' })).toBe('assets/payment-logos/mastercard.svg');
     });
 
-    it('fallback 💳 si code inconnu ou null', () => {
-      expect(component.iconFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: null })).toBe('💳');
-      expect(component.iconFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: 'unknown' })).toBe('💳');
+    it('fallback mastercard.svg si code inconnu ou null', () => {
+      expect(component.logoFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: null })).toBe('assets/payment-logos/mastercard.svg');
+      expect(component.logoFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: 'unknown' })).toBe('assets/payment-logos/mastercard.svg');
     });
   });
 
