@@ -13,5 +13,7 @@ public class PaymentsToggleActivateResponse {
 
     private boolean paymentsActive;
     private int usersNotified;
+    private int usersInOriginalTrial;
+    private int usersInGrace24h;
     private boolean alreadyActive;
 }
