@@ -24,6 +24,16 @@ public class PaymentMethodConfig {
     @Column(nullable = false)
     private boolean enabled;
 
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
+    @Column(name = "display_order", nullable = false)
+    @Builder.Default
+    private int displayOrder = 99;
+
+    @Column(name = "paytech_method_code", length = 50)
+    private String paytechMethodCode;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;

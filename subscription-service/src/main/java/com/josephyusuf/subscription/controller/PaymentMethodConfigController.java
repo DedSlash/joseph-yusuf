@@ -26,9 +26,10 @@ public class PaymentMethodConfigController {
     private final AdminClient adminClient;
 
     // Accessible par tous les utilisateurs authentifiés — pour le frontend client
+    // Retourne seulement les providers activés et affichables (hors agrégateurs internes).
     @GetMapping("/api/subscriptions/payment-methods")
-    public ResponseEntity<List<PaymentMethodConfigDto>> getAll() {
-        return ResponseEntity.ok(service.getAll());
+    public ResponseEntity<List<PaymentMethodConfigDto>> getAvailable() {
+        return ResponseEntity.ok(service.getAvailableForClient());
     }
 
     // Validation code promo accessible à tous les utilisateurs connectés

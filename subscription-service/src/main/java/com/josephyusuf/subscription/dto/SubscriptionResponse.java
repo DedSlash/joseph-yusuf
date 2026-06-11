@@ -1,6 +1,5 @@
 package com.josephyusuf.subscription.dto;
 
-import com.josephyusuf.subscription.enums.CouponDuration;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.enums.SubscriptionStatus;
@@ -27,15 +26,10 @@ public class SubscriptionResponse {
     private Instant cancelledAt;
     private boolean autoRenew;
 
-    // Stripe Subscriptions
-    private String stripeSubscriptionId;
     private Instant currentPeriodStart;
     private Instant currentPeriodEnd;
     private boolean cancelAtPeriodEnd;
 
-    // Coupon (transparent pour le client)
-    private String couponApplied;
-    private CouponDuration couponDuration;
     private BigDecimal nextInvoiceAmount;
     private String currency;
 }

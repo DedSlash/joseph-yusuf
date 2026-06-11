@@ -1,8 +1,5 @@
 package com.josephyusuf.subscription.controller;
 
-import com.josephyusuf.subscription.dto.CancelSubscriptionRequest;
-import com.josephyusuf.subscription.dto.CreateSubscriptionRequest;
-import com.josephyusuf.subscription.dto.CreateSubscriptionResponse;
 import com.josephyusuf.subscription.dto.OrangeMoneyRequest;
 import com.josephyusuf.subscription.dto.PayDunyaInvoiceResponse;
 import com.josephyusuf.subscription.dto.PayDunyaRequest;
@@ -48,26 +45,6 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
     private final PayDunyaService payDunyaService;
     private final PayTechService payTechService;
-
-    @PostMapping("/stripe/create")
-    public ResponseEntity<CreateSubscriptionResponse> createStripeSubscription(Authentication auth,
-                                                                                @Valid @RequestBody CreateSubscriptionRequest request) {
-        return ResponseEntity.ok(subscriptionService.createStripeSubscription(
-                userIdOf(auth), emailOf(auth), request));
-    }
-
-    @PostMapping("/stripe/confirm/{subscriptionId}")
-    public ResponseEntity<SubscriptionResponse> confirmStripeSubscription(Authentication auth,
-                                                                          @PathVariable("subscriptionId") String subscriptionId) {
-        return ResponseEntity.ok(subscriptionService.confirmStripeSubscription(userIdOf(auth), subscriptionId));
-    }
-
-    @DeleteMapping("/stripe/cancel")
-    public ResponseEntity<SubscriptionResponse> cancelStripeSubscription(Authentication auth,
-                                                                          @RequestBody(required = false) CancelSubscriptionRequest request) {
-        boolean immediately = request != null && request.isImmediately();
-        return ResponseEntity.ok(subscriptionService.cancelStripeSubscription(userIdOf(auth), immediately));
-    }
 
     @PostMapping("/wave/initiate")
     public ResponseEntity<PaymentProviderResponse> initiateWave(Authentication auth,
@@ -121,12 +98,18 @@ public class SubscriptionController {
             Authentication auth, @Valid @RequestBody PayTechRequest request) {
         UUID userId = userIdOf(auth);
         return ResponseEntity.ok(payTechService.createPayment(
-                userId, request.getPlanTier(), request.getCouponCode()));
+                userId, request.getPlanTier(), request.getCouponCode(), request.getPaytechMethodCode()));
     }
 
     @GetMapping("/current")
     public ResponseEntity<SubscriptionResponse> current(Authentication auth) {
         return ResponseEntity.ok(subscriptionService.getCurrent(userIdOf(auth)));
+    }
+
+    @DeleteMapping("/cancel")
+    public ResponseEntity<SubscriptionResponse> cancel(Authentication auth,
+                                                       @RequestParam(defaultValue = "false") boolean immediately) {
+        return ResponseEntity.ok(subscriptionService.cancelSubscription(userIdOf(auth), immediately));
     }
 
     @PutMapping("/auto-renew")

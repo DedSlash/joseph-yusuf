@@ -39,7 +39,8 @@ public class PayTechService {
     private final ObjectMapper objectMapper;
 
     @SuppressWarnings("unchecked")
-    public PayTechPaymentResponse createPayment(UUID userId, String planTier, String couponCode) {
+    public PayTechPaymentResponse createPayment(UUID userId, String planTier, String couponCode,
+                                                String paytechMethodCode) {
         PlanTier plan = PlanTier.valueOf(planTier);
         if (plan == PlanTier.FREE) {
             throw new InvalidPlanException("Le plan FREE ne nécessite pas de paiement");
@@ -61,7 +62,8 @@ public class PayTechService {
         String refCommand = "JY-" + userId.toString().substring(0, 8)
                 + "-" + System.currentTimeMillis();
 
-        Map<String, Object> params = buildPaymentPayload(userId, planTier, couponCode, amount, refCommand);
+        Map<String, Object> params = buildPaymentPayload(userId, planTier, couponCode,
+                amount, refCommand, paytechMethodCode);
         HttpHeaders headers = buildHeaders();
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
 
@@ -89,7 +91,7 @@ public class PayTechService {
         subscriptionService.recordPendingTransaction(PendingTransactionParams.builder()
                 .userId(userId)
                 .plan(plan)
-                .provider(PaymentProvider.PAYTECH)
+                .provider(providerFromMethodCode(paytechMethodCode))
                 .externalTxId(refCommand)
                 .amount(amount)
                 .currency("XOF")
@@ -98,8 +100,8 @@ public class PayTechService {
                 .originalAmount(discountPercent != null ? originalAmount : null)
                 .build());
 
-        log.info("PayTech paiement créé userId={} plan={} amount={} XOF ref={}",
-                userId, planTier, amount, refCommand);
+        log.info("PayTech paiement créé userId={} plan={} method={} amount={} XOF ref={}",
+                userId, planTier, paytechMethodCode, amount, refCommand);
 
         return PayTechPaymentResponse.builder()
                 .refCommand(refCommand)
@@ -116,8 +118,24 @@ public class PayTechService {
         };
     }
 
+    /**
+     * Mapping inverse code PayTech → PaymentProvider pour tracer le moyen réellement choisi.
+     * Si l'utilisateur n'a pas pré-sélectionné de moyen, on retombe sur PAYTECH (agrégateur).
+     */
+    private PaymentProvider providerFromMethodCode(String paytechMethodCode) {
+        if (paytechMethodCode == null) return PaymentProvider.PAYTECH;
+        return switch (paytechMethodCode) {
+            case "wave" -> PaymentProvider.WAVE;
+            case "orange_money" -> PaymentProvider.ORANGE_MONEY;
+            case "free_money" -> PaymentProvider.FREE_MONEY;
+            case "card" -> PaymentProvider.CARTE;
+            default -> PaymentProvider.PAYTECH;
+        };
+    }
+
     private Map<String, Object> buildPaymentPayload(UUID userId, String planTier, String couponCode,
-                                                    BigDecimal amount, String refCommand) {
+                                                    BigDecimal amount, String refCommand,
+                                                    String paytechMethodCode) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("item_name", "Abonnement Joseph·Yusuf " + planTier);
         params.put("item_price", amount.intValue());
@@ -129,10 +147,17 @@ public class PayTechService {
         params.put("success_url", config.getSuccessUrl() + "?ref=" + refCommand);
         params.put("cancel_url", config.getCancelUrl());
 
+        if (paytechMethodCode != null && !paytechMethodCode.isBlank()) {
+            params.put("target_payment", paytechMethodCode);
+        }
+
         Map<String, String> customField = new HashMap<>();
         customField.put("userId", userId.toString());
         customField.put("planTier", planTier);
         customField.put("couponCode", couponCode != null ? couponCode : "");
+        if (paytechMethodCode != null) {
+            customField.put("paytechMethodCode", paytechMethodCode);
+        }
         try {
             params.put("custom_field", objectMapper.writeValueAsString(customField));
         } catch (JsonProcessingException e) {

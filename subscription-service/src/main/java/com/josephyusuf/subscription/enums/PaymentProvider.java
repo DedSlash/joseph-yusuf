@@ -1,9 +1,10 @@
 package com.josephyusuf.subscription.enums;
 
 public enum PaymentProvider {
-    STRIPE,
     WAVE,
     ORANGE_MONEY,
+    FREE_MONEY,
+    CARTE,
     PAYDUNYA,
     PAYTECH
 }

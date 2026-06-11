@@ -28,23 +28,6 @@ spring:
 jwt:
   secret: ${JWT_SECRET:am9zZXBoeXVzdWYtand0LXNlY3JldC1rZXktMjAyNi1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}
 
-stripe:
-  api:
-    key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
-  webhook:
-    secret: ${STRIPE_WEBHOOK_SECRET:whsec_test_placeholder}
-  prices:
-    # Montants d'affichage (pour calcul "nextInvoiceAmount" et cohérence DB)
-    premium-eur: 499
-    premium-plus-eur: 999
-    premium-xof: 3000
-    premium-plus-xof: 6000
-    # Stripe Price IDs (créés dans le Stripe Dashboard — Products > Prices)
-    premium-monthly-eur: ${STRIPE_PRICE_PREMIUM_EUR:price_premium_eur_placeholder}
-    premium-monthly-xof: ${STRIPE_PRICE_PREMIUM_XOF:price_premium_xof_placeholder}
-    premium-plus-monthly-eur: ${STRIPE_PRICE_PREMIUM_PLUS_EUR:price_premium_plus_eur_placeholder}
-    premium-plus-monthly-xof: ${STRIPE_PRICE_PREMIUM_PLUS_XOF:price_premium_plus_xof_placeholder}
-
 paydunya:
   master-key: ${PAYDUNYA_MASTER_KEY:test_master_key}
   private-key: ${PAYDUNYA_PRIVATE_KEY:test_private_key}
