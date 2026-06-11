@@ -13,12 +13,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -63,14 +68,14 @@ public class PaymentsToggleController {
         List<User> trialUsers = userRepository.findByInTrialTrue();
         systemSettingsService.setPaymentsActive(true);
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
         int inOriginalTrial = 0;
         int inGrace24h = 0;
 
         for (User user : trialUsers) {
-            LocalDateTime originalEnd = resolveOriginalTrialEnd(user, now);
+            LocalDateTime originalEnd = resolveOriginalTrialEnd(user, nowUtc);
 
-            if (originalEnd.isAfter(now)) {
+            if (originalEnd.isAfter(nowUtc)) {
                 user.setTrialEndsAt(originalEnd);
                 userRepository.save(user);
                 emailService.sendPaymentsActivatedTrialActive(user);
@@ -81,7 +86,7 @@ public class PaymentsToggleController {
                         "Tu peux souscrire dès maintenant. Ton coupon EARLY50 (-50% à vie) est valable.");
                 inOriginalTrial++;
             } else {
-                user.setTrialEndsAt(now.plusHours(GRACE_PERIOD_HOURS));
+                user.setTrialEndsAt(nowUtc.plusHours(GRACE_PERIOD_HOURS));
                 userRepository.save(user);
                 emailService.sendPaymentsActivatedGrace24h(user);
                 trialService.pushInAppAlert(user.getId(),
@@ -106,12 +111,57 @@ public class PaymentsToggleController {
     }
 
     /**
-     * Fin de la fenêtre d'essai initiale (trialStartedAt + 7 jours). Fallback
-     * sur now si trialStartedAt est absent — l'utilisateur sera traité comme
-     * trial initial dépassé.
+     * Envoie un email d'aperçu à l'adresse fournie, sans toucher à la DB.
+     * Templates supportés : {@code trial-active} et {@code grace-24h}.
+     *
+     * @param template nom du template à prévisualiser
+     * @param to adresse email destinataire (typiquement celle de l'admin)
+     * @param firstName prénom utilisé dans le corps de l'email, par défaut "Admin"
      */
-    private LocalDateTime resolveOriginalTrialEnd(User user, LocalDateTime now) {
-        LocalDateTime startedAt = user.getTrialStartedAt();
-        return startedAt != null ? startedAt.plusDays(INITIAL_TRIAL_DAYS) : now;
+    @PostMapping("/preview-email/{template}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> previewEmail(
+            @PathVariable String template,
+            @RequestParam String to,
+            @RequestParam(required = false) String firstName) {
+
+        User fake = User.builder()
+                .email(to)
+                .firstName(firstName != null && !firstName.isBlank() ? firstName : "Admin")
+                .build();
+
+        switch (template) {
+            case "trial-active" -> {
+                fake.setTrialEndsAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(5));
+                emailService.sendPaymentsActivatedTrialActive(fake);
+            }
+            case "grace-24h" -> emailService.sendPaymentsActivatedGrace24h(fake);
+            default -> {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Unknown template: " + template,
+                        "supported", List.of("trial-active", "grace-24h")));
+            }
+        }
+
+        log.info("Preview email '{}' envoyé à {}", template, to);
+        return ResponseEntity.ok(Map.of(
+                "sent", true,
+                "template", template,
+                "to", to));
+    }
+
+    /**
+     * Fin de la fenêtre d'essai initiale calculée depuis {@code created_at}
+     * (date d'inscription, immutable) + 7 jours. Utiliser {@code created_at}
+     * plutôt que {@code trial_started_at} garantit que les utilisateurs encore
+     * dans leur première semaine d'inscription sont épargnés même si
+     * {@code trial_started_at} a été altéré.
+     *
+     * <p>Conversion explicite en UTC pour rester aligné avec {@code nowUtc}.
+     */
+    private LocalDateTime resolveOriginalTrialEnd(User user, LocalDateTime nowUtc) {
+        Instant createdAt = user.getCreatedAt();
+        if (createdAt == null) return nowUtc;
+        return LocalDateTime.ofInstant(createdAt, ZoneOffset.UTC).plusDays(INITIAL_TRIAL_DAYS);
     }
 }
