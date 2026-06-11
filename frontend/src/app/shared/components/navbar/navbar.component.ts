@@ -58,6 +58,11 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
           <div class="avatar">{{ getInitials(user) }}</div>
           <div class="dropdown" *ngIf="dropdownOpen">
             <a class="dropdown-item" (click)="goToAccount()">Mon compte</a>
+            <a class="dropdown-item" routerLink="/subscription" (click)="dropdownOpen = false" *ngIf="paymentsActive">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; opacity: 0.7">
+                <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.1.89 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.11-.9-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>Abonnement
+            </a>
             <a class="dropdown-item" routerLink="/support" (click)="dropdownOpen = false">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; opacity: 0.7">
                 <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
@@ -77,6 +82,7 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
     <aside class="nav-drawer" [class.open]="drawerOpen">
       <a routerLink="/dashboard" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Dashboard</a>
       <a routerLink="/incomes" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Mes Revenus</a>
+      <a routerLink="/subscription" class="drawer-link" (click)="drawerOpen = false" *ngIf="paymentsActive">Abonnement</a>
       <a class="drawer-link" (click)="goToAccount()">Mon compte</a>
       <a routerLink="/support" class="drawer-link" (click)="drawerOpen = false">Support</a>
       <div class="drawer-divider"></div>
