@@ -215,7 +215,7 @@ type PreviewTemplate = 'trial-active' | 'grace-24h';
       <div class="pm-list">
         <div class="pm-row" *ngFor="let m of paymentMethods()">
           <div class="pm-info">
-            <span class="pm-logo">{{ pmLogo(m.provider) }}</span>
+            <img class="pm-logo" [src]="pmLogo(m.provider)" [alt]="pmLabel(m.provider)" />
             <div>
               <strong class="pm-name">{{ pmLabel(m.provider) }}</strong>
               <span class="pm-updated">Modifié le {{ m.updatedAt | date:'dd/MM/yyyy HH:mm' }}</span>
@@ -318,7 +318,7 @@ type PreviewTemplate = 'trial-active' | 'grace-24h';
 
     .pm-info { display: flex; align-items: center; gap: 0.9rem; }
 
-    .pm-logo { font-size: 1.4rem; flex-shrink: 0; }
+    .pm-logo { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; border-radius: 8px; }
 
     .pm-name { display: block; font-size: 0.9rem; color: var(--text); font-weight: 600; }
 
@@ -678,10 +678,11 @@ export class DashboardComponent implements OnInit {
 
   protected pmLogo(provider: string): string {
     switch (provider) {
-      case 'STRIPE': return '💳';
-      case 'WAVE': return '📱';
-      case 'ORANGE_MONEY': return '🟠';
-      default: return '💰';
+      case 'WAVE': return 'assets/payment-logos/wave.png';
+      case 'ORANGE_MONEY': return 'assets/payment-logos/orange-money.svg';
+      case 'FREE_MONEY': return 'assets/payment-logos/free-money.png';
+      case 'CARTE': return 'assets/payment-logos/mastercard.svg';
+      default: return 'assets/payment-logos/mastercard.svg';
     }
   }
 
