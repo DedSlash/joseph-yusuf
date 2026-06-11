@@ -9,7 +9,7 @@ declare let gtag: (...args: any[]) => void;
 export class AnalyticsService {
   private initialized = false;
 
-  constructor(private router: Router) {}
+  constructor(private readonly router: Router) {}
 
   init(): void {
     if (this.initialized || !environment.gaTrackingId) return;
