@@ -143,6 +143,7 @@ public class SubscriptionService {
                 .plan(params.getPlan())
                 .provider(params.getProvider())
                 .transactionId(params.getExternalTxId())
+                .providerToken(params.getProviderToken())
                 .amount(params.getAmount())
                 .currency(params.getCurrency())
                 .status(TransactionStatus.PENDING)

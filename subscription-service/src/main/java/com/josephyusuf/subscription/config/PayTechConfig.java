@@ -17,6 +17,7 @@ public class PayTechConfig {
     private String successUrl;
     private String cancelUrl;
     private String ipnUrl;
+    private String refundNotifUrl;
 
     public String getBaseUrl() {
         return "https://paytech.sn/api";

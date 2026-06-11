@@ -40,4 +40,10 @@ public class AdminTransactionService {
         auditLogService.log(adminId, "TRANSACTION_FORCE_ACTIVATE", "TRANSACTION", id.toString(), null, ip);
         return activated;
     }
+
+    public TransactionDto reconcile(UUID id, UUID adminId, String ip) {
+        TransactionDto reconciled = subscriptionClient.reconcile(id);
+        auditLogService.log(adminId, "TRANSACTION_RECONCILE", "TRANSACTION", id.toString(), null, ip);
+        return reconciled;
+    }
 }

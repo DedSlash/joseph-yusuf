@@ -44,6 +44,7 @@ paytech:
   success-url: ${PAYTECH_SUCCESS_URL:http://localhost:4200/subscription/success}
   cancel-url: ${PAYTECH_CANCEL_URL:http://localhost:4200/subscription}
   ipn-url: ${PAYTECH_IPN_URL:http://localhost:8080/api/webhooks/paytech}
+  refund-notif-url: ${PAYTECH_REFUND_NOTIF_URL:http://localhost:8080/api/webhooks/paytech}
 
 eureka:
   client:

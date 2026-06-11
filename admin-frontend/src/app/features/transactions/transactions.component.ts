@@ -5,7 +5,7 @@ import { AdminApiService } from '../../core/services/admin-api.service';
 import { Transaction, TransactionStatus } from '../../shared/models/admin.model';
 
 type StatusFilter = '' | TransactionStatus;
-type ActionType = 'refund' | 'cancel' | 'force-activate';
+type ActionType = 'refund' | 'cancel' | 'force-activate' | 'reconcile';
 
 interface PendingAction {
   tx: Transaction;
@@ -78,6 +78,15 @@ interface PendingAction {
             <td class="mono" [title]="t.userId">{{ shortId(t.userId) }}</td>
             <td>
               <div class="action-group">
+                <!-- Réconcilier — PENDING uniquement (rattrape IPN perdue) -->
+                <button class="btn btn-info mini"
+                        *ngIf="canReconcile(t)"
+                        [disabled]="busyId() === t.id"
+                        (click)="askAction(t, 'reconcile')"
+                        title="Interroger PayTech pour mettre à jour le statut">
+                  ⟳ Réconcilier
+                </button>
+
                 <!-- Activer manuellement — PENDING ou FAILED -->
                 <button class="btn btn-success mini"
                         *ngIf="canForceActivate(t)"
@@ -137,8 +146,9 @@ interface PendingAction {
             <h3>Activer l'abonnement manuellement</h3>
             <p>
               Cette action activera le plan <strong>{{ pendingAction()!.tx.plan }}</strong>
-              pour l'utilisateur <code>{{ shortId(pendingAction()!.tx.userId) }}</code> sans passer par le webhook Stripe.
-              À utiliser uniquement si le paiement est bien confirmé sur Stripe.
+              pour l'utilisateur <code>{{ shortId(pendingAction()!.tx.userId) }}</code> sans passer par PayTech.
+              À utiliser uniquement si le paiement est confirmé hors-bande (dashboard PayTech).
+              Préférez "Réconcilier" si la transaction est PENDING.
             </p>
             <div class="modal-actions">
               <button class="btn btn-ghost" (click)="cancelAction()">Annuler</button>
@@ -150,7 +160,9 @@ interface PendingAction {
             <h3>Confirmer le remboursement</h3>
             <p>
               Le montant de <strong>{{ pendingAction()!.tx.amount | number:'1.0-2' }} {{ pendingAction()!.tx.currency }}</strong>
-              sera remboursé via Stripe. Cette action est irréversible.
+              sera remboursé via PayTech (appel <code>/payment/refund-payment</code>) et l'abonnement
+              sera downgradé en FREE. Si PayTech refuse, la transaction reste SUCCEEDED côté Joseph·Yusuf.
+              Action irréversible.
             </p>
             <div class="modal-actions">
               <button class="btn btn-ghost" (click)="cancelAction()">Annuler</button>
@@ -161,12 +173,26 @@ interface PendingAction {
           <ng-container *ngSwitchCase="'cancel'">
             <h3>Annuler la transaction</h3>
             <p>
-              La transaction sera marquée <strong>CANCELLED</strong>. Aucun remboursement Stripe ne sera effectué
+              La transaction sera marquée <strong>CANCELLED</strong>. Aucun remboursement PayTech ne sera effectué
               (utilisez "Rembourser" si le paiement a déjà été capturé). Utile pour nettoyer les doublons PENDING.
             </p>
             <div class="modal-actions">
               <button class="btn btn-ghost" (click)="cancelAction()">Retour</button>
               <button class="btn btn-danger" (click)="doAction()">Confirmer l'annulation</button>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'reconcile'">
+            <h3>Réconcilier avec PayTech</h3>
+            <p>
+              Interroge <code>GET /payment/get-status</code> côté PayTech pour rattraper une éventuelle
+              IPN perdue. Si PayTech confirme le paiement, l'abonnement <strong>{{ pendingAction()!.tx.plan }}</strong>
+              sera activé pour <code>{{ shortId(pendingAction()!.tx.userId) }}</code>.
+              Sinon, la transaction reste PENDING ou bascule en FAILED.
+            </p>
+            <div class="modal-actions">
+              <button class="btn btn-ghost" (click)="cancelAction()">Retour</button>
+              <button class="btn btn-info" (click)="doAction()">Lancer la réconciliation</button>
             </div>
           </ng-container>
 
@@ -215,6 +241,19 @@ interface PendingAction {
     }
     .btn-warning:hover:not(:disabled) { background: rgba(243, 156, 18, 0.22); }
     .btn-warning:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-info {
+      background: rgba(76, 152, 219, 0.12);
+      border: 1px solid rgba(76, 152, 219, 0.4);
+      color: #6cb1ec;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      padding: 0.45rem 0.9rem;
+      transition: background 0.2s;
+    }
+    .btn-info:hover:not(:disabled) { background: rgba(76, 152, 219, 0.22); }
+    .btn-info:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .badge.disabled { background: rgba(128,128,128,0.15); color: #aaa; border-color: rgba(128,128,128,0.3); }
 
@@ -289,6 +328,7 @@ export class TransactionsComponent implements OnInit {
   canRefund(t: Transaction): boolean { return t.status === 'SUCCEEDED'; }
   canCancel(t: Transaction): boolean { return t.status === 'PENDING' || t.status === 'FAILED'; }
   canForceActivate(t: Transaction): boolean { return t.status === 'PENDING' || t.status === 'FAILED'; }
+  canReconcile(t: Transaction): boolean { return t.status === 'PENDING'; }
 
   askAction(tx: Transaction, type: ActionType): void {
     this.pendingAction.set({ tx, type });
@@ -306,12 +346,15 @@ export class TransactionsComponent implements OnInit {
       ? this.api.refundTransaction(action.tx.id)
       : action.type === 'cancel'
         ? this.api.cancelTransaction(action.tx.id)
-        : this.api.forceActivateTransaction(action.tx.id);
+        : action.type === 'reconcile'
+          ? this.api.reconcileTransaction(action.tx.id)
+          : this.api.forceActivateTransaction(action.tx.id);
 
     const successMsg: Record<ActionType, string> = {
       'refund': `Remboursement de ${action.tx.amount} ${action.tx.currency} effectué`,
       'cancel': 'Transaction annulée',
-      'force-activate': `Abonnement ${action.tx.plan} activé manuellement`
+      'force-activate': `Abonnement ${action.tx.plan} activé manuellement`,
+      'reconcile': 'Réconciliation PayTech effectuée'
     };
 
     obs$.subscribe({

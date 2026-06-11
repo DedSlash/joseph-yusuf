@@ -50,4 +50,10 @@ public class AdminTransactionController {
     public ResponseEntity<AdminTransactionDto> forceActivate(@PathVariable UUID id) {
         return ResponseEntity.ok(service.forceActivate(id));
     }
+
+    @PostMapping("/{id}/reconcile")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AdminTransactionDto> reconcile(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.reconcile(id));
+    }
 }

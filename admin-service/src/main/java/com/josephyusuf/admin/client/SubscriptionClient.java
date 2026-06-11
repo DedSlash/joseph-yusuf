@@ -34,6 +34,9 @@ public interface SubscriptionClient {
     @PostMapping("/api/subscriptions/admin/transactions/{id}/force-activate")
     TransactionDto forceActivate(@PathVariable("id") UUID id);
 
+    @PostMapping("/api/subscriptions/admin/transactions/{id}/reconcile")
+    TransactionDto reconcile(@PathVariable("id") UUID id);
+
     @GetMapping("/api/subscriptions/admin/payment-methods")
     List<PaymentMethodConfigDto> getPaymentMethods();
 

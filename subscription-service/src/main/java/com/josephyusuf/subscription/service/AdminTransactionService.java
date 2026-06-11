@@ -3,6 +3,7 @@ package com.josephyusuf.subscription.service;
 import com.josephyusuf.subscription.dto.AdminPageResponse;
 import com.josephyusuf.subscription.dto.AdminTransactionDto;
 import com.josephyusuf.subscription.entity.Transaction;
+import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.TransactionStatus;
 import com.josephyusuf.subscription.exception.PaymentException;
 import com.josephyusuf.subscription.exception.SubscriptionNotFoundException;
@@ -25,6 +26,8 @@ public class AdminTransactionService {
 
     private final TransactionRepository transactionRepository;
     private final SubscriptionService subscriptionService;
+    private final PayTechRefundService payTechRefundService;
+    private final PayTechReconciliationService payTechReconciliationService;
 
     @Transactional(readOnly = true)
     public AdminPageResponse<AdminTransactionDto> list(int page, int size, String status, UUID userId) {
@@ -51,9 +54,15 @@ public class AdminTransactionService {
     }
 
     /**
-     * Marquage local d'un remboursement. L'administrateur doit avoir préalablement
-     * effectué le remboursement réel sur le dashboard PayTech ; cet endpoint sert
-     * uniquement à refléter cet état côté Joseph·Yusuf.
+     * Refund automatique : appelle PayTech /payment/refund-payment puis applique
+     * localement REFUNDED + downgrade FREE. Si PayTech refuse (réseau, ref inconnue,
+     * doublon), la transaction reste SUCCEEDED côté Joseph·Yusuf — pas de drift.
+     *
+     * Le webhook refund_complete arrivera ensuite et sera idempotent (status déjà
+     * REFUNDED).
+     *
+     * Pour les transactions PayDunya (non couvertes par PayTech), conserve le
+     * comportement legacy : marquage local uniquement.
      */
     @Transactional
     public AdminTransactionDto refund(UUID id) {
@@ -61,10 +70,31 @@ public class AdminTransactionService {
         if (transaction.getStatus() != TransactionStatus.SUCCEEDED) {
             throw new PaymentException("Seules les transactions SUCCEEDED peuvent être remboursées");
         }
-        transaction.setStatus(TransactionStatus.REFUNDED);
-        transactionRepository.save(transaction);
-        log.info("Transaction marquée REFUNDED localement id={} provider={}", id, transaction.getProvider());
-        return toDto(transaction);
+
+        if (transaction.getProvider() == PaymentProvider.PAYDUNYA) {
+            transaction.setStatus(TransactionStatus.REFUNDED);
+            transactionRepository.save(transaction);
+            log.info("Transaction PayDunya marquée REFUNDED localement id={}", id);
+            return toDto(transaction);
+        }
+
+        payTechRefundService.refund(transaction);
+        subscriptionService.markRefundAndDowngrade(transaction.getUserId(), transaction.getTransactionId());
+        Transaction updated = findById(id);
+        log.info("Transaction remboursée via PayTech id={} provider={}", id, transaction.getProvider());
+        return toDto(updated);
+    }
+
+    /**
+     * Réconciliation manuelle : interroge PayTech pour rattraper une IPN
+     * éventuellement perdue. Doit cibler une transaction PENDING.
+     */
+    @Transactional
+    public AdminTransactionDto reconcile(UUID id) {
+        Transaction transaction = findById(id);
+        payTechReconciliationService.reconcile(transaction);
+        Transaction updated = findById(id);
+        return toDto(updated);
     }
 
     @Transactional

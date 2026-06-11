@@ -40,6 +40,9 @@ public class Transaction {
     @Column(name = "transaction_id", unique = true, length = 255)
     private String transactionId;
 
+    @Column(name = "provider_token", length = 255)
+    private String providerToken;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 

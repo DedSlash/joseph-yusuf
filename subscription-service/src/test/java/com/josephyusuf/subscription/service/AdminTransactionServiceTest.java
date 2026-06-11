@@ -35,6 +35,8 @@ class AdminTransactionServiceTest {
 
     @Mock private TransactionRepository transactionRepository;
     @Mock private SubscriptionService subscriptionService;
+    @Mock private PayTechRefundService payTechRefundService;
+    @Mock private PayTechReconciliationService payTechReconciliationService;
 
     @InjectMocks private AdminTransactionService service;
 
@@ -128,16 +130,64 @@ class AdminTransactionServiceTest {
     }
 
     @Test
-    @DisplayName("refund - SUCCEEDED → marquage local REFUNDED, persistance et DTO renvoyés")
-    void refund_marksLocalRefunded() {
+    @DisplayName("refund - PAYTECH SUCCEEDED → appelle PayTech /refund-payment puis downgrade")
+    void refund_paytech_callsRefundApiThenDowngrade() {
         Transaction tx = sampleTransaction(TransactionStatus.SUCCEEDED);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        service.refund(tx.getId());
+
+        verify(payTechRefundService).refund(tx);
+        verify(subscriptionService).markRefundAndDowngrade(tx.getUserId(), tx.getTransactionId());
+    }
+
+    @Test
+    @DisplayName("refund - PayTech refuse → exception propagée, pas de downgrade local")
+    void refund_paytechRefuses_propagatesAndSkipsDowngrade() {
+        Transaction tx = sampleTransaction(TransactionStatus.SUCCEEDED);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        org.mockito.Mockito.doThrow(new PaymentException("PayTech a refusé le remboursement : doublon"))
+                .when(payTechRefundService).refund(tx);
+
+        assertThatThrownBy(() -> service.refund(tx.getId()))
+                .isInstanceOf(PaymentException.class)
+                .hasMessageContaining("PayTech a refusé");
+
+        verify(subscriptionService, never()).markRefundAndDowngrade(any(), any());
+    }
+
+    @Test
+    @DisplayName("refund - PAYDUNYA SUCCEEDED → marquage local REFUNDED uniquement (legacy)")
+    void refund_paydunya_marksLocalOnly() {
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID())
+                .userId(UUID.randomUUID())
+                .provider(PaymentProvider.PAYDUNYA)
+                .transactionId("PD-xyz")
+                .amount(BigDecimal.valueOf(2990))
+                .currency("XOF")
+                .plan(PlanTier.PREMIUM)
+                .status(TransactionStatus.SUCCEEDED)
+                .build();
         when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
 
         AdminTransactionDto dto = service.refund(tx.getId());
 
         assertThat(dto.getStatus()).isEqualTo(TransactionStatus.REFUNDED);
-        assertThat(tx.getStatus()).isEqualTo(TransactionStatus.REFUNDED);
         verify(transactionRepository).save(tx);
+        verify(payTechRefundService, never()).refund(any());
+        verify(subscriptionService, never()).markRefundAndDowngrade(any(), any());
+    }
+
+    @Test
+    @DisplayName("reconcile - délègue à PayTechReconciliationService et renvoie le DTO mis à jour")
+    void reconcile_delegates() {
+        Transaction tx = sampleTransaction(TransactionStatus.PENDING);
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        service.reconcile(tx.getId());
+
+        verify(payTechReconciliationService).reconcile(tx);
     }
 
     @Test

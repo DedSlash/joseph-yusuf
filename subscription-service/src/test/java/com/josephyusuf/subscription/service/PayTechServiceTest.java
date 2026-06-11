@@ -53,6 +53,7 @@ class PayTechServiceTest {
         config.setSuccessUrl("https://josephyusuf.com/subscription/success");
         config.setCancelUrl("https://josephyusuf.com/subscription");
         config.setIpnUrl("https://api.josephyusuf.com/api/webhooks/paytech");
+        config.setRefundNotifUrl("https://api.josephyusuf.com/api/webhooks/paytech");
 
         payTechService = new PayTechService(config, restTemplate, subscriptionService,
                 adminClient, new ObjectMapper());
@@ -256,5 +257,59 @@ class PayTechServiceTest {
     @DisplayName("baseUrl est toujours paytech.sn/api")
     void baseUrl_isAlwaysPaytechSn() {
         assertThat(config.getBaseUrl()).isEqualTo("https://paytech.sn/api");
+    }
+
+    @Test
+    @DisplayName("createPayment capture le token PayTech depuis la réponse")
+    @SuppressWarnings("unchecked")
+    void createPayment_capturesProviderToken() {
+        UUID userId = UUID.randomUUID();
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", 1);
+        body.put("token", "pt_token_abc123");
+        body.put("redirect_url", "https://paytech.sn/payment/checkout/abc");
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class),
+                eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
+                .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
+
+        payTechService.createPayment(userId, "PREMIUM", null, null);
+
+        ArgumentCaptor<PendingTransactionParams> captor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(captor.capture());
+        assertThat(captor.getValue().getProviderToken()).isEqualTo("pt_token_abc123");
+    }
+
+    @Test
+    @DisplayName("createPayment envoie refund_notif_url et ipn_url dans le payload")
+    @SuppressWarnings("unchecked")
+    void createPayment_includesRefundNotifUrl() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, null);
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
+        Map<String, Object> sentBody = reqCaptor.getValue().getBody();
+        assertThat(sentBody)
+                .containsEntry("ipn_url", "https://api.josephyusuf.com/api/webhooks/paytech")
+                .containsEntry("refund_notif_url", "https://api.josephyusuf.com/api/webhooks/paytech");
+    }
+
+    @Test
+    @DisplayName("createPayment omet refund_notif_url si non configuré")
+    @SuppressWarnings("unchecked")
+    void createPayment_skipsRefundNotifUrlIfBlank() {
+        UUID userId = UUID.randomUUID();
+        config.setRefundNotifUrl(null);
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, null);
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
+        Map<String, Object> sentBody = reqCaptor.getValue().getBody();
+        assertThat(sentBody).doesNotContainKey("refund_notif_url");
     }
 }
