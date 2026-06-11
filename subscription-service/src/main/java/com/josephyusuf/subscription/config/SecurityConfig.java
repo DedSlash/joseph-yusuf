@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -32,8 +33,12 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Non authentifié")))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**", "/api/webhooks/**",
-                                "/api/subscriptions/promo-codes/validate-public").permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/actuator/**"),
+                                new AntPathRequestMatcher("/api/webhooks/**"),
+                                new AntPathRequestMatcher("/api/subscriptions/promo-codes/validate-public"),
+                                new AntPathRequestMatcher("/api/subscriptions/payment-methods")
+                        ).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
