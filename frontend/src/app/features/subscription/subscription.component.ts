@@ -52,12 +52,13 @@ const PLANS: PlanMeta[] = [
   }
 ];
 
-// Iconographie par défaut — clé = paytech_method_code, valeur = icône fallback.
+// Iconographie par défaut — clé = paytech_method_code (valeurs littérales doc PayTech),
+// valeur = icône fallback.
 const METHOD_ICON: Record<string, string> = {
-  wave: '🌊',
-  orange_money: '🟠',
-  free_money: '💚',
-  card: '💳'
+  'Wave': '🌊',
+  'Orange Money': '🟠',
+  'Free Money': '💚',
+  'Carte Bancaire': '💳'
 };
 
 @Component({

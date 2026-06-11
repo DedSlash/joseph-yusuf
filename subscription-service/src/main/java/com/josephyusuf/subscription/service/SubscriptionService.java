@@ -110,6 +110,29 @@ public class SubscriptionService {
         });
     }
 
+    /**
+     * Reçoit un IPN refund_complete : marque la transaction REFUNDED puis downgrade
+     * l'abonnement de l'utilisateur en FREE (statut CANCELLED). Sans cette
+     * descente, l'utilisateur garderait son accès premium gratuitement après le
+     * remboursement effectif.
+     */
+    @Transactional
+    public void markRefundAndDowngrade(UUID userId, String externalTxId) {
+        markTransactionRefunded(externalTxId);
+
+        subscriptionRepository.findByUserId(userId).ifPresent(sub -> {
+            sub.setPlan(PlanTier.FREE);
+            sub.setStatus(SubscriptionStatus.CANCELLED);
+            sub.setCancelledAt(Instant.now());
+            sub.setExpiresAt(Instant.now());
+            sub.setAutoRenew(false);
+            subscriptionRepository.save(sub);
+        });
+
+        syncPlanWithAuthService(userId, PlanTier.FREE);
+        log.info("Refund + downgrade FREE appliqués userId={} tx={}", userId, externalTxId);
+    }
+
     @Transactional
     public Transaction recordPendingTransaction(PendingTransactionParams params) {
         if (params.getPlan() == PlanTier.FREE) {
