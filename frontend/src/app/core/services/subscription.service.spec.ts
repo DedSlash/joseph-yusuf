@@ -128,4 +128,24 @@ describe('SubscriptionService', () => {
       mobileRedirectUrl: 'https://paytech.sn/payment/mobile/abc'
     });
   });
+
+  it('createPaddlePayment() → POST /paddle/create avec planTier + couponCode', () => {
+    const body = { planTier: 'PREMIUM_PLUS', couponCode: 'EARLY50' };
+    service.createPaddlePayment(body).subscribe();
+    const req = httpMock.expectOne(`${apiUrl}/paddle/create`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(body);
+    req.flush({
+      transactionId: 'txn_abc',
+      status: 'ready',
+      checkoutUrl: 'https://pay.paddle.com/abc'
+    });
+  });
+
+  it('createPaddlePayment() sans coupon → couponCode null transmis', () => {
+    service.createPaddlePayment({ planTier: 'PREMIUM', couponCode: null }).subscribe();
+    const req = httpMock.expectOne(`${apiUrl}/paddle/create`);
+    expect(req.request.body).toEqual({ planTier: 'PREMIUM', couponCode: null });
+    req.flush({ transactionId: 'txn_x', status: 'ready', checkoutUrl: null });
+  });
 });

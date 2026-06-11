@@ -5,11 +5,13 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { EMPTY, of, throwError } from 'rxjs';
 import { SubscriptionComponent } from './subscription.component';
 import { SubscriptionService } from '../../core/services/subscription.service';
+import { PaddleService } from '../../core/services/paddle.service';
 import { AuthService } from '../../core/auth/auth.service';
 
 describe('SubscriptionComponent', () => {
   let component: SubscriptionComponent;
   let subscriptionSpy: jasmine.SpyObj<SubscriptionService>;
+  let paddleSpy: jasmine.SpyObj<PaddleService>;
   let authSpy: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
@@ -17,10 +19,12 @@ describe('SubscriptionComponent', () => {
       'getCurrent', 'cancelSubscription', 'setAutoRenew',
       'initiateWave', 'initiateOrange',
       'validatePromoCode', 'getAvailablePaymentMethods',
-      'createPayTechPayment'
+      'createPayTechPayment', 'createPaddlePayment'
     ]);
     subscriptionSpy.getCurrent.and.returnValue(EMPTY);
     subscriptionSpy.getAvailablePaymentMethods.and.returnValue(of([]));
+
+    paddleSpy = jasmine.createSpyObj<PaddleService>('PaddleService', ['openCheckout']);
 
     authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'getCurrentUser', 'refreshSession', 'isLoggedIn', 'isAdmin', 'getTrialStatus']);
     authSpy.getPlan.and.returnValue('FREE');
@@ -38,6 +42,7 @@ describe('SubscriptionComponent', () => {
         provideRouter([]),
         provideAnimations(),
         { provide: SubscriptionService, useValue: subscriptionSpy },
+        { provide: PaddleService, useValue: paddleSpy },
         { provide: AuthService, useValue: authSpy }
       ]
     }).compileComponents();
@@ -159,24 +164,34 @@ describe('SubscriptionComponent', () => {
     });
   });
 
-  describe('initiatePayment (PayTech-only)', () => {
+  describe('initiatePayment (PayTech path)', () => {
+    const wavePick = () => {
+      component.selectedProvider = 'WAVE';
+      component.selectedMethodCode = 'Wave';
+      component.selectedRouting = 'PAYTECH';
+    };
+
     it('no-op si aucun plan sélectionné', () => {
       component.selectedPlan = null;
-      component.selectedMethodCode = 'Wave';
+      wavePick();
       component.initiatePayment();
       expect(subscriptionSpy.createPayTechPayment).not.toHaveBeenCalled();
     });
 
-    it('no-op si aucun méthode sélectionnée', () => {
+    it('no-op si aucune méthode sélectionnée', () => {
       component.selectedPlan = 'PREMIUM';
+      component.selectedProvider = null;
       component.selectedMethodCode = null;
+      component.selectedRouting = null;
       component.initiatePayment();
       expect(subscriptionSpy.createPayTechPayment).not.toHaveBeenCalled();
     });
 
     it('appelle createPayTechPayment avec planTier + couponCode + paytechMethodCode', () => {
       component.selectedPlan = 'PREMIUM_PLUS';
+      component.selectedProvider = 'ORANGE_MONEY';
       component.selectedMethodCode = 'Orange Money';
+      component.selectedRouting = 'PAYTECH';
       component.promoCode = '  EARLY50  ';
       subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
 
@@ -191,7 +206,7 @@ describe('SubscriptionComponent', () => {
 
     it('couponCode vide → null transmis', () => {
       component.selectedPlan = 'PREMIUM';
-      component.selectedMethodCode = 'Wave';
+      wavePick();
       component.promoCode = '   ';
       subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
 
@@ -206,7 +221,7 @@ describe('SubscriptionComponent', () => {
 
     it('erreur → paymentError prend le message backend', () => {
       component.selectedPlan = 'PREMIUM';
-      component.selectedMethodCode = 'Wave';
+      wavePick();
       subscriptionSpy.createPayTechPayment.and.returnValue(
         throwError(() => ({ error: { message: 'PayTech KO' } }))
       );
@@ -219,12 +234,76 @@ describe('SubscriptionComponent', () => {
 
     it('erreur sans message → fallback générique', () => {
       component.selectedPlan = 'PREMIUM';
-      component.selectedMethodCode = 'card';
+      wavePick();
       subscriptionSpy.createPayTechPayment.and.returnValue(throwError(() => ({})));
 
       component.initiatePayment();
 
       expect(component.paymentError).toBe('Erreur lors de la création du paiement.');
+    });
+  });
+
+  describe('initiatePayment (Paddle path)', () => {
+    const cartePick = () => {
+      component.selectedProvider = 'CARTE';
+      component.selectedMethodCode = null;
+      component.selectedRouting = 'PADDLE';
+    };
+
+    it('appelle createPaddlePayment puis paddleService.openCheckout', () => {
+      component.selectedPlan = 'PREMIUM';
+      cartePick();
+      component.promoCode = 'EARLY50';
+      authSpy.getCurrentUser.and.returnValue({ id: 'u1', email: 'a@x.com' } as any);
+      subscriptionSpy.createPaddlePayment.and.returnValue(of({
+        transactionId: 'txn_abc', status: 'ready', checkoutUrl: null
+      } as any));
+
+      component.initiatePayment();
+
+      expect(subscriptionSpy.createPaddlePayment).toHaveBeenCalledWith({
+        planTier: 'PREMIUM', couponCode: 'EARLY50'
+      });
+      expect(paddleSpy.openCheckout).toHaveBeenCalledWith('txn_abc', 'a@x.com');
+    });
+
+    it('aucun email user → paymentError + pas d\'appel backend', () => {
+      component.selectedPlan = 'PREMIUM';
+      cartePick();
+      authSpy.getCurrentUser.and.returnValue(null);
+
+      component.initiatePayment();
+
+      expect(subscriptionSpy.createPaddlePayment).not.toHaveBeenCalled();
+      expect(component.paymentError).toContain('Email');
+    });
+
+    it('erreur backend → paymentError prend le message', () => {
+      component.selectedPlan = 'PREMIUM_PLUS';
+      cartePick();
+      authSpy.getCurrentUser.and.returnValue({ id: 'u1', email: 'a@x.com' } as any);
+      subscriptionSpy.createPaddlePayment.and.returnValue(
+        throwError(() => ({ error: { message: 'Paddle down' } }))
+      );
+
+      component.initiatePayment();
+
+      expect(component.paymentError).toBe('Paddle down');
+      expect(paddleSpy.openCheckout).not.toHaveBeenCalled();
+    });
+
+    it('paddleService.openCheckout throws → paymentError', () => {
+      component.selectedPlan = 'PREMIUM';
+      cartePick();
+      authSpy.getCurrentUser.and.returnValue({ id: 'u1', email: 'a@x.com' } as any);
+      subscriptionSpy.createPaddlePayment.and.returnValue(of({
+        transactionId: 'txn_x', status: 'ready', checkoutUrl: null
+      } as any));
+      paddleSpy.openCheckout.and.throwError('Paddle.js indisponible');
+
+      component.initiatePayment();
+
+      expect(component.paymentError).toContain('Paddle.js indisponible');
     });
   });
 
@@ -268,35 +347,44 @@ describe('SubscriptionComponent', () => {
   });
 
   describe('canPay / selectMethod', () => {
-    it('canPay false sans méthode', () => {
-      component.selectedMethodCode = null;
+    it('canPay false sans provider', () => {
+      component.selectedProvider = null;
       expect(component.canPay()).toBe(false);
     });
 
-    it('canPay true avec méthode', () => {
-      component.selectedMethodCode = 'Wave';
+    it('canPay true avec provider', () => {
+      component.selectedProvider = 'WAVE';
       expect(component.canPay()).toBe(true);
     });
 
-    it('selectMethod met à jour selectedMethodCode et reset paymentError', () => {
+    it('selectMethod met à jour provider/code/routing et reset paymentError', () => {
       component.paymentError = 'previous';
-      component.selectMethod({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' });
+      component.selectMethod({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave', routing: 'PAYTECH' });
+      expect(component.selectedProvider).toBe('WAVE');
       expect(component.selectedMethodCode).toBe('Wave');
+      expect(component.selectedRouting).toBe('PAYTECH');
       expect(component.paymentError).toBe('');
+    });
+
+    it('selectMethod CARTE → routing PADDLE + paytechMethodCode null', () => {
+      component.selectMethod({ provider: 'CARTE', enabled: true, displayName: 'Carte bancaire', displayOrder: 4, paytechMethodCode: null, routing: 'PADDLE' });
+      expect(component.selectedProvider).toBe('CARTE');
+      expect(component.selectedRouting).toBe('PADDLE');
+      expect(component.selectedMethodCode).toBeNull();
     });
   });
 
   describe('logoFor', () => {
     it('renvoie le chemin logo si paytechMethodCode connu (valeurs doc PayTech)', () => {
-      expect(component.logoFor({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' })).toBe('assets/payment-logos/wave.png');
-      expect(component.logoFor({ provider: 'ORANGE_MONEY', enabled: true, displayName: 'Orange Money', displayOrder: 2, paytechMethodCode: 'Orange Money' })).toBe('assets/payment-logos/orange-money.svg');
-      expect(component.logoFor({ provider: 'FREE_MONEY', enabled: true, displayName: 'Free Money', displayOrder: 3, paytechMethodCode: 'Free Money' })).toBe('assets/payment-logos/free-money.png');
-      expect(component.logoFor({ provider: 'CARTE', enabled: true, displayName: 'Carte bancaire', displayOrder: 4, paytechMethodCode: 'Carte Bancaire' })).toBe('assets/payment-logos/mastercard.svg');
+      expect(component.logoFor({ provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave', routing: 'PAYTECH' })).toBe('assets/payment-logos/wave.png');
+      expect(component.logoFor({ provider: 'ORANGE_MONEY', enabled: true, displayName: 'Orange Money', displayOrder: 2, paytechMethodCode: 'Orange Money', routing: 'PAYTECH' })).toBe('assets/payment-logos/orange-money.svg');
+      expect(component.logoFor({ provider: 'FREE_MONEY', enabled: true, displayName: 'Free Money', displayOrder: 3, paytechMethodCode: 'Free Money', routing: 'PAYTECH' })).toBe('assets/payment-logos/free-money.png');
+      expect(component.logoFor({ provider: 'CARTE', enabled: true, displayName: 'Carte bancaire', displayOrder: 4, paytechMethodCode: null, routing: 'PADDLE' })).toBe('assets/payment-logos/mastercard.svg');
     });
 
     it('fallback mastercard.svg si code inconnu ou null', () => {
-      expect(component.logoFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: null })).toBe('assets/payment-logos/mastercard.svg');
-      expect(component.logoFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: 'unknown' })).toBe('assets/payment-logos/mastercard.svg');
+      expect(component.logoFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: null, routing: 'PAYTECH' })).toBe('assets/payment-logos/mastercard.svg');
+      expect(component.logoFor({ provider: 'X', enabled: true, displayName: 'X', displayOrder: 5, paytechMethodCode: 'unknown', routing: 'PAYTECH' })).toBe('assets/payment-logos/mastercard.svg');
     });
   });
 
@@ -543,7 +631,7 @@ describe('SubscriptionComponent', () => {
 
     it('getAvailablePaymentMethods succès → liste hydratée', () => {
       const methods = [
-        { provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave' }
+        { provider: 'WAVE', enabled: true, displayName: 'Wave', displayOrder: 1, paytechMethodCode: 'Wave', routing: 'PAYTECH' as const }
       ];
       subscriptionSpy.getAvailablePaymentMethods.and.returnValue(of(methods));
       subscriptionSpy.getCurrent.and.returnValue(of({ plan: 'FREE', status: 'ACTIVE' } as any));

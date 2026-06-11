@@ -16,5 +16,6 @@ public class PaymentMethodConfigDto {
     private String displayName;
     private int displayOrder;
     private String paytechMethodCode;
+    private String routing;
     private Instant updatedAt;
 }

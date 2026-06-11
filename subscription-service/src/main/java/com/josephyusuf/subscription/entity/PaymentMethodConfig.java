@@ -34,6 +34,15 @@ public class PaymentMethodConfig {
     @Column(name = "paytech_method_code", length = 50)
     private String paytechMethodCode;
 
+    /**
+     * Backend qui gère ce moyen de paiement côté serveur.
+     * Valeurs : "PAYTECH" (Wave/Orange Money/Free Money) ou "PADDLE" (carte bancaire).
+     * Le frontend route l'appel /create selon cette valeur.
+     */
+    @Column(name = "routing", nullable = false, length = 20)
+    @Builder.Default
+    private String routing = "PAYTECH";
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;

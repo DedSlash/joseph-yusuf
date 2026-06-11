@@ -1,6 +1,8 @@
 package com.josephyusuf.subscription.controller;
 
 import com.josephyusuf.subscription.dto.OrangeMoneyRequest;
+import com.josephyusuf.subscription.dto.PaddleCheckoutResponse;
+import com.josephyusuf.subscription.dto.PaddleRequest;
 import com.josephyusuf.subscription.dto.PayDunyaInvoiceResponse;
 import com.josephyusuf.subscription.dto.PayDunyaRequest;
 import com.josephyusuf.subscription.dto.PayDunyaStatusResponse;
@@ -13,6 +15,7 @@ import com.josephyusuf.subscription.dto.TransactionResponse;
 import com.josephyusuf.subscription.dto.WavePaymentRequest;
 import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.service.OrangeMoneyService;
+import com.josephyusuf.subscription.service.PaddleService;
 import com.josephyusuf.subscription.service.PayDunyaService;
 import com.josephyusuf.subscription.service.PayTechService;
 import com.josephyusuf.subscription.service.SubscriptionService;
@@ -45,6 +48,7 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
     private final PayDunyaService payDunyaService;
     private final PayTechService payTechService;
+    private final PaddleService paddleService;
 
     @PostMapping("/wave/initiate")
     public ResponseEntity<PaymentProviderResponse> initiateWave(Authentication auth,
@@ -99,6 +103,16 @@ public class SubscriptionController {
         UUID userId = userIdOf(auth);
         return ResponseEntity.ok(payTechService.createPayment(
                 userId, request.getPlanTier(), request.getCouponCode(), request.getPaytechMethodCode()));
+    }
+
+    @PostMapping("/paddle/create")
+    public ResponseEntity<PaddleCheckoutResponse> createPaddlePayment(
+            Authentication auth, @Valid @RequestBody PaddleRequest request) {
+        UUID userId = userIdOf(auth);
+        com.josephyusuf.subscription.enums.PlanTier plan =
+                com.josephyusuf.subscription.enums.PlanTier.valueOf(request.getPlanTier());
+        return ResponseEntity.ok(paddleService.createPayment(
+                userId, plan, request.getCouponCode()));
     }
 
     @GetMapping("/current")

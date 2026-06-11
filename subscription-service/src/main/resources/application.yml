@@ -52,6 +52,16 @@ paytech:
   ipn-url: ${PAYTECH_IPN_URL:http://localhost:8080/api/webhooks/paytech}
   refund-notif-url: ${PAYTECH_REFUND_NOTIF_URL:http://localhost:8080/api/webhooks/paytech}
 
+paddle:
+  api-key: ${PADDLE_API_KEY:test_paddle_api_key}
+  client-token: ${PADDLE_CLIENT_TOKEN:test_paddle_client_token}
+  webhook-secret: ${PADDLE_WEBHOOK_SECRET:pdl_ntfset_test}
+  sandbox: ${PADDLE_SANDBOX:true}
+  prices:
+    premium-id: ${PADDLE_PREMIUM_PRICE_ID:pri_01ksq0ph7hf40yw3jxar0m8ze9}
+    premium-plus-id: ${PADDLE_PREMIUM_PLUS_PRICE_ID:pri_01ksq0w0pszyzjgjersrds2wvg}
+    early50-discount-id: ${PADDLE_EARLY50_DISCOUNT_ID:dsc_01ksq16caf60a7664a1vah71h2}
+
 eureka:
   client:
     register-with-eureka: true
