@@ -108,6 +108,42 @@ class SubscriptionServiceTest {
 
             assertThat(result).isNotNull();
         }
+
+        @Test
+        @DisplayName("sourceTx.monthsCount=6 → expiresAt = startedAt + 180 jours (mobile money multi-mois)")
+        void activate_multiMonth_extendsExpiry() {
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> {
+                Subscription s = inv.getArgument(0);
+                s.setId(UUID.randomUUID());
+                return s;
+            });
+            when(transactionRepository.findByTransactionId(EXTERNAL_TX)).thenReturn(Optional.of(
+                    Transaction.builder()
+                            .userId(USER_ID)
+                            .status(TransactionStatus.PENDING)
+                            .monthsCount(6)
+                            .build()));
+
+            Subscription result = service.activateAfterPayment(USER_ID, PlanTier.PREMIUM,
+                    PaymentProvider.WAVE, EXTERNAL_TX);
+
+            long days = java.time.Duration.between(result.getStartedAt(), result.getExpiresAt()).toDays();
+            assertThat(days).isEqualTo(30L * 6);
+        }
+
+        @Test
+        @DisplayName("sourceTx absente → fallback 1 mois (30 jours)")
+        void activate_noSourceTx_defaultsToOneMonth() {
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Subscription result = service.activateAfterPayment(USER_ID, PlanTier.PREMIUM,
+                    PaymentProvider.WAVE, null);
+
+            long days = java.time.Duration.between(result.getStartedAt(), result.getExpiresAt()).toDays();
+            assertThat(days).isEqualTo(30L);
+        }
     }
 
     @Nested

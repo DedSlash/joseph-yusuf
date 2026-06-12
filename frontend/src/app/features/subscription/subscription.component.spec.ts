@@ -200,7 +200,8 @@ describe('SubscriptionComponent', () => {
       expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
         planTier: 'PREMIUM_PLUS',
         couponCode: 'EARLY50',
-        paytechMethodCode: 'Orange Money'
+        paytechMethodCode: 'Orange Money',
+        monthsCount: 1
       });
     });
 
@@ -215,7 +216,8 @@ describe('SubscriptionComponent', () => {
       expect(subscriptionSpy.createPayTechPayment).toHaveBeenCalledWith({
         planTier: 'PREMIUM',
         couponCode: null,
-        paytechMethodCode: 'Wave'
+        paytechMethodCode: 'Wave',
+        monthsCount: 1
       });
     });
 

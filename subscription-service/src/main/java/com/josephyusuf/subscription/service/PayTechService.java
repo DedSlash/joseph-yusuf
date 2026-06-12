@@ -40,13 +40,15 @@ public class PayTechService {
 
     @SuppressWarnings("unchecked")
     public PayTechPaymentResponse createPayment(UUID userId, String planTier, String couponCode,
-                                                String paytechMethodCode) {
+                                                String paytechMethodCode, Integer monthsCount) {
         PlanTier plan = PlanTier.valueOf(planTier);
         if (plan == PlanTier.FREE) {
             throw new InvalidPlanException("Le plan FREE ne nécessite pas de paiement");
         }
 
-        BigDecimal amount = resolvePlanAmount(plan);
+        int months = normalizeMonths(monthsCount);
+        BigDecimal monthly = resolvePlanAmount(plan);
+        BigDecimal amount = monthly.multiply(BigDecimal.valueOf(months));
         BigDecimal originalAmount = amount;
         Integer discountPercent = null;
         boolean couponLifetime = false;
@@ -65,7 +67,7 @@ public class PayTechService {
                 + "-" + System.currentTimeMillis();
 
         Map<String, Object> params = buildPaymentPayload(userId, planTier, couponCode,
-                amount, refCommand, paytechMethodCode);
+                amount, refCommand, paytechMethodCode, months);
         HttpHeaders headers = buildHeaders();
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
 
@@ -103,16 +105,25 @@ public class PayTechService {
                 .discountPercent(discountPercent)
                 .originalAmount(discountPercent != null ? originalAmount : null)
                 .couponLifetime(couponLifetime)
+                .monthsCount(months)
                 .build());
 
-        log.info("PayTech paiement créé userId={} plan={} method={} amount={} XOF ref={}",
-                userId, planTier, paytechMethodCode, amount, refCommand);
+        log.info("PayTech paiement créé userId={} plan={} method={} months={} amount={} XOF ref={}",
+                userId, planTier, paytechMethodCode, months, amount, refCommand);
 
         return PayTechPaymentResponse.builder()
                 .refCommand(refCommand)
                 .redirectUrl(redirectUrls.get("regular"))
                 .mobileRedirectUrl(redirectUrls.get("express"))
                 .build();
+    }
+
+    private int normalizeMonths(Integer monthsCount) {
+        if (monthsCount == null) return 1;
+        if (monthsCount < 1 || monthsCount > 12) {
+            throw new InvalidPlanException("monthsCount doit être entre 1 et 12 (reçu " + monthsCount + ")");
+        }
+        return monthsCount;
     }
 
     private BigDecimal resolvePlanAmount(PlanTier plan) {
@@ -142,9 +153,12 @@ public class PayTechService {
 
     private Map<String, Object> buildPaymentPayload(UUID userId, String planTier, String couponCode,
                                                     BigDecimal amount, String refCommand,
-                                                    String paytechMethodCode) {
+                                                    String paytechMethodCode, int months) {
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("item_name", "Abonnement Joseph·Yusuf " + planTier);
+        String itemName = months > 1
+                ? "Abonnement Joseph·Yusuf " + planTier + " (" + months + " mois)"
+                : "Abonnement Joseph·Yusuf " + planTier;
+        params.put("item_name", itemName);
         params.put("item_price", amount.intValue());
         params.put("currency", "XOF");
         params.put("ref_command", refCommand);

@@ -50,13 +50,15 @@ public class SubscriptionService {
     public Subscription activateAfterPayment(UUID userId, PlanTier plan, PaymentProvider provider,
                                              String externalTxId) {
         Instant now = Instant.now();
-        Instant expiry = now.plus(30, ChronoUnit.DAYS);
 
         Transaction sourceTx = externalTxId != null
                 ? transactionRepository.findByTransactionId(externalTxId).orElse(null)
                 : null;
         String couponApplied = sourceTx != null ? sourceTx.getPromoCode() : null;
         boolean couponLifetime = sourceTx != null && sourceTx.isCouponLifetime();
+        int months = sourceTx != null && sourceTx.getMonthsCount() > 0
+                ? sourceTx.getMonthsCount() : 1;
+        Instant expiry = now.plus(30L * months, ChronoUnit.DAYS);
 
         Subscription subscription = subscriptionRepository.findByUserId(userId)
                 .map(existing -> {
@@ -151,6 +153,7 @@ public class SubscriptionService {
         if (params.getPlan() == PlanTier.FREE) {
             throw new InvalidPlanException("Le plan FREE ne nécessite pas de transaction");
         }
+        int months = params.getMonthsCount() < 1 ? 1 : params.getMonthsCount();
         Transaction tx = Transaction.builder()
                 .userId(params.getUserId())
                 .plan(params.getPlan())
@@ -164,6 +167,7 @@ public class SubscriptionService {
                 .discountPercent(params.getDiscountPercent())
                 .originalAmount(params.getOriginalAmount())
                 .couponLifetime(params.isCouponLifetime())
+                .monthsCount(months)
                 .build();
         return transactionRepository.save(tx);
     }

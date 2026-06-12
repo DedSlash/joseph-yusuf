@@ -102,13 +102,13 @@ class SubscriptionControllerTest {
                 .redirectUrl("https://paytech.sn/checkout/x")
                 .mobileRedirectUrl("https://paytech.sn/mobile/x")
                 .build();
-        when(payTechService.createPayment(userId, "PREMIUM", "EARLY50", "wave")).thenReturn(resp);
+        when(payTechService.createPayment(userId, "PREMIUM", "EARLY50", "wave", null)).thenReturn(resp);
 
         ResponseEntity<PayTechPaymentResponse> response = controller.createPayTechPayment(auth, request);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody().getRefCommand()).isEqualTo("JY-aaaa-1700");
-        verify(payTechService).createPayment(userId, "PREMIUM", "EARLY50", "wave");
+        verify(payTechService).createPayment(userId, "PREMIUM", "EARLY50", "wave", null);
     }
 
     @Test
@@ -116,12 +116,12 @@ class SubscriptionControllerTest {
     void createPayTechPayment_nullMethodCode() {
         mockAuth();
         PayTechRequest request = PayTechRequest.builder().planTier("PREMIUM_PLUS").build();
-        when(payTechService.createPayment(userId, "PREMIUM_PLUS", null, null))
+        when(payTechService.createPayment(userId, "PREMIUM_PLUS", null, null, null))
                 .thenReturn(PayTechPaymentResponse.builder().refCommand("JY-x").build());
 
         controller.createPayTechPayment(auth, request);
 
-        verify(payTechService).createPayment(userId, "PREMIUM_PLUS", null, null);
+        verify(payTechService).createPayment(userId, "PREMIUM_PLUS", null, null, null);
     }
 
     @Test

@@ -102,7 +102,8 @@ public class SubscriptionController {
             Authentication auth, @Valid @RequestBody PayTechRequest request) {
         UUID userId = userIdOf(auth);
         return ResponseEntity.ok(payTechService.createPayment(
-                userId, request.getPlanTier(), request.getCouponCode(), request.getPaytechMethodCode()));
+                userId, request.getPlanTier(), request.getCouponCode(),
+                request.getPaytechMethodCode(), request.getMonthsCount()));
     }
 
     @PostMapping("/paddle/create")
