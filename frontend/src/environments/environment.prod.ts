@@ -3,7 +3,7 @@ export const environment = {
   apiUrl: '',
   founderEndDate: '2026-07-31',
   gaTrackingId: 'G-E5V297BFKW',
-  paddleClientToken: 'live_paddle_client_token',
+  paddleClientToken: 'live_34967fd390018229f369e3b8b69',
   paddleEnvironment: 'production' as 'sandbox' | 'production',
   paddlePrices: {
     PREMIUM: 'pri_01ksq0ph7hf40yw3jxar0m8ze9',
