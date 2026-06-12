@@ -3,12 +3,14 @@ package com.josephyusuf.subscription.service;
 import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.PaddleConfig;
 import com.josephyusuf.subscription.dto.PaddleCheckoutResponse;
+import com.josephyusuf.subscription.dto.PendingTransactionParams;
 import com.josephyusuf.subscription.dto.PromoCodeValidation;
+import com.josephyusuf.subscription.enums.PaymentProvider;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.exception.InvalidPlanException;
 import com.josephyusuf.subscription.exception.PaymentException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +22,8 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -40,15 +44,31 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class PaddleService {
 
     private static final String HMAC_SHA256 = "HmacSHA256";
     private static final String EARLY50 = "EARLY50";
+    private static final BigDecimal PREMIUM_MONTHLY_EUR = new BigDecimal("4.99");
+    private static final BigDecimal PREMIUM_PLUS_MONTHLY_EUR = new BigDecimal("9.99");
 
     private final PaddleConfig paddleConfig;
     private final RestTemplate restTemplate;
     private final AdminClient adminClient;
+    /**
+     * Cycle DI : SubscriptionService → PaddleService (cancel, PR #29) ET
+     * PaddleService → SubscriptionService (recordPendingTransaction, ici).
+     * {@code @Lazy} casse le cycle en créant un proxy résolu au premier appel.
+     */
+    private final SubscriptionService subscriptionService;
+
+    public PaddleService(PaddleConfig paddleConfig, RestTemplate restTemplate,
+                         AdminClient adminClient,
+                         @Lazy SubscriptionService subscriptionService) {
+        this.paddleConfig = paddleConfig;
+        this.restTemplate = restTemplate;
+        this.adminClient = adminClient;
+        this.subscriptionService = subscriptionService;
+    }
 
     /**
      * Crée une transaction Paddle (POST /transactions) et retourne un
@@ -68,6 +88,12 @@ public class PaddleService {
             throw new InvalidPlanException("Le plan FREE ne nécessite pas de paiement Paddle");
         }
 
+        // Résolution du code promo en amont — un seul appel admin-service
+        // utilisé à la fois pour discount_id Paddle et pour le montant local.
+        PromoCodeValidation promo = lookupPromo(couponCode);
+        boolean promoValid = promo != null && promo.isValid();
+        boolean couponLifetime = promoValid && promo.isLifetime();
+
         String priceId = resolvePriceId(planTier);
 
         Map<String, Object> item = new HashMap<>();
@@ -86,7 +112,7 @@ public class PaddleService {
         body.put("custom_data", customData);
         body.put("collection_mode", "automatic");
 
-        String discountId = resolveDiscountId(couponCode);
+        String discountId = resolveDiscountIdFromValidation(promo, couponCode);
         if (discountId != null) {
             body.put("discount_id", discountId);
         }
@@ -117,14 +143,87 @@ public class PaddleService {
         String status = (String) data.get("status");
         String checkoutUrl = extractCheckoutUrl(data);
 
-        log.info("Paddle transaction créée userId={} plan={} txId={} status={}",
-                userId, planTier, transactionId, status);
+        // Le montant final + la devise sont calculés par Paddle (selon le prix,
+        // le discount éventuellement capé sous le minimum de transaction, etc.).
+        // On les lit dans la réponse plutôt que de re-calculer côté Joseph —
+        // évite la divergence "on a enregistré X chez nous mais Paddle a débité Y".
+        BigDecimal amount = extractAmountFromTotals(data, "total")
+                .orElseGet(() -> monthlyEurFor(planTier));
+        BigDecimal originalAmount = extractAmountFromTotals(data, "subtotal")
+                .orElse(null);
+        String currency = extractCurrency(data);
+        boolean priceWasDiscounted = originalAmount != null
+                && originalAmount.compareTo(amount) > 0;
+
+        // Enregistre la Transaction PENDING en local, indexée sur le txn_*
+        // Paddle. Sans ça, le webhook transaction.completed ne trouve aucune
+        // Transaction à mettre à jour et le paiement reste invisible dans
+        // l'historique utilisateur (bug initial PR #26 corrigé ici).
+        subscriptionService.recordPendingTransaction(PendingTransactionParams.builder()
+                .userId(userId)
+                .plan(planTier)
+                .provider(PaymentProvider.PADDLE)
+                .externalTxId(transactionId)
+                .amount(amount)
+                .currency(currency != null ? currency : "EUR")
+                .promoCode(promoValid ? promo.getCode() : couponCode)
+                .discountPercent(promoValid ? promo.getDiscountPercent() : null)
+                .originalAmount(priceWasDiscounted ? originalAmount : null)
+                .couponLifetime(couponLifetime)
+                .monthsCount(1)
+                .build());
+
+        log.info("Paddle transaction créée userId={} plan={} txId={} amount={} {} status={}",
+                userId, planTier, transactionId, amount, currency, status);
 
         return PaddleCheckoutResponse.builder()
                 .transactionId(transactionId)
                 .status(status)
                 .checkoutUrl(checkoutUrl)
                 .build();
+    }
+
+    private PromoCodeValidation lookupPromo(String couponCode) {
+        if (couponCode == null || couponCode.isBlank()) return null;
+        try {
+            return adminClient.validatePublic(couponCode.trim());
+        } catch (Exception e) {
+            log.warn("Lookup promo code KO pour code={} : {}", couponCode, e.getMessage());
+            return null;
+        }
+    }
+
+    private BigDecimal monthlyEurFor(PlanTier plan) {
+        return switch (plan) {
+            case PREMIUM -> PREMIUM_MONTHLY_EUR;
+            case PREMIUM_PLUS -> PREMIUM_PLUS_MONTHLY_EUR;
+            default -> throw new InvalidPlanException("Plan invalide pour Paddle: " + plan);
+        };
+    }
+
+    /** Lit {@code data.details.totals.<key>} (cents, string) → BigDecimal en unités. */
+    @SuppressWarnings("unchecked")
+    private java.util.Optional<BigDecimal> extractAmountFromTotals(
+            Map<String, Object> data, String key) {
+        try {
+            Map<String, Object> details = (Map<String, Object>) data.get("details");
+            if (details == null) return java.util.Optional.empty();
+            Map<String, Object> totals = (Map<String, Object>) details.get("totals");
+            if (totals == null) return java.util.Optional.empty();
+            Object raw = totals.get(key);
+            if (raw == null) return java.util.Optional.empty();
+            return java.util.Optional.of(
+                    new BigDecimal(raw.toString())
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+        } catch (Exception e) {
+            log.warn("Extraction totals.{} échouée : {}", key, e.getMessage());
+            return java.util.Optional.empty();
+        }
+    }
+
+    private String extractCurrency(Map<String, Object> data) {
+        Object cur = data.get("currency_code");
+        return cur == null ? null : cur.toString();
     }
 
     /**
@@ -205,21 +304,18 @@ public class PaddleService {
         };
     }
 
-    private String resolveDiscountId(String couponCode) {
-        if (couponCode == null || couponCode.isBlank()) return null;
-        String trimmed = couponCode.trim();
-        try {
-            PromoCodeValidation v = adminClient.validatePublic(trimmed);
-            if (v != null && v.isValid() && v.getPaddleDiscountId() != null
-                    && !v.getPaddleDiscountId().isBlank()) {
-                return v.getPaddleDiscountId();
-            }
-        } catch (Exception e) {
-            log.warn("Lookup paddle discount id KO pour code={} : {}", trimmed, e.getMessage());
+    /**
+     * Récupère le discount_id Paddle à partir d'un résultat de validation déjà
+     * fait (évite un 2ᵉ aller-retour vers admin-service). Fallback config
+     * pour EARLY50 (compat descendante avec PADDLE_EARLY50_DISCOUNT_ID).
+     */
+    private String resolveDiscountIdFromValidation(PromoCodeValidation promo, String couponCode) {
+        if (promo != null && promo.isValid()
+                && promo.getPaddleDiscountId() != null
+                && !promo.getPaddleDiscountId().isBlank()) {
+            return promo.getPaddleDiscountId();
         }
-        // Fallback EARLY50 (compat descendante avec PADDLE_EARLY50_DISCOUNT_ID).
-        // À retirer une fois la migration V3 vérifiée stable en prod.
-        if (EARLY50.equalsIgnoreCase(trimmed)) {
+        if (couponCode != null && EARLY50.equalsIgnoreCase(couponCode.trim())) {
             return paddleConfig.getPrices().getEarly50DiscountId();
         }
         return null;

@@ -43,6 +43,7 @@ class PaddleServiceTest {
 
     @Mock private RestTemplate restTemplate;
     @Mock private AdminClient adminClient;
+    @Mock private SubscriptionService subscriptionService;
 
     private PaddleConfig config;
     private PaddleService paddleService;
@@ -60,7 +61,7 @@ class PaddleServiceTest {
         prices.setEarly50DiscountId("dsc_early50_test");
         config.setPrices(prices);
 
-        paddleService = new PaddleService(config, restTemplate, adminClient);
+        paddleService = new PaddleService(config, restTemplate, adminClient, subscriptionService);
     }
 
     private static PromoCodeValidation validWith(String paddleDiscountId) {
@@ -72,11 +73,30 @@ class PaddleServiceTest {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void stubPaddleOk(String txId, String checkoutUrl) {
+        stubPaddleOkWithTotals(txId, checkoutUrl, null, null, null);
+    }
+
+    /** Stub avec totals + currency comme la vraie API Paddle les renvoie. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void stubPaddleOkWithTotals(String txId, String checkoutUrl,
+                                        String totalCents, String subtotalCents,
+                                        String currencyCode) {
         Map<String, Object> data = new HashMap<>();
         data.put("id", txId);
         data.put("status", "ready");
         if (checkoutUrl != null) {
             data.put("checkout", Map.of("url", checkoutUrl));
+        }
+        if (currencyCode != null) {
+            data.put("currency_code", currencyCode);
+        }
+        if (totalCents != null || subtotalCents != null) {
+            Map<String, Object> totals = new HashMap<>();
+            if (totalCents != null) totals.put("total", totalCents);
+            if (subtotalCents != null) totals.put("subtotal", subtotalCents);
+            Map<String, Object> details = new HashMap<>();
+            details.put("totals", totals);
+            data.put("details", details);
         }
         Map<String, Object> body = new HashMap<>();
         body.put("data", data);
@@ -199,6 +219,53 @@ class PaddleServiceTest {
         assertThat(body).doesNotContainKey("discount_id");
         Map<String, Object> customData = (Map<String, Object>) body.get("custom_data");
         assertThat(customData).containsEntry("couponCode", "SOMEOTHER");
+    }
+
+    @Test
+    @DisplayName("Paddle ne renvoie pas de totals → fallback monthlyEur, currency EUR par défaut")
+    void createPayment_recordsPendingTransaction_premium_fallback() {
+        UUID userId = UUID.randomUUID();
+        stubPaddleOk("txn_abc", null);
+
+        paddleService.createPayment(userId, PlanTier.PREMIUM, null);
+
+        ArgumentCaptor<com.josephyusuf.subscription.dto.PendingTransactionParams> captor =
+                ArgumentCaptor.forClass(com.josephyusuf.subscription.dto.PendingTransactionParams.class);
+        org.mockito.Mockito.verify(subscriptionService).recordPendingTransaction(captor.capture());
+
+        com.josephyusuf.subscription.dto.PendingTransactionParams params = captor.getValue();
+        assertThat(params.getProvider()).isEqualTo(com.josephyusuf.subscription.enums.PaymentProvider.PADDLE);
+        assertThat(params.getExternalTxId()).isEqualTo("txn_abc");
+        assertThat(params.getAmount()).isEqualByComparingTo(new java.math.BigDecimal("4.99"));
+        assertThat(params.getCurrency()).isEqualTo("EUR");
+        assertThat(params.getMonthsCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Paddle renvoie totals USD avec discount → on enregistre le montant réel facturé")
+    void createPayment_recordsPendingTransaction_fromPaddleTotals() {
+        UUID userId = UUID.randomUUID();
+        // 9.99 USD remisé à 2.00 USD (cas réel DEBIT299 capé par minimum Paddle)
+        stubPaddleOkWithTotals("txn_xyz", null, "200", "999", "USD");
+        when(adminClient.validatePublic("DEBIT299")).thenReturn(
+                PromoCodeValidation.builder()
+                        .valid(true).code("DEBIT299").discountPercent(99)
+                        .paddleDiscountId("dsc_real").lifetime(false).build());
+
+        paddleService.createPayment(userId, PlanTier.PREMIUM_PLUS, "DEBIT299");
+
+        ArgumentCaptor<com.josephyusuf.subscription.dto.PendingTransactionParams> captor =
+                ArgumentCaptor.forClass(com.josephyusuf.subscription.dto.PendingTransactionParams.class);
+        org.mockito.Mockito.verify(subscriptionService).recordPendingTransaction(captor.capture());
+
+        com.josephyusuf.subscription.dto.PendingTransactionParams params = captor.getValue();
+        assertThat(params.getAmount()).isEqualByComparingTo(new java.math.BigDecimal("2.00"));
+        assertThat(params.getOriginalAmount()).isEqualByComparingTo(new java.math.BigDecimal("9.99"));
+        assertThat(params.getCurrency()).isEqualTo("USD");
+        // discountPercent vient d'admin-service (vue Joseph du promo), pas du montant Paddle
+        assertThat(params.getDiscountPercent()).isEqualTo(99);
+        assertThat(params.getPromoCode()).isEqualTo("DEBIT299");
+        assertThat(params.isCouponLifetime()).isFalse();
     }
 
     @Test
