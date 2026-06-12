@@ -76,7 +76,7 @@ class PayTechServiceTest {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null, null);
+        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null, null, null);
 
         assertThat(result.getRefCommand()).startsWith("JY-");
         ArgumentCaptor<PendingTransactionParams> captor =
@@ -92,7 +92,7 @@ class PayTechServiceTest {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM_PLUS", null, null);
+        payTechService.createPayment(userId, "PREMIUM_PLUS", null, null, null);
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -106,7 +106,7 @@ class PayTechServiceTest {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "Wave");
+        payTechService.createPayment(userId, "PREMIUM", null, "Wave", null);
 
         ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
@@ -125,7 +125,7 @@ class PayTechServiceTest {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "Orange Money");
+        payTechService.createPayment(userId, "PREMIUM", null, "Orange Money", null);
 
         ArgumentCaptor<PendingTransactionParams> txCaptor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -139,7 +139,7 @@ class PayTechServiceTest {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "Free Money");
+        payTechService.createPayment(userId, "PREMIUM", null, "Free Money", null);
 
         ArgumentCaptor<PendingTransactionParams> txCaptor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -153,7 +153,7 @@ class PayTechServiceTest {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, "Carte Bancaire");
+        payTechService.createPayment(userId, "PREMIUM", null, "Carte Bancaire", null);
 
         ArgumentCaptor<PendingTransactionParams> txCaptor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -169,7 +169,7 @@ class PayTechServiceTest {
                 PromoCodeValidation.builder().valid(true).discountPercent(50).code("EARLY50").build());
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", "EARLY50", "Wave");
+        payTechService.createPayment(userId, "PREMIUM", "EARLY50", "Wave", null);
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -183,7 +183,7 @@ class PayTechServiceTest {
     @DisplayName("createPayment FREE → InvalidPlanException")
     void createPayment_free_throws() {
         UUID userId = UUID.randomUUID();
-        assertThatThrownBy(() -> payTechService.createPayment(userId, "FREE", null, null))
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "FREE", null, null, null))
                 .isInstanceOf(InvalidPlanException.class);
     }
 
@@ -199,7 +199,7 @@ class PayTechServiceTest {
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
 
-        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null))
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null, null))
                 .isInstanceOf(PaymentException.class)
                 .hasMessageContaining("Clés API invalides");
     }
@@ -213,7 +213,7 @@ class PayTechServiceTest {
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenThrow(new RuntimeException("Connection refused"));
 
-        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null))
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null, null))
                 .isInstanceOf(PaymentException.class)
                 .hasMessageContaining("Impossible de contacter PayTech");
     }
@@ -230,7 +230,7 @@ class PayTechServiceTest {
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
 
-        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null, null);
+        PayTechPaymentResponse result = payTechService.createPayment(userId, "PREMIUM", null, null, null);
 
         assertThat(result.getRedirectUrl()).isEqualTo("https://paytech.sn/single-url");
         assertThat(result.getMobileRedirectUrl()).isEqualTo("https://paytech.sn/single-url");
@@ -244,7 +244,7 @@ class PayTechServiceTest {
                 PromoCodeValidation.builder().valid(false).reason("Expiré").build());
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", "EXPIRED", null);
+        payTechService.createPayment(userId, "PREMIUM", "EXPIRED", null, null);
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -272,7 +272,7 @@ class PayTechServiceTest {
                 eq((Class<Map<String, Object>>) (Class<?>) Map.class)))
                 .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
 
-        payTechService.createPayment(userId, "PREMIUM", null, null);
+        payTechService.createPayment(userId, "PREMIUM", null, null, null);
 
         ArgumentCaptor<PendingTransactionParams> captor =
                 ArgumentCaptor.forClass(PendingTransactionParams.class);
@@ -287,7 +287,7 @@ class PayTechServiceTest {
         UUID userId = UUID.randomUUID();
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, null);
+        payTechService.createPayment(userId, "PREMIUM", null, null, null);
 
         ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
@@ -305,11 +305,82 @@ class PayTechServiceTest {
         config.setRefundNotifUrl(null);
         stubPayTechOk();
 
-        payTechService.createPayment(userId, "PREMIUM", null, null);
+        payTechService.createPayment(userId, "PREMIUM", null, null, null);
 
         ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
         Map<String, Object> sentBody = reqCaptor.getValue().getBody();
         assertThat(sentBody).doesNotContainKey("refund_notif_url");
+    }
+
+    @Test
+    @DisplayName("createPayment monthsCount=6 → amount × 6 + item_name suffixé + monthsCount persisté")
+    @SuppressWarnings("unchecked")
+    void createPayment_multiMonth_premium() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, "Wave", 6);
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
+        Map<String, Object> sentBody = reqCaptor.getValue().getBody();
+        assertThat(sentBody).containsEntry("item_price", 17940);
+        assertThat((String) sentBody.get("item_name")).contains("6 mois");
+
+        ArgumentCaptor<PendingTransactionParams> txCaptor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(txCaptor.capture());
+        assertThat(txCaptor.getValue().getAmount()).isEqualByComparingTo(new BigDecimal("17940"));
+        assertThat(txCaptor.getValue().getMonthsCount()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("createPayment monthsCount=6 + EARLY50 → (6 × 2990) × 50% = 8970")
+    @SuppressWarnings("unchecked")
+    void createPayment_multiMonth_withCoupon() {
+        UUID userId = UUID.randomUUID();
+        when(adminClient.validatePublic("EARLY50")).thenReturn(
+                PromoCodeValidation.builder().valid(true).discountPercent(50).code("EARLY50").build());
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", "EARLY50", "Wave", 6);
+
+        ArgumentCaptor<PendingTransactionParams> txCaptor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(txCaptor.capture());
+        assertThat(txCaptor.getValue().getAmount()).isEqualByComparingTo(new BigDecimal("8970"));
+        assertThat(txCaptor.getValue().getOriginalAmount()).isEqualByComparingTo(new BigDecimal("17940"));
+        assertThat(txCaptor.getValue().getMonthsCount()).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("createPayment monthsCount null → traité comme 1, item_name sans suffixe")
+    @SuppressWarnings("unchecked")
+    void createPayment_nullMonths_defaultsToOne() {
+        UUID userId = UUID.randomUUID();
+        stubPayTechOk();
+
+        payTechService.createPayment(userId, "PREMIUM", null, null, null);
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> reqCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).postForEntity(anyString(), reqCaptor.capture(), any(Class.class));
+        Map<String, Object> sentBody = reqCaptor.getValue().getBody();
+        assertThat((String) sentBody.get("item_name")).doesNotContain("mois");
+
+        ArgumentCaptor<PendingTransactionParams> txCaptor =
+                ArgumentCaptor.forClass(PendingTransactionParams.class);
+        verify(subscriptionService).recordPendingTransaction(txCaptor.capture());
+        assertThat(txCaptor.getValue().getMonthsCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("createPayment monthsCount hors bornes (0 ou 13) → InvalidPlanException")
+    void createPayment_outOfRangeMonths_throws() {
+        UUID userId = UUID.randomUUID();
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null, 0))
+                .isInstanceOf(InvalidPlanException.class);
+        assertThatThrownBy(() -> payTechService.createPayment(userId, "PREMIUM", null, null, 13))
+                .isInstanceOf(InvalidPlanException.class);
     }
 }

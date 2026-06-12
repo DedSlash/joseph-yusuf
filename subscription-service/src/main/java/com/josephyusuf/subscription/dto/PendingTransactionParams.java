@@ -23,4 +23,5 @@ public class PendingTransactionParams {
     private final Integer discountPercent;
     private final BigDecimal originalAmount;
     private final boolean couponLifetime;
+    private final int monthsCount;
 }

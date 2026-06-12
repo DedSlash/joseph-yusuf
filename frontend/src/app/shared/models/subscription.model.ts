@@ -44,6 +44,8 @@ export interface PayTechRequest {
   planTier: string;
   couponCode: string | null;
   paytechMethodCode: string | null;
+  /** Nombre de mois d'abonnement payés en une fois (1-12). Mobile money uniquement. */
+  monthsCount: number;
 }
 
 export interface PayTechPaymentResponse {

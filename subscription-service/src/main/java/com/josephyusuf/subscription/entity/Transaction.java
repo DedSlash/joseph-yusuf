@@ -69,6 +69,10 @@ public class Transaction {
     @Builder.Default
     private boolean couponLifetime = false;
 
+    @Column(name = "months_count", nullable = false)
+    @Builder.Default
+    private int monthsCount = 1;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
