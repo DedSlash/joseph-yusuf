@@ -12,6 +12,7 @@ import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.enums.SubscriptionStatus;
 import com.josephyusuf.subscription.enums.TransactionStatus;
 import com.josephyusuf.subscription.exception.InvalidPlanException;
+import com.josephyusuf.subscription.exception.PaymentException;
 import com.josephyusuf.subscription.exception.SubscriptionNotFoundException;
 import com.josephyusuf.subscription.mapper.SubscriptionMapper;
 import com.josephyusuf.subscription.repository.SubscriptionRepository;
@@ -40,6 +41,7 @@ public class SubscriptionService {
     private final TransactionRepository transactionRepository;
     private final SubscriptionMapper mapper;
     private final AuthClient authClient;
+    private final PaddleService paddleService;
 
     /**
      * Activation après paiement réussi (PayTech IPN, ou activation manuelle admin).
@@ -183,13 +185,38 @@ public class SubscriptionService {
 
     /**
      * Annulation : l'utilisateur conserve l'accès jusqu'à expiresAt puis l'abonnement
-     * expire naturellement (pas de cron de renouvellement actif tant que le renouvellement
-     * automatique PayTech n'est pas implémenté).
+     * expire naturellement.
+     *
+     * <p>Pour les abonnements Paddle, on appelle aussi
+     * {@code Paddle /subscriptions/{id}/cancel} (effective_from = next_billing_period)
+     * pour stopper les prélèvements futurs. Sans cet appel, Paddle continuerait
+     * de débiter la carte au prochain cycle. Si l'API Paddle échoue, on remonte
+     * l'erreur au lieu de marquer en local pour éviter une désynchronisation
+     * silencieuse ("annulé chez nous mais toujours débité chez Paddle").</p>
+     *
+     * <p>Pour les paiements mobile money (PayTech), aucun appel upstream
+     * n'est nécessaire : il n'y a pas de prélèvement automatique côté PayTech.</p>
      */
     @Transactional
     public SubscriptionResponse cancelSubscription(UUID userId, boolean immediately) {
         Subscription local = subscriptionRepository.findByUserId(userId)
                 .orElseThrow(() -> new SubscriptionNotFoundException("Aucun abonnement actif"));
+
+        if (local.getProvider() == PaymentProvider.PADDLE
+                && local.getPaddleSubscriptionId() != null
+                && !local.getPaddleSubscriptionId().isBlank()) {
+            try {
+                paddleService.cancelSubscription(local.getPaddleSubscriptionId());
+                log.info("Paddle subscription annulée upstream userId={} paddleId={}",
+                        userId, local.getPaddleSubscriptionId());
+            } catch (Exception e) {
+                log.error("Échec annulation Paddle userId={} paddleId={} : {}",
+                        userId, local.getPaddleSubscriptionId(), e.getMessage());
+                throw new PaymentException(
+                        "Impossible d'annuler l'abonnement Paddle. Réessayez dans quelques instants.");
+            }
+        }
+
         if (immediately) {
             local.setStatus(SubscriptionStatus.CANCELLED);
             local.setCancelledAt(Instant.now());
@@ -200,7 +227,8 @@ public class SubscriptionService {
         }
         local.setAutoRenew(false);
         Subscription saved = subscriptionRepository.save(local);
-        log.info("Subscription annulée userId={} immediately={}", userId, immediately);
+        log.info("Subscription annulée userId={} immediately={} provider={}",
+                userId, immediately, local.getProvider());
         return mapper.toResponse(saved);
     }
 
