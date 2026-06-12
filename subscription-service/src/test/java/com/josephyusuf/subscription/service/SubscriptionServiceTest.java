@@ -44,6 +44,7 @@ class SubscriptionServiceTest {
     @Mock private TransactionRepository transactionRepository;
     @Mock private SubscriptionMapper mapper;
     @Mock private AuthClient authClient;
+    @Mock private PaddleService paddleService;
 
     @InjectMocks private SubscriptionService service;
 
@@ -190,6 +191,76 @@ class SubscriptionServiceTest {
             when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
             assertThatThrownBy(() -> service.cancelSubscription(USER_ID, false))
                     .isInstanceOf(SubscriptionNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("cancel sub PADDLE → appelle Paddle.cancelSubscription puis marque local")
+        void cancel_paddle_callsUpstream() {
+            Subscription local = Subscription.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM).status(SubscriptionStatus.ACTIVE)
+                    .provider(PaymentProvider.PADDLE).paddleSubscriptionId("sub_pdl_xyz")
+                    .autoRenew(true).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(local));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(mapper.toResponse(any(Subscription.class)))
+                    .thenReturn(SubscriptionResponse.builder().build());
+
+            service.cancelSubscription(USER_ID, false);
+
+            verify(paddleService).cancelSubscription("sub_pdl_xyz");
+            verify(subscriptionRepository).save(argThat(s -> s.isCancelAtPeriodEnd() && !s.isAutoRenew()));
+        }
+
+        @Test
+        @DisplayName("cancel sub PADDLE sans paddleSubscriptionId → skip Paddle, marque local")
+        void cancel_paddle_nullId_skipsUpstream() {
+            Subscription local = Subscription.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM).status(SubscriptionStatus.ACTIVE)
+                    .provider(PaymentProvider.PADDLE).paddleSubscriptionId(null)
+                    .autoRenew(true).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(local));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(mapper.toResponse(any(Subscription.class)))
+                    .thenReturn(SubscriptionResponse.builder().build());
+
+            service.cancelSubscription(USER_ID, false);
+
+            verify(paddleService, never()).cancelSubscription(any());
+            verify(subscriptionRepository).save(argThat(s -> s.isCancelAtPeriodEnd()));
+        }
+
+        @Test
+        @DisplayName("cancel sub mobile money (WAVE) → pas d'appel Paddle, marque local")
+        void cancel_wave_skipsPaddle() {
+            Subscription local = Subscription.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM).status(SubscriptionStatus.ACTIVE)
+                    .provider(PaymentProvider.WAVE).autoRenew(true).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(local));
+            when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(mapper.toResponse(any(Subscription.class)))
+                    .thenReturn(SubscriptionResponse.builder().build());
+
+            service.cancelSubscription(USER_ID, false);
+
+            verify(paddleService, never()).cancelSubscription(any());
+            verify(subscriptionRepository).save(argThat(s -> s.isCancelAtPeriodEnd()));
+        }
+
+        @Test
+        @DisplayName("cancel sub PADDLE + Paddle KO → PaymentException, pas de marquage local")
+        void cancel_paddleKo_throwsAndKeepsLocal() {
+            Subscription local = Subscription.builder()
+                    .userId(USER_ID).plan(PlanTier.PREMIUM).status(SubscriptionStatus.ACTIVE)
+                    .provider(PaymentProvider.PADDLE).paddleSubscriptionId("sub_pdl_xyz")
+                    .autoRenew(true).build();
+            when(subscriptionRepository.findByUserId(USER_ID)).thenReturn(Optional.of(local));
+            doThrow(new RuntimeException("Paddle 500"))
+                    .when(paddleService).cancelSubscription("sub_pdl_xyz");
+
+            assertThatThrownBy(() -> service.cancelSubscription(USER_ID, false))
+                    .isInstanceOf(com.josephyusuf.subscription.exception.PaymentException.class)
+                    .hasMessageContaining("Paddle");
+            verify(subscriptionRepository, never()).save(any());
         }
 
         @Test
