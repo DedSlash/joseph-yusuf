@@ -474,6 +474,17 @@ const METHOD_LOGO: Record<string, string> = {
             </div>
           </div>
 
+          <div class="paddle-promo-notice" *ngIf="selectedRouting === 'PADDLE' && promoApplied">
+            <span class="paddle-promo-icon">💳</span>
+            <div class="paddle-promo-body">
+              <strong>Code promo à ressaisir sur la fenêtre Paddle</strong>
+              <span>
+                Pour le paiement par carte, votre code <strong>{{ promoCode.toUpperCase() }}</strong>
+                ne s'applique pas automatiquement. Recopiez-le dans la fenêtre de paiement Paddle qui s'ouvrira juste après.
+              </span>
+            </div>
+          </div>
+
           <div class="error-banner" *ngIf="paymentError">{{ paymentError }}</div>
 
           <div class="step-actions">
@@ -519,6 +530,22 @@ const METHOD_LOGO: Record<string, string> = {
     .admin-preview-body { display: flex; flex-direction: column; gap: 0.2rem; }
     .admin-preview-body strong { font-size: 0.85rem; color: #5dade2; }
     .admin-preview-body span { font-size: 0.78rem; color: var(--text-2); line-height: 1.4; }
+
+    .paddle-promo-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      background: rgba(201, 168, 76, 0.08);
+      border: 1px solid rgba(201, 168, 76, 0.35);
+      border-radius: var(--r-md);
+      padding: 0.85rem 1.1rem;
+      margin: 1rem 0 1.25rem;
+    }
+    .paddle-promo-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .paddle-promo-body { display: flex; flex-direction: column; gap: 0.25rem; }
+    .paddle-promo-body > strong { font-size: 0.88rem; color: var(--gold); }
+    .paddle-promo-body span { font-size: 0.8rem; color: var(--text-2); line-height: 1.45; }
+    .paddle-promo-body span strong { color: var(--gold-light); }
 
     .loading-state { display: flex; justify-content: center; padding: 5rem; }
     .spinner {
