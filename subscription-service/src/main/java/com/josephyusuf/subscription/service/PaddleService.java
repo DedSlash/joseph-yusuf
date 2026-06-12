@@ -1,7 +1,9 @@
 package com.josephyusuf.subscription.service;
 
+import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.PaddleConfig;
 import com.josephyusuf.subscription.dto.PaddleCheckoutResponse;
+import com.josephyusuf.subscription.dto.PromoCodeValidation;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.exception.InvalidPlanException;
 import com.josephyusuf.subscription.exception.PaymentException;
@@ -46,6 +48,7 @@ public class PaddleService {
 
     private final PaddleConfig paddleConfig;
     private final RestTemplate restTemplate;
+    private final AdminClient adminClient;
 
     /**
      * Crée une transaction Paddle (POST /transactions) et retourne un
@@ -53,10 +56,11 @@ public class PaddleService {
      *
      * @param userId     id Joseph de l'utilisateur (placé dans {@code custom_data})
      * @param planTier   PREMIUM ou PREMIUM_PLUS
-     * @param couponCode code promo Joseph. Seul {@code EARLY50} est mappé sur un
-     *                   {@code discount_id} Paddle ; les autres sont ignorés
-     *                   (les codes spécifiques à Joseph sont gérés en interne
-     *                   par admin-service après webhook).
+     * @param couponCode code promo Joseph. Le {@code paddle_discount_id}
+     *                   associé est lu en DB via admin-service (table
+     *                   {@code joseph_admin.promo_codes}). EARLY50 reste
+     *                   supporté via fallback config si la DB est indisponible
+     *                   ou ne renvoie pas la mapping (compat descendante).
      */
     @SuppressWarnings("unchecked")
     public PaddleCheckoutResponse createPayment(UUID userId, PlanTier planTier, String couponCode) {
@@ -202,8 +206,20 @@ public class PaddleService {
     }
 
     private String resolveDiscountId(String couponCode) {
-        if (couponCode == null) return null;
-        if (EARLY50.equalsIgnoreCase(couponCode.trim())) {
+        if (couponCode == null || couponCode.isBlank()) return null;
+        String trimmed = couponCode.trim();
+        try {
+            PromoCodeValidation v = adminClient.validatePublic(trimmed);
+            if (v != null && v.isValid() && v.getPaddleDiscountId() != null
+                    && !v.getPaddleDiscountId().isBlank()) {
+                return v.getPaddleDiscountId();
+            }
+        } catch (Exception e) {
+            log.warn("Lookup paddle discount id KO pour code={} : {}", trimmed, e.getMessage());
+        }
+        // Fallback EARLY50 (compat descendante avec PADDLE_EARLY50_DISCOUNT_ID).
+        // À retirer une fois la migration V3 vérifiée stable en prod.
+        if (EARLY50.equalsIgnoreCase(trimmed)) {
             return paddleConfig.getPrices().getEarly50DiscountId();
         }
         return null;

@@ -51,6 +51,7 @@ export interface PromoCode {
   usedCount: number;
   expiresAt?: string;
   active: boolean;
+  paddleDiscountId?: string;
   createdAt: string;
 }
 

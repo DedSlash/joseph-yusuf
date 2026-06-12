@@ -48,6 +48,7 @@ public class PromoCodeService {
                 .expiresAt(request.getExpiresAt())
                 .active(true)
                 .lifetime(request.isLifetime())
+                .paddleDiscountId(normalizePaddleId(request.getPaddleDiscountId()))
                 .createdBy(adminId)
                 .build();
 
@@ -180,6 +181,7 @@ public class PromoCodeService {
                 .discountPercent(promo.getDiscountPercent())
                 .valid(true)
                 .lifetime(promo.isLifetime())
+                .paddleDiscountId(promo.getPaddleDiscountId())
                 .build();
     }
 
@@ -199,7 +201,14 @@ public class PromoCodeService {
                 .discountPercent(promo.getDiscountPercent())
                 .valid(true)
                 .lifetime(promo.isLifetime())
+                .paddleDiscountId(promo.getPaddleDiscountId())
                 .build();
+    }
+
+    private String normalizePaddleId(String raw) {
+        if (raw == null) return null;
+        String trimmed = raw.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private PromoCodeValidation invalid(String reason) {

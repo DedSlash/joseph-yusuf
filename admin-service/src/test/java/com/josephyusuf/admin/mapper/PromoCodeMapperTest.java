@@ -28,6 +28,7 @@ class PromoCodeMapperTest {
                 .usedCount(7)
                 .expiresAt(now)
                 .active(true)
+                .paddleDiscountId("dsc_abc")
                 .createdBy(UUID.randomUUID())
                 .createdAt(now)
                 .build();
@@ -42,6 +43,7 @@ class PromoCodeMapperTest {
         assertThat(dto.getUsedCount()).isEqualTo(7);
         assertThat(dto.getExpiresAt()).isEqualTo(now);
         assertThat(dto.isActive()).isTrue();
+        assertThat(dto.getPaddleDiscountId()).isEqualTo("dsc_abc");
         assertThat(dto.getCreatedAt()).isEqualTo(now);
     }
 

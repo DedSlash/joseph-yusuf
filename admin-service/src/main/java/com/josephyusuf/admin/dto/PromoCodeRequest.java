@@ -32,4 +32,9 @@ public class PromoCodeRequest {
 
     @Builder.Default
     private boolean lifetime = false;
+
+    @Pattern(regexp = "^dsc_[A-Za-z0-9]+$",
+            message = "paddleDiscountId doit ressembler à dsc_xxx (vide autorisé)")
+    @Size(max = 64)
+    private String paddleDiscountId;
 }

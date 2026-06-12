@@ -21,5 +21,6 @@ public class PromoCodeResponse {
     private Instant expiresAt;
     private boolean active;
     private boolean lifetime;
+    private String paddleDiscountId;
     private Instant createdAt;
 }

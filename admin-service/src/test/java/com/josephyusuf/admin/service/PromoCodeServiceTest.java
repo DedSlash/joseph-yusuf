@@ -299,4 +299,36 @@ class PromoCodeServiceTest {
         assertThat(result.isValid()).isFalse();
         assertThat(result.getReason()).contains("déjà utilisé");
     }
+
+    @Test
+    @DisplayName("create - paddleDiscountId persisté + normalisé (trim, vide → null)")
+    void create_paddleDiscountId_persisted() {
+        PromoCodeRequest request = PromoCodeRequest.builder()
+                .code("JOSEPH20")
+                .discountPercent(20)
+                .paddleDiscountId("  dsc_abc123  ")
+                .build();
+
+        when(promoCodeRepository.existsByCode("JOSEPH20")).thenReturn(false);
+        when(promoCodeRepository.save(any(PromoCode.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(promoCodeMapper.toResponse(any(PromoCode.class))).thenReturn(PromoCodeResponse.builder().build());
+
+        org.mockito.ArgumentCaptor<PromoCode> captor = org.mockito.ArgumentCaptor.forClass(PromoCode.class);
+        service.create(request, adminId);
+
+        verify(promoCodeRepository).save(captor.capture());
+        assertThat(captor.getValue().getPaddleDiscountId()).isEqualTo("dsc_abc123");
+    }
+
+    @Test
+    @DisplayName("validatePublic - paddleDiscountId remonté dans la réponse")
+    void validatePublic_paddleDiscountId_inResponse() {
+        promo.setPaddleDiscountId("dsc_xyz");
+        when(promoCodeRepository.findByCode("JOSEPH20")).thenReturn(Optional.of(promo));
+
+        PromoCodeValidation result = service.validatePublic("JOSEPH20");
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.getPaddleDiscountId()).isEqualTo("dsc_xyz");
+    }
 }
