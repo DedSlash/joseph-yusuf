@@ -110,6 +110,20 @@ import { environment } from '../../../environments/environment';
             <label>Date d'expiration</label>
             <input class="input" type="datetime-local" formControlName="expiresAt" />
           </div>
+          <div class="form-row">
+            <label>
+              ID discount Paddle (optionnel)
+              <span class="hint">
+                À renseigner pour que le code fonctionne aussi en carte bancaire (Paddle).
+                Format : <code>dsc_xxx</code> — créer d'abord le discount côté Paddle Dashboard
+                (Catalog → Discounts), puis coller son ID ici.
+              </span>
+            </label>
+            <input class="input" formControlName="paddleDiscountId" placeholder="dsc_01..." />
+            <small *ngIf="invalid('paddleDiscountId')" class="error-text">
+              Format attendu : dsc_xxx (lettres + chiffres uniquement)
+            </small>
+          </div>
 
           <div class="modal-actions">
             <button type="button" class="btn btn-ghost" (click)="closeCreate()">Annuler</button>
@@ -181,6 +195,15 @@ import { environment } from '../../../environments/environment';
     }
     .stats-list dt { color: var(--text-dim); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
     .stats-list dd { color: var(--text); font-size: 0.92rem; }
+    .hint {
+      display: block;
+      font-weight: 400;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 0.3rem;
+      line-height: 1.4;
+    }
+    .hint code { background: rgba(201, 168, 76, 0.12); padding: 0.05rem 0.3rem; border-radius: 3px; }
   `]
 })
 export class PromoCodesComponent implements OnInit {
@@ -209,7 +232,8 @@ export class PromoCodesComponent implements OnInit {
     description: [''],
     discountPercent: [10, [Validators.required, Validators.min(1), Validators.max(100)]],
     maxUses: [null as number | null],
-    expiresAt: ['']
+    expiresAt: [''],
+    paddleDiscountId: ['', [Validators.pattern(/^(dsc_[A-Za-z0-9]+)?$/), Validators.maxLength(64)]]
   });
 
   ngOnInit(): void {
@@ -252,7 +276,8 @@ export class PromoCodesComponent implements OnInit {
       description: '',
       discountPercent: 10,
       maxUses: null,
-      expiresAt: ''
+      expiresAt: '',
+      paddleDiscountId: ''
     });
     this.showCreateForm.set(true);
   }
@@ -279,6 +304,7 @@ export class PromoCodesComponent implements OnInit {
       discountPercent: raw.discountPercent,
       maxUses: raw.maxUses ?? undefined,
       expiresAt: raw.expiresAt ? new Date(raw.expiresAt).toISOString() : undefined,
+      paddleDiscountId: raw.paddleDiscountId?.trim() || undefined,
       active: true
     };
     this.api.createPromoCode(payload).subscribe({

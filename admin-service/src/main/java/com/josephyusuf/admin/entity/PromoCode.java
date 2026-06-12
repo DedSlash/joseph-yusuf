@@ -48,6 +48,9 @@ public class PromoCode {
     @Builder.Default
     private boolean lifetime = false;
 
+    @Column(name = "paddle_discount_id", length = 64)
+    private String paddleDiscountId;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

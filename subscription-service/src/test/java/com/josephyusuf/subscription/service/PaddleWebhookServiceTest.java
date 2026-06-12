@@ -54,7 +54,7 @@ class PaddleWebhookServiceTest {
         config.setWebhookSecret(WEBHOOK_SECRET);
         config.setSandbox(true);
         config.setPrices(new PaddleConfig.Prices());
-        paddleService = new PaddleService(config, null);
+        paddleService = new PaddleService(config, null, null);
         objectMapper = new ObjectMapper();
         webhookService = new PaddleWebhookService(paddleService, subscriptionService,
                 subscriptionRepository, processedWebhookEventRepository, authClient, objectMapper);

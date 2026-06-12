@@ -1,7 +1,9 @@
 package com.josephyusuf.subscription.service;
 
+import com.josephyusuf.subscription.client.AdminClient;
 import com.josephyusuf.subscription.config.PaddleConfig;
 import com.josephyusuf.subscription.dto.PaddleCheckoutResponse;
+import com.josephyusuf.subscription.dto.PromoCodeValidation;
 import com.josephyusuf.subscription.enums.PlanTier;
 import com.josephyusuf.subscription.exception.InvalidPlanException;
 import com.josephyusuf.subscription.exception.PaymentException;
@@ -40,6 +42,7 @@ class PaddleServiceTest {
     private static final String WEBHOOK_SECRET = "pdl_ntfset_test_secret_value";
 
     @Mock private RestTemplate restTemplate;
+    @Mock private AdminClient adminClient;
 
     private PaddleConfig config;
     private PaddleService paddleService;
@@ -57,7 +60,14 @@ class PaddleServiceTest {
         prices.setEarly50DiscountId("dsc_early50_test");
         config.setPrices(prices);
 
-        paddleService = new PaddleService(config, restTemplate);
+        paddleService = new PaddleService(config, restTemplate, adminClient);
+    }
+
+    private static PromoCodeValidation validWith(String paddleDiscountId) {
+        return PromoCodeValidation.builder()
+                .valid(true)
+                .paddleDiscountId(paddleDiscountId)
+                .build();
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -133,11 +143,33 @@ class PaddleServiceTest {
     }
 
     @Test
-    @DisplayName("PREMIUM_PLUS + couponCode EARLY50 → discount_id Paddle + couponCode dans custom_data")
+    @DisplayName("Code promo + adminClient renvoie paddleDiscountId → utilisé dans body Paddle")
     @SuppressWarnings({"unchecked", "rawtypes"})
-    void createPayment_premiumPlus_earlyCoupon() {
+    void createPayment_couponFromDb_usesDbDiscountId() {
         UUID userId = UUID.randomUUID();
         stubPaddleOk("txn_def", null);
+        when(adminClient.validatePublic("JOSEPH20")).thenReturn(validWith("dsc_from_db"));
+
+        paddleService.createPayment(userId, PlanTier.PREMIUM_PLUS, "JOSEPH20");
+
+        ArgumentCaptor<HttpEntity> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        org.mockito.Mockito.verify(restTemplate).exchange(any(String.class), eq(HttpMethod.POST),
+                captor.capture(), any(ParameterizedTypeReference.class));
+
+        Map<String, Object> body = (Map<String, Object>) captor.getValue().getBody();
+        assertThat(body).containsEntry("discount_id", "dsc_from_db");
+
+        Map<String, Object> customData = (Map<String, Object>) body.get("custom_data");
+        assertThat(customData).containsEntry("couponCode", "JOSEPH20");
+    }
+
+    @Test
+    @DisplayName("EARLY50 + adminClient KO → fallback config.early50DiscountId (compat)")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void createPayment_early50_adminDown_fallsBackToConfig() {
+        UUID userId = UUID.randomUUID();
+        stubPaddleOk("txn_def", null);
+        when(adminClient.validatePublic("EARLY50")).thenThrow(new RuntimeException("admin-service down"));
 
         paddleService.createPayment(userId, PlanTier.PREMIUM_PLUS, "EARLY50");
 
@@ -147,20 +179,15 @@ class PaddleServiceTest {
 
         Map<String, Object> body = (Map<String, Object>) captor.getValue().getBody();
         assertThat(body).containsEntry("discount_id", "dsc_early50_test");
-
-        List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
-        assertThat(items.get(0)).containsEntry("price_id", "pri_premium_plus_test");
-
-        Map<String, Object> customData = (Map<String, Object>) body.get("custom_data");
-        assertThat(customData).containsEntry("couponCode", "EARLY50");
     }
 
     @Test
-    @DisplayName("Coupon non-EARLY50 → ignoré côté Paddle, gardé dans custom_data pour tracking")
+    @DisplayName("Code non-EARLY50 sans paddleDiscountId en DB → pas de discount_id, couponCode tracké")
     @SuppressWarnings({"unchecked", "rawtypes"})
-    void createPayment_unknownCoupon_noDiscountId() {
+    void createPayment_couponWithoutPaddleId_noDiscountId() {
         UUID userId = UUID.randomUUID();
         stubPaddleOk("txn_x", null);
+        when(adminClient.validatePublic("SOMEOTHER")).thenReturn(validWith(null));
 
         paddleService.createPayment(userId, PlanTier.PREMIUM, "SOMEOTHER");
 

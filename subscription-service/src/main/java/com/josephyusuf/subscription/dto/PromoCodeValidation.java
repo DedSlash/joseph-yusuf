@@ -17,4 +17,5 @@ public class PromoCodeValidation {
     private boolean valid;
     private String reason;
     private boolean lifetime;
+    private String paddleDiscountId;
 }
