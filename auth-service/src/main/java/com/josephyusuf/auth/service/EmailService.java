@@ -3,6 +3,7 @@ package com.josephyusuf.auth.service;
 import com.josephyusuf.auth.dto.RenewalReminderEmailRequest;
 import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.User;
+import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +41,16 @@ public class EmailService {
     @Value("${app.subscription-url}")
     private String subscriptionUrl;
 
-    private InternetAddress getSender() throws UnsupportedEncodingException {
-        String address = (mailUsername != null && !mailUsername.isBlank()) ? mailUsername : from;
-        return new InternetAddress(address, "Joseph·Yusuf", ENCODING);
+    private InternetAddress getSender() throws UnsupportedEncodingException, AddressException {
+        String fromValue = (from != null && !from.isBlank()) ? from : mailUsername;
+        if (fromValue != null && fromValue.contains("<")) {
+            InternetAddress parsed = new InternetAddress(fromValue);
+            if (parsed.getPersonal() != null) {
+                parsed.setPersonal(parsed.getPersonal(), ENCODING);
+            }
+            return parsed;
+        }
+        return new InternetAddress(fromValue, "Joseph·Yusuf", ENCODING);
     }
 
     public void sendPasswordResetEmail(String to, String token) {
