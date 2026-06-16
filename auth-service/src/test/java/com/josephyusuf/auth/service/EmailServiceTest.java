@@ -94,7 +94,7 @@ class EmailServiceTest {
         emailService.sendTrialWelcome(trialUser());
 
         MimeMessage sent = captureSentMessage();
-        assertThat(subject(sent)).contains("PREMIUM_PLUS");
+        assertThat(subject(sent)).contains("Bienvenue");
         assertThat(firstRecipient(sent)).isEqualTo("user@example.com");
     }
 
