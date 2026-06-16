@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /incomes
+Disallow: /subscription
+Disallow: /subscription/success
+Disallow: /support
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /api/
+
+Sitemap: https://josephyusuf.com/sitemap.xml
