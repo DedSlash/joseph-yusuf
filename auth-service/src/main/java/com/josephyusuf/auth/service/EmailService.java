@@ -78,31 +78,44 @@ public class EmailService {
     }
 
     public void sendTrialWelcome(User user) {
-        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern(DATE_PATTERN));
+        String expirationDate = user.getTrialEndsAt()
+                .format(DateTimeFormatter.ofPattern(DATE_PATTERN, Locale.FRENCH));
         String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Bienvenue sur Joseph·Yusuf !\n\n"
-                + "Nous vous offrons 7 jours d'accès complet PREMIUM_PLUS pour découvrir toutes les fonctionnalités :\n\n"
+                + "Nous t'offrons 7 jours d'accès complet PREMIUM+ pour découvrir "
+                + "toutes les fonctionnalités :\n\n"
                 + "✅ Sources de revenus illimitées\n"
                 + "✅ Toutes les règles financières\n"
                 + "✅ Objectifs d'épargne illimités\n"
                 + "✅ Rapports PDF mensuels et annuels\n"
                 + "✅ Support prioritaire\n\n"
-                + "Votre accès gratuit expire le " + expirationDate + ".\n\n"
-                + "Les moyens de paiement seront ouverts très bientôt. Quand ce sera le cas, "
-                + "vous pourrez utiliser le code EARLY50 pour bénéficier de -50% à vie — "
-                + "réservé aux 100 premiers inscrits.\n\n"
-                + "Si vous ne souhaitez pas continuer, aucune action n'est nécessaire — "
-                + "votre compte passera automatiquement en FREE le " + expirationDate + ".\n\n"
+                + "Ton accès gratuit expire le " + expirationDate + ".\n\n"
+                + "Quand tu seras prêt à souscrire, 4 moyens de paiement sont "
+                + "disponibles :\n"
+                + "→ Wave\n"
+                + "→ Orange Money\n"
+                + "→ Free Money\n"
+                + "→ Carte bancaire (Visa / Mastercard)\n\n"
+                + "En tant qu'early adopter, le code EARLY50 te donne -50% à vie "
+                + "(réservé aux 100 premiers inscrits) :\n"
+                + "→ Premium : 1 495 FCFA/mois au lieu de 2 990\n"
+                + "→ Premium+ : 2 995 FCFA/mois au lieu de 5 990\n\n"
+                + "Activer mon abonnement :\n"
+                + subscriptionUrl + "\n\n"
+                + "Sans action de ta part, ton compte passera automatiquement en "
+                + "FREE le " + expirationDate + " — tes données restent disponibles "
+                + "dans tous les cas.\n\n"
                 + "Bonne découverte !\n"
                 + "🌾 L'équipe Joseph·Yusuf";
 
         sendEmail(user.getEmail(),
-                "🌟 Votre accès PREMIUM_PLUS est activé — 7 jours gratuits !",
+                "🌟 Bienvenue sur Joseph·Yusuf — 7 jours PREMIUM+ offerts",
                 body);
     }
 
     public void sendTrialReminder(User user) {
-        String expirationDate = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern(DATE_PATTERN));
+        String expirationDate = user.getTrialEndsAt()
+                .format(DateTimeFormatter.ofPattern(DATE_PATTERN, Locale.FRENCH));
         String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Votre période d'essai PREMIUM_PLUS se termine demain le " + expirationDate + ".\n\n"
                 + "Sans action de votre part, votre compte passera automatiquement en FREE demain. "
@@ -163,7 +176,8 @@ public class EmailService {
      * date d'origine, mais ils peuvent souscrire dès maintenant.
      */
     public void sendPaymentsActivatedTrialActive(User user) {
-        String originalEnd = user.getTrialEndsAt().format(DateTimeFormatter.ofPattern(DATE_PATTERN));
+        String originalEnd = user.getTrialEndsAt()
+                .format(DateTimeFormatter.ofPattern(DATE_PATTERN, Locale.FRENCH));
         String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Bonne nouvelle — les paiements sont maintenant ouverts sur Joseph·Yusuf.\n\n"
                 + "Tu es encore dans ta période d'essai gratuite de 7 jours, qui se termine "
