@@ -5,6 +5,7 @@ import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { PaddleService } from '../../core/services/paddle.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { CornLogoComponent } from '../../shared/components/corn-logo/corn-logo.component';
 import { TrialStatus } from '../../shared/models/user.model';
 import {
   SubscriptionInfo,
@@ -63,7 +64,7 @@ const METHOD_LOGO: Record<string, string> = {
 @Component({
   selector: 'app-subscription',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, DatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, DatePipe, CornLogoComponent],
   template: `
     <div class="sub-page">
       <div class="page-header">
@@ -92,7 +93,7 @@ const METHOD_LOGO: Record<string, string> = {
       <!-- ════════════ VUE TRIAL ════════════ -->
       <ng-container *ngIf="view === 'trial' && trialStatus">
         <div class="trial-active-card" *ngIf="trialStatus.paymentsActive; else giftAccessCard">
-          <div class="trial-icon-large">&#x1F31F;</div>
+          <div class="trial-icon-large"><app-corn-logo [size]="48"></app-corn-logo></div>
           <h2 class="trial-title">Vous profitez de votre acc&egrave;s PREMIUM_PLUS gratuit</h2>
 
           <div class="trial-countdown">
@@ -137,7 +138,7 @@ const METHOD_LOGO: Record<string, string> = {
 
         <ng-template #giftAccessCard>
           <div class="trial-active-card">
-            <div class="trial-icon-large">&#x1F31F;</div>
+            <div class="trial-icon-large"><app-corn-logo [size]="48"></app-corn-logo></div>
             <h2 class="trial-title">Acc&egrave;s Premium+ offert</h2>
             <p class="trial-message">
               Les moyens de paiement arrivent bient&ocirc;t. En attendant,
