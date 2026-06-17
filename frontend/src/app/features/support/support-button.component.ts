@@ -21,7 +21,10 @@ type Step = 'search' | 'article' | 'form' | 'success';
             type="button"
             (click)="open()"
             aria-label="Centre d'aide">
-      <span aria-hidden="true">?</span>
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+        <path d="M7 9h10v2H7zm0-3h10v2H7zm0 6h7v2H7z"/>
+      </svg>
     </button>
 
     <div class="support-overlay" *ngIf="isOpen()" (click)="close()">
@@ -165,8 +168,9 @@ type Step = 'search' | 'article' | 'form' | 'success';
       border: none;
       background: var(--gold, #C9A84C);
       color: #1a1a1a;
-      font-size: 1.8rem;
-      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       box-shadow: 0 6px 18px rgba(0,0,0,0.35);
       z-index: 980;
