@@ -26,7 +26,7 @@ Chart.register(...registerables);
     <div class="dashboard">
 
       <!-- Carte d'accueil — aucune donnée -->
-      <section class="welcome-section" *ngIf="!summary && history.length === 0 && !loading">
+      <section class="welcome-section" *ngIf="history.length === 0 && !loading">
         <div class="welcome-card">
           <div class="welcome-icon">✦</div>
           <h2 class="welcome-title">Bienvenue dans votre espace Joseph · Yusuf</h2>
