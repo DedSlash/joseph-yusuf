@@ -85,6 +85,7 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
       <a routerLink="/subscription" class="drawer-link" (click)="drawerOpen = false" *ngIf="paymentsActive">Abonnement</a>
       <a class="drawer-link" (click)="goToAccount()">Mon compte</a>
       <a routerLink="/support" class="drawer-link" (click)="drawerOpen = false">Support</a>
+      <a class="drawer-link" (click)="drawerOpen = false; showHelp = true">Comment ça marche</a>
       <div class="drawer-divider"></div>
       <button class="drawer-link drawer-logout" (click)="drawerOpen = false; logout()">Déconnexion</button>
     </aside>

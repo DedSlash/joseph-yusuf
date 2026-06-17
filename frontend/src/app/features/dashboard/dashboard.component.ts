@@ -81,29 +81,34 @@ Chart.register(...registerables);
             </span>
           </div>
 
-          <!-- Données insuffisantes : message d'accompagnement -->
-          <div class="summary-meta" *ngIf="history.length < 3">
+          <!-- Progression — encouragement premiers mois -->
+          <div class="summary-meta" *ngIf="history.length >= 1 && history.length < 3">
             <div class="insufficient-data">
-              <span class="insufficient-icon">⏳</span>
+              <span class="insufficient-icon">{{ history.length === 1 ? '✓' : '📈' }}</span>
               <div>
-                <p class="insufficient-title">Encore {{ 3 - history.length }} mois de données nécessaires</p>
-                <p class="insufficient-body">
-                  Il faut au moins 3 mois de revenus pour déterminer si vous êtes en période
-                  d'abondance ou de disette. Vous pouvez accélérer le processus en
-                  <a routerLink="/incomes" class="link-import">important votre historique</a>
-                  depuis un fichier Excel, CSV ou JSON.
+                <p class="insufficient-title">{{ history.length === 1 ? 'Premier mois enregistré' : 'Déjà 2 mois — votre suivi se précise' }}</p>
+                <p class="insufficient-body" *ngIf="history.length === 1">
+                  Votre tableau de bord est actif : découvrez ci-dessous votre
+                  première répartition et le conseil de Joseph pour ce mois. Plus vous ajoutez
+                  de mois, plus votre suivi devient précis — vous pouvez aussi importer votre
+                  <a routerLink="/incomes" class="link-import">historique</a> pour aller plus vite.
+                </p>
+                <p class="insufficient-body" *ngIf="history.length === 2">
+                  Votre classification commence à se calibrer. Encore un mois et elle
+                  sera pleinement fiable.
                 </p>
               </div>
             </div>
           </div>
 
-          <!-- Comparaison normale -->
-          <div class="summary-meta" *ngIf="history.length >= 3">
+          <!-- Comparaison vs moyenne -->
+          <div class="summary-meta" *ngIf="history.length >= 2">
             <ng-container *ngIf="summary.averageLast3Months > 0; else noBaseline">
               <span class="percentage" [ngClass]="summary.percentageVsAverage >= 0 ? 'positive' : 'negative'">
                 {{ summary.percentageVsAverage >= 0 ? '+' : '' }}{{ summary.percentageVsAverage | number:'1.0-1' }}%
               </span>
               <span class="vs-average">vs moyenne des 3 derniers mois</span>
+              <span class="reliability-badge" *ngIf="summary.monthsInBaseline < 3">Provisoire — s'affine avec le temps</span>
             </ng-container>
             <ng-template #noBaseline>
               <span class="vs-average">Pas encore de moyenne disponible</span>
@@ -657,6 +662,17 @@ Chart.register(...registerables);
       font-size: 0.8rem;
       color: var(--text-0);
       opacity: 0.5;
+    }
+
+    .reliability-badge {
+      display: inline-block;
+      margin-left: 0.5rem;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      border-radius: 4px;
+      background: rgba(201, 168, 76, 0.15);
+      color: var(--gold, #C9A84C);
+      border: 1px solid rgba(201, 168, 76, 0.3);
     }
 
     .status-banner {
