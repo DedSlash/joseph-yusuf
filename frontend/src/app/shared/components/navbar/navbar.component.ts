@@ -2,18 +2,18 @@ import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { Observable } from 'rxjs';
-import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../../core/auth/auth.service';
 import { User, Plan } from '../../../shared/models/user.model';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 import { CornLogoComponent } from '../corn-logo/corn-logo.component';
+import { WelcomeDialogComponent } from '../welcome-dialog/welcome-dialog.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, DialogModule, ToastModule, NotificationBellComponent, CornLogoComponent],
+  imports: [CommonModule, RouterModule, ToastModule, NotificationBellComponent, CornLogoComponent, WelcomeDialogComponent],
   providers: [MessageService],
   template: `
     <nav class="navbar" *ngIf="currentUser$ | async as user">
@@ -90,63 +90,8 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
       <button class="drawer-link drawer-logout" (click)="drawerOpen = false; logout()">Déconnexion</button>
     </aside>
 
-    <!-- Modale d'aide — Principe de Joseph -->
-    <p-dialog
-      header=" "
-      [(visible)]="showHelp"
-      [modal]="true"
-      [style]="{ width: '600px', maxWidth: '95vw' }"
-      [baseZIndex]="2000"
-      [draggable]="false"
-      [resizable]="false"
-      styleClass="help-dialog"
-    >
-      <div class="help-body">
-        <div class="help-icon">✦</div>
-        <h2 class="help-title">Le Principe de Joseph</h2>
-        <p class="help-intro">
-          Joseph · Yusuf s'inspire d'un principe millénaire simple :
-          <strong>épargner pendant l'abondance pour tenir pendant la disette</strong>.
-          Votre tableau de bord prend vie dès que vous enregistrez vos revenus.
-        </p>
-        <p class="help-intro" style="margin-top: 0.5rem">
-          Il faut au moins <strong>3 mois de données</strong> pour comparer votre mois actuel
-          à votre moyenne et déterminer si vous traversez une période d'abondance ou de vaches maigres.
-        </p>
-
-        <div class="help-steps">
-          <div class="help-step">
-            <span class="help-step-num">1</span>
-            <div>
-              <strong>Saisissez vos revenus du mois</strong>
-              <p>Rendez-vous dans « Mes Revenus » pour ajouter votre premier revenu.</p>
-            </div>
-          </div>
-          <div class="help-step">
-            <span class="help-step-num">2</span>
-            <div>
-              <strong>Importez votre historique si vous en avez</strong>
-              <p>
-                Vous avez déjà des données sur Excel, CSV ou JSON ?
-                Importez-les depuis « Mes Revenus » → bouton <em>Importer</em>
-                et reprenez votre aventure dans le principe de richesse sans stress.
-              </p>
-            </div>
-          </div>
-          <div class="help-step">
-            <span class="help-step-num">3</span>
-            <div>
-              <strong>Laissez Joseph travailler pour vous</strong>
-              <p>Après 3 mois, votre tableau de bord vous indique précisément où vous en êtes et comment répartir vos revenus.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="help-footer">
-          <a routerLink="/incomes" (click)="showHelp = false" class="btn-help-start">Commencer maintenant →</a>
-        </div>
-      </div>
-    </p-dialog>
+    <!-- Modale d'aide — contenu mutualisé avec le pop-up de bienvenue -->
+    <app-welcome-dialog [(visible)]="showHelp" titleLabel="Comment ça marche"></app-welcome-dialog>
   `,
   styles: [`
     .navbar {
@@ -368,116 +313,6 @@ import { CornLogoComponent } from '../corn-logo/corn-logo.component';
       height: 1px;
       background: var(--line-soft);
       margin: 4px 8px;
-    }
-
-    /* ── Modale d'aide ── */
-    .help-body {
-      text-align: center;
-      padding: 0.5rem 0.5rem 1rem;
-    }
-
-    .help-icon {
-      font-size: 2rem;
-      color: var(--gold);
-      margin-bottom: 0.75rem;
-    }
-
-    .help-title {
-      font-family: var(--font-serif);
-      font-size: 1.7rem;
-      font-weight: 600;
-      color: var(--text-0);
-      margin: 0 0 1rem;
-    }
-
-    .help-intro {
-      color: var(--text-1);
-      font-size: 0.92rem;
-      line-height: 1.7;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-
-    .help-intro strong {
-      color: var(--gold-light);
-    }
-
-    .help-steps {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      text-align: left;
-      max-width: 500px;
-      margin: 1.75rem auto 0;
-    }
-
-    .help-step {
-      display: flex;
-      gap: 1rem;
-      align-items: flex-start;
-      padding: 12px 14px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--line-soft);
-    }
-
-    .help-step-num {
-      flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: var(--gold-tint);
-      border: 1px solid var(--line-strong);
-      color: var(--gold-light);
-      font-size: 0.75rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 2px;
-    }
-
-    .help-step strong {
-      display: block;
-      font-size: 0.88rem;
-      color: var(--text-0);
-      margin-bottom: 0.2rem;
-    }
-
-    .help-step p {
-      font-size: 0.82rem;
-      color: var(--text-2);
-      line-height: 1.55;
-      margin: 0;
-    }
-
-    .help-step em {
-      color: var(--gold-light);
-      font-style: normal;
-      font-weight: 500;
-    }
-
-    .help-footer {
-      margin-top: 2rem;
-    }
-
-    .btn-help-start {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 11px 24px;
-      background: linear-gradient(180deg, var(--gold-light), var(--gold));
-      border-radius: 10px;
-      color: #1b1500;
-      font-size: 0.88rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: box-shadow 0.2s;
-      box-shadow: 0 8px 24px -8px var(--gold-glow);
-    }
-
-    .btn-help-start:hover {
-      box-shadow: 0 12px 32px -8px var(--gold-glow);
     }
 
     /* ── Burger button ── */

@@ -14,6 +14,7 @@ import { AllocationResult, AllocationLine, RuleAvailability, RuleType, UserRuleC
 import { Plan } from '../../shared/models/user.model';
 import { SavingsWidgetComponent } from '../savings/savings-widget.component';
 import { MoneyTipsModalComponent } from '../incomes/money-tips-modal/money-tips-modal.component';
+import { WelcomeDialogComponent } from '../../shared/components/welcome-dialog/welcome-dialog.component';
 import { Router } from '@angular/router';
 
 Chart.register(...registerables);
@@ -21,7 +22,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, DialogModule, SavingsWidgetComponent, MoneyTipsModalComponent],
+  imports: [CommonModule, RouterModule, FormsModule, DialogModule, SavingsWidgetComponent, MoneyTipsModalComponent, WelcomeDialogComponent],
   template: `
     <div class="dashboard">
 
@@ -414,6 +415,9 @@ Chart.register(...registerables);
         (dismissedForMonth)="onDashboardTipsDismiss()"
         (langChanged)="onDashboardTipsLangChanged($event)"
       ></app-money-tips-modal>
+
+      <!-- Pop-up de bienvenue — auto au premier login -->
+      <app-welcome-dialog [(visible)]="showWelcomeDialog"></app-welcome-dialog>
     </div>
   `,
   styles: [`
@@ -1547,6 +1551,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   history: MonthSummary[] = [];
   availableRules: RuleAvailability[] = [];
   showRuleDialog = false;
+  showWelcomeDialog = false;
   loading = true;
   josephReserve: number | null = null;
   abundanceMonthsCount = 0;
@@ -1624,10 +1629,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit(): void {
     this.loadDashboardData();
     this.loadTrialStatus();
+    this.maybeShowWelcomeDialog();
 
     this.updateSub = this.incomeService.incomeUpdated$.subscribe(() => {
       this.loadDashboardData();
     });
+  }
+
+  private maybeShowWelcomeDialog(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user) return;
+    const key = `joseph.onboardingShown.${user.id}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    setTimeout(() => { this.showWelcomeDialog = true; }, 350);
   }
 
   private loadTrialStatus(): void {
