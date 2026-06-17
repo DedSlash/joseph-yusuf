@@ -65,7 +65,7 @@ import {
 
       <div *ngIf="!canReply()" class="closed-note">
         Ce ticket est <strong>{{ statusLabel(t.status).toLowerCase() }}</strong>.
-        Ouvrez un nouveau ticket depuis le bouton ? si vous avez besoin d'aide supplémentaire.
+        Ouvrez un nouveau ticket depuis le bouton message en bas à droite si vous avez besoin d'aide supplémentaire.
       </div>
     </div>
 

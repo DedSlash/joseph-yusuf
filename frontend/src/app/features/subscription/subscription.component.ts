@@ -116,7 +116,7 @@ const METHOD_LOGO: Record<string, string> = {
           </div>
 
           <div class="trial-founder-offer">
-            <span class="founder-badge">&#x1F381; OFFRE FONDATEURS</span>
+            <span class="founder-badge">OFFRE FONDATEURS</span>
             <p>
               Code <strong>EARLY50</strong> r&eacute;serv&eacute; aux
               <strong>100 premiers inscrits</strong> pour b&eacute;n&eacute;ficier de

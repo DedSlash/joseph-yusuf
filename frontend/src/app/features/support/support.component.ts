@@ -48,7 +48,7 @@ import {
         </div>
         <h3 class="empty-title">Pas encore de ticket</h3>
         <p class="empty-text">
-          Besoin d'aide ? Cliquez sur le bouton <strong class="gold">?</strong> en bas à droite
+          Besoin d'aide ? Cliquez sur le bouton message en bas à droite
           pour chercher dans notre FAQ ou ouvrir un ticket.
         </p>
       </div>
