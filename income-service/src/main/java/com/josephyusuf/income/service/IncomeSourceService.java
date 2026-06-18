@@ -1,5 +1,7 @@
 package com.josephyusuf.income.service;
 
+import com.josephyusuf.income.client.AuthClient;
+import com.josephyusuf.income.client.dto.UpdateProfileRequest;
 import com.josephyusuf.income.dto.*;
 import com.josephyusuf.income.entity.IncomeEntry;
 import com.josephyusuf.income.entity.IncomeSource;
@@ -9,12 +11,14 @@ import com.josephyusuf.income.exception.UnauthorizedAccessException;
 import com.josephyusuf.income.repository.IncomeEntryRepository;
 import com.josephyusuf.income.repository.IncomeSourceRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IncomeSourceService {
@@ -22,6 +26,7 @@ public class IncomeSourceService {
     private final IncomeSourceRepository sourceRepository;
     private final IncomeEntryRepository entryRepository;
     private final IncomeMapper incomeMapper;
+    private final AuthClient authClient;
 
     @Transactional
     public IncomeSourceDto create(UUID userId, String plan, IncomeSourceRequest request) {
@@ -33,16 +38,32 @@ public class IncomeSourceService {
             }
         }
 
+        boolean isFirstSourceEver = sourceRepository.countByUserId(userId) == 0;
+        String currency = request.getCurrency() != null ? request.getCurrency() : "XOF";
+
         IncomeSource source = IncomeSource.builder()
                 .userId(userId)
                 .name(request.getName())
                 .type(request.getType())
-                .currency(request.getCurrency() != null ? request.getCurrency() : "XOF")
+                .currency(currency)
                 .active(true)
                 .build();
 
         source = sourceRepository.save(source);
+
+        if (isFirstSourceEver) {
+            syncUserDisplayCurrency(userId, currency);
+        }
+
         return incomeMapper.toSourceDto(source);
+    }
+
+    private void syncUserDisplayCurrency(UUID userId, String currency) {
+        try {
+            authClient.updateProfile(UpdateProfileRequest.builder().currency(currency).build());
+        } catch (Exception e) {
+            log.warn("Failed to sync display currency for user {}: {}", userId, e.getMessage());
+        }
     }
 
     public List<IncomeSourceDto> listByUser(UUID userId) {

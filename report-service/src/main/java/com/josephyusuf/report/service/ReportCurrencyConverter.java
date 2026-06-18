@@ -1,4 +1,4 @@
-package com.josephyusuf.income.service;
+package com.josephyusuf.report.service;
 
 import org.springframework.stereotype.Service;
 
@@ -6,11 +6,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 
+/**
+ * Conversion XOF → devise utilisateur pour l'affichage dans les PDF.
+ * Duplique les taux de {@code income-service/CurrencyConverter} : le report-service
+ * stocke et calcule en XOF, ne convertit qu'à l'affichage. Source unique de vérité
+ * fonctionnelle : la parité fixe BCEAO 1 EUR = 655.957 XOF.
+ */
 @Service
-public class CurrencyConverter {
+public class ReportCurrencyConverter {
 
-    // Taux indicatifs : 1 unité = X XOF. À remplacer par un flux de taux en temps réel.
-    // EUR/XOF est une parité fixe légale BCEAO (1 EUR = 655.957 XOF).
     private static final Map<String, BigDecimal> RATES_TO_XOF = Map.ofEntries(
         Map.entry("XOF", BigDecimal.ONE),
         Map.entry("XAF", BigDecimal.ONE),
@@ -30,30 +34,23 @@ public class CurrencyConverter {
         Map.entry("LRD", new BigDecimal("3"))
     );
 
-    public BigDecimal toXOF(BigDecimal amount, String currencyCode) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
-        return amount.multiply(rateToXof(currencyCode)).setScale(2, RoundingMode.HALF_UP);
-    }
-
     public BigDecimal fromXOF(BigDecimal amountXof, String currencyCode) {
         if (amountXof == null || amountXof.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-        BigDecimal rate = rateToXof(currencyCode);
-        int scale = "XOF".equalsIgnoreCase(currencyCode) || "XAF".equalsIgnoreCase(currencyCode) ? 0 : 2;
+        String code = currencyCode != null ? currencyCode.toUpperCase() : "XOF";
+        BigDecimal rate = RATES_TO_XOF.getOrDefault(code, BigDecimal.ONE);
+        int scale = isZeroDecimal(code) ? 0 : 2;
         return amountXof.divide(rate, scale, RoundingMode.HALF_UP);
     }
 
-    public Map<String, BigDecimal> getRatesToXof() {
-        return RATES_TO_XOF;
+    public String displayCode(String currencyCode) {
+        if (currencyCode == null) return "XOF";
+        String code = currencyCode.toUpperCase();
+        return "XOF".equals(code) ? "FCFA" : code;
     }
 
-    private BigDecimal rateToXof(String currencyCode) {
-        return RATES_TO_XOF.getOrDefault(
-            currencyCode != null ? currencyCode.toUpperCase() : "XOF",
-            BigDecimal.ONE
-        );
+    private boolean isZeroDecimal(String code) {
+        return "XOF".equals(code) || "XAF".equals(code);
     }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { SavingsService } from '../../core/services/savings.service';
 import { IncomeService } from '../../core/services/income.service';
+import { CurrencyDisplayService } from '../../core/services/currency-display.service';
 import { SavingsDashboard, SavingsGoal, SavingsRecommendation } from '../../shared/models/savings.model';
 import { SavingsGoalFormComponent } from './savings-goal-form.component';
 import { SavingsContributionFormComponent } from './savings-contribution-form.component';
@@ -197,7 +198,8 @@ export class SavingsWidgetComponent implements OnInit, OnDestroy {
 
   constructor(
     private savingsService: SavingsService,
-    private incomeService: IncomeService
+    private incomeService: IncomeService,
+    private currencyDisplay: CurrencyDisplayService
   ) {}
 
   ngOnInit(): void {
@@ -253,8 +255,7 @@ export class SavingsWidgetComponent implements OnInit, OnDestroy {
   onContributionSaved(): void { this.reload(); }
 
   formatAmount(value: number): string {
-    if (value == null) return '0 XOF';
-    return value.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' XOF';
+    return this.currencyDisplay.formatAmount(value);
   }
 
   statusLabel(status: string): string {

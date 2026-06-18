@@ -20,4 +20,5 @@ public class AnnualReportData {
     private Integer leanMonths;
     private Integer normalMonths;
     private List<AnnualMonthRow> rows;
+    private String displayCurrency;
 }

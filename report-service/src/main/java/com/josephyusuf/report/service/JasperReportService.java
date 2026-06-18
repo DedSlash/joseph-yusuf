@@ -5,6 +5,7 @@ import com.josephyusuf.report.dto.AnnualMonthRow;
 import com.josephyusuf.report.dto.AnnualReportData;
 import com.josephyusuf.report.dto.MonthlyReportData;
 import com.josephyusuf.report.exception.ReportGenerationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperExportManager;
@@ -22,7 +23,10 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class JasperReportService {
+
+    private final ReportCurrencyConverter currencyConverter;
 
     private static final String MONTHLY_TEMPLATE = "reports/monthly-report.jrxml";
     private static final String ANNUAL_TEMPLATE = "reports/annual-report.jrxml";
@@ -49,37 +53,49 @@ public class JasperReportService {
     }
 
     public byte[] generateMonthlyPdf(MonthlyReportData data) {
+        String currency = data.getDisplayCurrency() != null ? data.getDisplayCurrency() : "XOF";
+
         Map<String, Object> params = new HashMap<>();
         params.put("userId", data.getUserId().toString());
         params.put("month", data.getMonth());
         params.put("year", data.getYear());
-        params.put("totalIncome", data.getSummary().getTotalIncome());
-        params.put("averageLast3Months", data.getSummary().getAverageLast3Months());
+        params.put("totalIncome", currencyConverter.fromXOF(data.getSummary().getTotalIncome(), currency));
+        params.put("averageLast3Months", currencyConverter.fromXOF(data.getSummary().getAverageLast3Months(), currency));
         params.put("status", translateStatus(data.getSummary().getStatus()));
         params.put("rule", translateRule(String.valueOf(data.getAllocation().getRule())));
         String message = data.getAllocation().getMessage();
         params.put("message", message != null ? message : "");
+        params.put("currencyCode", currencyConverter.displayCode(currency));
 
         List<AllocationLineDto> lines = data.getAllocation().getAllocations() != null
-                ? data.getAllocation().getAllocations()
-                : List.of();
+                ? data.getAllocation().getAllocations().stream()
+                    .map(line -> AllocationLineDto.builder()
+                            .label(line.getLabel())
+                            .amount(currencyConverter.fromXOF(line.getAmount(), currency))
+                            .percentage(line.getPercentage())
+                            .build())
+                    .toList()
+                : List.<AllocationLineDto>of();
 
         return generate(MONTHLY_TEMPLATE, params, new JRBeanCollectionDataSource(lines));
     }
 
     public byte[] generateAnnualPdf(AnnualReportData data) {
+        String currency = data.getDisplayCurrency() != null ? data.getDisplayCurrency() : "XOF";
+
         Map<String, Object> params = new HashMap<>();
         params.put("userId", data.getUserId().toString());
         params.put("year", data.getYear());
-        params.put("totalAnnualIncome", data.getTotalAnnualIncome());
+        params.put("totalAnnualIncome", currencyConverter.fromXOF(data.getTotalAnnualIncome(), currency));
         params.put("abundanceMonths", data.getAbundanceMonths());
         params.put("leanMonths", data.getLeanMonths());
         params.put("normalMonths", data.getNormalMonths());
+        params.put("currencyCode", currencyConverter.displayCode(currency));
 
         List<AnnualMonthRow> translatedRows = data.getRows().stream()
                 .map(r -> AnnualMonthRow.builder()
                         .month(r.getMonth())
-                        .totalIncome(r.getTotalIncome())
+                        .totalIncome(currencyConverter.fromXOF(r.getTotalIncome(), currency))
                         .status(translateStatus(r.getStatus()))
                         .build())
                 .collect(java.util.stream.Collectors.toList());

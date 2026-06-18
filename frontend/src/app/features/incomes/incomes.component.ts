@@ -13,6 +13,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { IncomeService } from '../../core/services/income.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { CurrencyDisplayService } from '../../core/services/currency-display.service';
 import { IncomeSource, IncomeSourceRequest, IncomeSourceType, IncomeEntry, IncomeEntryRequest, MonthSummary, MoneyTips } from '../../shared/models/income.model';
 import { Plan } from '../../shared/models/user.model';
 import { MoneyTipsModalComponent } from './money-tips-modal/money-tips-modal.component';
@@ -26,7 +27,7 @@ interface CurrencyOption {
 const CURRENCIES: CurrencyOption[] = [
   { code: 'XOF', label: 'XOF — Franc CFA (BCEAO)',        rateToXOF: 1       },
   { code: 'XAF', label: 'XAF — Franc CFA (BEAC)',          rateToXOF: 1       },
-  { code: 'EUR', label: 'EUR — Euro',                       rateToXOF: 655.96  },
+  { code: 'EUR', label: 'EUR — Euro',                       rateToXOF: 655.957 },
   { code: 'USD', label: 'USD — Dollar américain',           rateToXOF: 600     },
   { code: 'GBP', label: 'GBP — Livre sterling',             rateToXOF: 760     },
   { code: 'CAD', label: 'CAD — Dollar canadien',            rateToXOF: 445     },
@@ -168,8 +169,8 @@ interface ImportRow {
                   <label class="entry-label">{{ entry.sourceName }}</label>
                   <span class="entry-badge entry-badge-update" *ngIf="entry.entryId">Modifier</span>
                   <span class="entry-badge entry-badge-new" *ngIf="!entry.entryId">Nouveau</span>
-                  <span class="entry-converted" *ngIf="entry.currency !== 'XOF' && entry.amount > 0">
-                    ≈ {{ formatCurrency(toXOF(entry.amount, entry.currency)) }} XOF
+                  <span class="entry-converted" *ngIf="entry.currency !== displayCurrency && entry.amount > 0">
+                    ≈ {{ formatCurrency(toXOF(entry.amount, entry.currency)) }}
                   </span>
                 </div>
                 <div class="entry-input-wrapper">
@@ -188,7 +189,7 @@ interface ImportRow {
 
               <div class="entries-footer">
                 <div class="total-display">
-                  <span class="total-label">Total (XOF) :</span>
+                  <span class="total-label">Total ({{ displayCurrency }}) :</span>
                   <span class="total-amount">{{ formatCurrency(calculateTotalXOF()) }}</span>
                   <span class="status-badge" *ngIf="currentSummary" [ngClass]="getStatusClass(currentSummary.status)">
                     {{ getStatusLabel(currentSummary.status) }}
@@ -484,7 +485,7 @@ interface ImportRow {
                 <tr *ngFor="let row of importAggregatedPreview()" [ngClass]="{'row-invalid': !row.valid}">
                   <td>{{ formatImportDate(row.month, row.year) }}</td>
                   <td>{{ row.source || '—' }}</td>
-                  <td>{{ row.valid ? formatCurrency(row.amount) : '—' }}</td>
+                  <td>{{ row.valid ? formatPlain(row.amount) : '—' }}</td>
                   <td>
                     <span class="source-tag" [ngClass]="isNewSource(row.source) ? 'source-tag-new' : 'source-tag-exists'">
                       {{ isNewSource(row.source) ? '+ à créer' : '✓ existante' }}
@@ -1500,7 +1501,7 @@ export class IncomesComponent implements OnInit {
   newSource: IncomeSourceRequest = {
     name: '',
     type: 'SALARY',
-    currency: 'XOF'
+    currency: 'XOF' // overwritten with user.currency when dialog opens
   };
 
   currencyOptions = CURRENCIES;
@@ -1530,12 +1531,6 @@ export class IncomesComponent implements OnInit {
 
   years: number[] = [];
 
-  private readonly currencyFormatter = new Intl.NumberFormat('fr-SN', {
-    style: 'currency',
-    currency: 'XOF',
-    maximumFractionDigits: 0
-  });
-
   readonly currentMonth: number;
   readonly currentYear: number;
 
@@ -1550,7 +1545,8 @@ export class IncomesComponent implements OnInit {
   constructor(
     private incomeService: IncomeService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private currencyDisplay: CurrencyDisplayService
   ) {
     const now = new Date();
     this.currentMonth = now.getMonth() + 1;
@@ -1625,7 +1621,7 @@ export class IncomesComponent implements OnInit {
 
   openAddSourceDialog(): void {
     this.editingSource = null;
-    this.newSource = { name: '', type: 'SALARY', currency: 'XOF' };
+    this.newSource = { name: '', type: 'SALARY', currency: this.displayCurrency };
     this.showSourceDialog = true;
   }
 
@@ -1638,11 +1634,16 @@ export class IncomesComponent implements OnInit {
   createSource(): void {
     if (!this.newSource.name) return;
 
+    const wasFirstSource = this.sources.length === 0;
+
     this.incomeService.createSource(this.newSource).subscribe({
       next: () => {
         this.showSourceDialog = false;
-        this.newSource = { name: '', type: 'SALARY', currency: 'XOF' };
         this.loadSources();
+        if (wasFirstSource) {
+          this.authService.me().subscribe();
+        }
+        this.newSource = { name: '', type: 'SALARY', currency: this.displayCurrency };
       }
     });
   }
@@ -1654,7 +1655,7 @@ export class IncomesComponent implements OnInit {
       next: () => {
         this.showSourceDialog = false;
         this.editingSource = null;
-        this.newSource = { name: '', type: 'SALARY', currency: 'XOF' };
+        this.newSource = { name: '', type: 'SALARY', currency: this.displayCurrency };
         this.loadSources();
       }
     });
@@ -2301,7 +2302,15 @@ export class IncomesComponent implements OnInit {
   }
 
   formatCurrency(amount: number): string {
-    return this.currencyFormatter.format(amount);
+    return this.currencyDisplay.formatAmount(amount);
+  }
+
+  formatPlain(amount: number): string {
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount ?? 0);
+  }
+
+  get displayCurrency(): string {
+    return this.currencyDisplay.displayCurrency;
   }
 
   isPremium(): boolean {
