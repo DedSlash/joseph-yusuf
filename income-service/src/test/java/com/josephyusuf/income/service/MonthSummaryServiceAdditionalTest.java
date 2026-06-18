@@ -31,10 +31,9 @@ class MonthSummaryServiceAdditionalTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     @Test
-    @DisplayName("getHistory - returns only months with income > 0")
-    void getHistory_filtersZeroMonths() {
-        when(entryRepository.sumByUserIdAndMonthAndYear(any(), anyInt(), anyInt()))
-                .thenReturn(BigDecimal.ZERO);
+    @DisplayName("getHistory - returns empty when user has no entries")
+    void getHistory_noEntries_returnsEmpty() {
+        when(entryRepository.findDistinctMonthsByUserId(USER_ID)).thenReturn(List.of());
 
         List<MonthSummary> result = summaryService.getHistory(USER_ID, 3);
 
@@ -42,8 +41,10 @@ class MonthSummaryServiceAdditionalTest {
     }
 
     @Test
-    @DisplayName("getHistory - includes months with income and wraps year correctly")
-    void getHistory_includesPositiveMonths() {
+    @DisplayName("getHistory - returns N most recent months with entries")
+    void getHistory_includesMonthsWithEntries() {
+        when(entryRepository.findDistinctMonthsByUserId(USER_ID))
+                .thenReturn(List.of("2026-05", "2026-04"));
         when(entryRepository.sumByUserIdAndMonthAndYear(any(), anyInt(), anyInt()))
                 .thenReturn(new BigDecimal("500000"));
 
