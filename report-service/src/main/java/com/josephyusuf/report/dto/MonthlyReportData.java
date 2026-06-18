@@ -16,4 +16,5 @@ public class MonthlyReportData {
     private Integer year;
     private MonthSummaryDto summary;
     private AllocationResultDto allocation;
+    private String displayCurrency;
 }

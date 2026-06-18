@@ -9,6 +9,7 @@ import { IncomeService } from '../../core/services/income.service';
 import { RuleService } from '../../core/services/rule.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ReportService } from '../../core/services/report.service';
+import { CurrencyDisplayService } from '../../core/services/currency-display.service';
 import { MonthSummary, MonthStatus, MoneyTips } from '../../shared/models/income.model';
 import { AllocationResult, AllocationLine, RuleAvailability, RuleType, UserRuleConfigRequest } from '../../shared/models/rule.model';
 import { Plan } from '../../shared/models/user.model';
@@ -1593,11 +1594,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private updateSub!: Subscription;
 
-  private readonly currencyFormatter = new Intl.NumberFormat('fr-SN', {
-    style: 'currency',
-    currency: 'XOF',
-    maximumFractionDigits: 0
-  });
 
   private readonly allocColors: Record<string, string> = {
     'Besoins': '#C9A84C',
@@ -1614,7 +1610,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     private readonly ruleService: RuleService,
     private readonly authService: AuthService,
     private readonly reportService: ReportService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly currencyDisplay: CurrencyDisplayService
   ) {
     const now = new Date();
     this.pdfMonth = now.getMonth() + 1;
@@ -1983,7 +1980,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   formatCurrency(amount: number): string {
-    return this.currencyFormatter.format(amount);
+    return this.currencyDisplay.formatAmount(amount);
   }
 
   getStatusClass(status: MonthStatus): string {

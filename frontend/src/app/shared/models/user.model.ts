@@ -10,6 +10,8 @@ export interface User {
   inTrial?: boolean;
   trialEndsAt?: string;
   createdAt: string;
+  country?: string;
+  currency?: string;
 }
 
 export interface TrialStatus {

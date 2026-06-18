@@ -1,7 +1,9 @@
 package com.josephyusuf.report.service;
 
+import com.josephyusuf.report.client.AuthClient;
 import com.josephyusuf.report.client.IncomeClient;
 import com.josephyusuf.report.client.RuleEngineClient;
+import com.josephyusuf.report.client.dto.AuthUserDto;
 import com.josephyusuf.report.dto.AllocationResultDto;
 import com.josephyusuf.report.dto.MonthSummaryDto;
 import com.josephyusuf.report.dto.ReportResponse;
@@ -38,12 +40,17 @@ class ReportServiceTest {
 
     @Mock private IncomeClient incomeClient;
     @Mock private RuleEngineClient ruleEngineClient;
+    @Mock private AuthClient authClient;
     @Mock private JasperReportService jasperReportService;
     @Mock private ReportRepository reportRepository;
     @Mock private ReportMapper reportMapper;
 
     @InjectMocks
     private ReportService reportService;
+
+    private void stubAuthClient(String currency) {
+        when(authClient.me()).thenReturn(AuthUserDto.builder().currency(currency).build());
+    }
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID REPORT_ID = UUID.randomUUID();
@@ -73,6 +80,7 @@ class ReportServiceTest {
         void generateMonthly_premium_success() {
             when(incomeClient.getSummary(5, 2026)).thenReturn(sampleSummary(5, "ABUNDANCE", new BigDecimal("500000")));
             when(ruleEngineClient.getResult(5, 2026)).thenReturn(sampleAllocation());
+            stubAuthClient("XOF");
             when(jasperReportService.generateMonthlyPdf(any())).thenReturn(FAKE_PDF);
 
             ReportRecord saved = ReportRecord.builder()
@@ -119,6 +127,7 @@ class ReportServiceTest {
                 BigDecimal amount = new BigDecimal("100000");
                 when(incomeClient.getSummary(m, 2026)).thenReturn(sampleSummary(m, status, amount));
             }
+            stubAuthClient("EUR");
             when(jasperReportService.generateAnnualPdf(any())).thenReturn(FAKE_PDF);
 
             ReportRecord saved = ReportRecord.builder()
@@ -152,6 +161,7 @@ class ReportServiceTest {
                         .totalIncome(null).status(null).build();
                 when(incomeClient.getSummary(m, 2026)).thenReturn(s);
             }
+            stubAuthClient("XOF");
             when(jasperReportService.generateAnnualPdf(any())).thenReturn(FAKE_PDF);
             when(reportRepository.save(any(ReportRecord.class))).thenAnswer(inv -> inv.getArgument(0));
             when(reportMapper.toResponse(any())).thenReturn(ReportResponse.builder().year(2026).build());

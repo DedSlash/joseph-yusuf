@@ -1,7 +1,9 @@
 package com.josephyusuf.report.service;
 
+import com.josephyusuf.report.client.AuthClient;
 import com.josephyusuf.report.client.IncomeClient;
 import com.josephyusuf.report.client.RuleEngineClient;
+import com.josephyusuf.report.client.dto.AuthUserDto;
 import com.josephyusuf.report.dto.AllocationResultDto;
 import com.josephyusuf.report.dto.AnnualMonthRow;
 import com.josephyusuf.report.dto.AnnualReportData;
@@ -36,6 +38,7 @@ public class ReportService {
 
     private final IncomeClient incomeClient;
     private final RuleEngineClient ruleEngineClient;
+    private final AuthClient authClient;
     private final JasperReportService jasperReportService;
     private final ReportRepository reportRepository;
     private final ReportMapper reportMapper;
@@ -46,6 +49,7 @@ public class ReportService {
 
         MonthSummaryDto summary = incomeClient.getSummary(month, year);
         AllocationResultDto allocation = ruleEngineClient.getResult(month, year);
+        String currency = fetchDisplayCurrency();
 
         MonthlyReportData data = MonthlyReportData.builder()
                 .userId(userId)
@@ -53,6 +57,7 @@ public class ReportService {
                 .year(year)
                 .summary(summary)
                 .allocation(allocation)
+                .displayCurrency(currency)
                 .build();
 
         byte[] pdf = jasperReportService.generateMonthlyPdf(data);
@@ -108,6 +113,7 @@ public class ReportService {
                 .leanMonths(lean)
                 .normalMonths(normal)
                 .rows(rows)
+                .displayCurrency(fetchDisplayCurrency())
                 .build();
 
         byte[] pdf = jasperReportService.generateAnnualPdf(data);
@@ -143,6 +149,16 @@ public class ReportService {
     private void verifyPlan(String plan) {
         if (plan == null || PLAN_FREE.equalsIgnoreCase(plan)) {
             throw new PlanNotAllowedException("Les rapports PDF sont réservés aux plans PREMIUM et PREMIUM_PLUS");
+        }
+    }
+
+    private String fetchDisplayCurrency() {
+        try {
+            AuthUserDto user = authClient.me();
+            return user != null && user.getCurrency() != null ? user.getCurrency() : "XOF";
+        } catch (Exception e) {
+            log.warn("Failed to fetch user currency, fallback to XOF: {}", e.getMessage());
+            return "XOF";
         }
     }
 }

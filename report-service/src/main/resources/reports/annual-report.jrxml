@@ -20,6 +20,7 @@
     <parameter name="abundanceMonths" class="java.lang.Integer"/>
     <parameter name="leanMonths"      class="java.lang.Integer"/>
     <parameter name="normalMonths"    class="java.lang.Integer"/>
+    <parameter name="currencyCode"    class="java.lang.String"/>
 
     <field name="month"       class="java.lang.Integer"/>
     <field name="totalIncome" class="java.math.BigDecimal"/>
@@ -72,10 +73,10 @@
                 <textElement><font size="9"/></textElement>
                 <text><![CDATA[Revenu annuel total]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField>
                 <reportElement x="180" y="24" width="355" height="14"/>
                 <textElement><font size="9" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$P{totalAnnualIncome}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[new java.text.DecimalFormat("#,##0.##").format($P{totalAnnualIncome}) + " " + $P{currencyCode}]]></textFieldExpression>
             </textField>
 
             <staticText>
@@ -154,10 +155,10 @@
                 ]]></textFieldExpression>
             </textField>
 
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
+            <textField isBlankWhenNull="true">
                 <reportElement x="80" y="3" width="280" height="16" style="RowAmount"/>
                 <textElement textAlignment="Right"/>
-                <textFieldExpression><![CDATA[$F{totalIncome}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{totalIncome} != null ? new java.text.DecimalFormat("#,##0.##").format($F{totalIncome}) + " " + $P{currencyCode} : ""]]></textFieldExpression>
             </textField>
 
             <textField isBlankWhenNull="true">

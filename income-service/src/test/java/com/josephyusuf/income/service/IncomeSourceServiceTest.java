@@ -1,5 +1,7 @@
 package com.josephyusuf.income.service;
 
+import com.josephyusuf.income.client.AuthClient;
+import com.josephyusuf.income.client.dto.UpdateProfileRequest;
 import com.josephyusuf.income.dto.IncomeMapper;
 import com.josephyusuf.income.dto.IncomeSourceDto;
 import com.josephyusuf.income.dto.IncomeSourceRequest;
@@ -8,6 +10,7 @@ import com.josephyusuf.income.entity.IncomeSourceType;
 import com.josephyusuf.income.exception.IncomeSourceNotFoundException;
 import com.josephyusuf.income.exception.PlanLimitExceededException;
 import com.josephyusuf.income.exception.UnauthorizedAccessException;
+import com.josephyusuf.income.repository.IncomeEntryRepository;
 import com.josephyusuf.income.repository.IncomeSourceRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -33,7 +36,13 @@ class IncomeSourceServiceTest {
     private IncomeSourceRepository sourceRepository;
 
     @Mock
+    private IncomeEntryRepository entryRepository;
+
+    @Mock
     private IncomeMapper incomeMapper;
+
+    @Mock
+    private AuthClient authClient;
 
     @InjectMocks
     private IncomeSourceService incomeSourceService;
@@ -153,6 +162,78 @@ class IncomeSourceServiceTest {
             // Verify no limit check was performed for PREMIUM plan
             verify(sourceRepository, never()).countByUserIdAndActiveTrue(any());
             verify(sourceRepository).save(any(IncomeSource.class));
+        }
+
+        @Test
+        @DisplayName("Premiere source du user - sync user.currency via auth-service")
+        void firstSourceEver_syncsUserCurrency() {
+            IncomeSourceRequest request = IncomeSourceRequest.builder()
+                    .name("Salaire France")
+                    .type(IncomeSourceType.SALARY)
+                    .currency("EUR")
+                    .build();
+
+            when(sourceRepository.countByUserId(USER_ID)).thenReturn(0L);
+
+            IncomeSource savedSource = IncomeSource.builder()
+                    .id(SOURCE_ID).userId(USER_ID).name("Salaire France")
+                    .type(IncomeSourceType.SALARY).currency("EUR").active(true).build();
+            when(sourceRepository.save(any(IncomeSource.class))).thenReturn(savedSource);
+            when(incomeMapper.toSourceDto(savedSource)).thenReturn(
+                    IncomeSourceDto.builder().id(SOURCE_ID).currency("EUR").build());
+
+            incomeSourceService.create(USER_ID, "PREMIUM", request);
+
+            ArgumentCaptor<UpdateProfileRequest> captor = ArgumentCaptor.forClass(UpdateProfileRequest.class);
+            verify(authClient).updateProfile(captor.capture());
+            assertThat(captor.getValue().getCurrency()).isEqualTo("EUR");
+        }
+
+        @Test
+        @DisplayName("Source suivante (countByUserId > 0) - pas de sync user.currency")
+        void notFirstSource_doesNotSyncUserCurrency() {
+            IncomeSourceRequest request = IncomeSourceRequest.builder()
+                    .name("Mission USA")
+                    .type(IncomeSourceType.FREELANCE)
+                    .currency("USD")
+                    .build();
+
+            when(sourceRepository.countByUserId(USER_ID)).thenReturn(2L);
+
+            IncomeSource savedSource = IncomeSource.builder()
+                    .id(SOURCE_ID).userId(USER_ID).currency("USD").active(true).build();
+            when(sourceRepository.save(any(IncomeSource.class))).thenReturn(savedSource);
+            when(incomeMapper.toSourceDto(savedSource)).thenReturn(
+                    IncomeSourceDto.builder().id(SOURCE_ID).currency("USD").build());
+
+            incomeSourceService.create(USER_ID, "PREMIUM", request);
+
+            verify(authClient, never()).updateProfile(any());
+        }
+
+        @Test
+        @DisplayName("Sync user.currency en echec - creation source reussit quand meme")
+        void syncFailure_doesNotBlockCreate() {
+            IncomeSourceRequest request = IncomeSourceRequest.builder()
+                    .name("Salaire")
+                    .type(IncomeSourceType.SALARY)
+                    .currency("EUR")
+                    .build();
+
+            when(sourceRepository.countByUserId(USER_ID)).thenReturn(0L);
+            IncomeSource savedSource = IncomeSource.builder()
+                    .id(SOURCE_ID).userId(USER_ID).currency("EUR").active(true).build();
+            when(sourceRepository.save(any(IncomeSource.class))).thenReturn(savedSource);
+            when(incomeMapper.toSourceDto(savedSource)).thenReturn(
+                    IncomeSourceDto.builder().id(SOURCE_ID).currency("EUR").build());
+
+            doThrow(new RuntimeException("auth-service down"))
+                    .when(authClient).updateProfile(any());
+
+            IncomeSourceDto result = incomeSourceService.create(USER_ID, "PREMIUM", request);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getCurrency()).isEqualTo("EUR");
         }
 
         @Test

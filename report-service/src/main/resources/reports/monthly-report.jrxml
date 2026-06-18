@@ -22,6 +22,7 @@
     <parameter name="status"           class="java.lang.String"/>
     <parameter name="rule"             class="java.lang.String"/>
     <parameter name="message"          class="java.lang.String"/>
+    <parameter name="currencyCode"     class="java.lang.String"/>
 
     <field name="label"      class="java.lang.String"/>
     <field name="amount"     class="java.math.BigDecimal"/>
@@ -106,10 +107,10 @@
                 <textElement><font size="9"/></textElement>
                 <text><![CDATA[Revenu du mois]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField>
                 <reportElement x="120" y="56" width="415" height="14"/>
                 <textElement><font size="9" isBold="true"/></textElement>
-                <textFieldExpression><![CDATA[$P{totalIncome}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[new java.text.DecimalFormat("#,##0.##").format($P{totalIncome}) + " " + $P{currencyCode}]]></textFieldExpression>
             </textField>
 
             <!-- Moyenne -->
@@ -118,10 +119,10 @@
                 <textElement><font size="9"/></textElement>
                 <text><![CDATA[Moyenne 3 mois]]></text>
             </staticText>
-            <textField pattern="#,##0.00">
+            <textField>
                 <reportElement x="120" y="72" width="415" height="14"/>
                 <textElement><font size="9"/></textElement>
-                <textFieldExpression><![CDATA[$P{averageLast3Months}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[new java.text.DecimalFormat("#,##0.##").format($P{averageLast3Months}) + " " + $P{currencyCode}]]></textFieldExpression>
             </textField>
 
             <!-- Section "Répartition recommandée" -->
@@ -155,10 +156,10 @@
             </textField>
 
             <!-- Amount -->
-            <textField isBlankWhenNull="true" pattern="#,##0.00">
+            <textField isBlankWhenNull="true">
                 <reportElement x="368" y="4" width="165" height="18" style="RowAmount"/>
                 <textElement textAlignment="Right"/>
-                <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{amount} != null ? new java.text.DecimalFormat("#,##0.##").format($F{amount}) + " " + $P{currencyCode} : ""]]></textFieldExpression>
             </textField>
 
             <!-- Bottom border -->

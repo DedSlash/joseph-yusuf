@@ -1,5 +1,6 @@
 package com.josephyusuf.income.service;
 
+import com.josephyusuf.income.client.AuthClient;
 import com.josephyusuf.income.dto.IncomeMapper;
 import com.josephyusuf.income.dto.IncomeSourceDto;
 import com.josephyusuf.income.dto.IncomeSourceRequest;
@@ -29,6 +30,9 @@ class IncomeSourceServiceAdditionalTest {
 
     @Mock
     private IncomeMapper incomeMapper;
+
+    @Mock
+    private AuthClient authClient;
 
     @InjectMocks
     private IncomeSourceService sourceService;

@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class JasperReportServiceTest {
 
-    private final JasperReportService service = new JasperReportService();
+    private final JasperReportService service = new JasperReportService(new ReportCurrencyConverter());
 
     private static final UUID USER_ID = UUID.randomUUID();
 

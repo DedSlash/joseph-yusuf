@@ -11,4 +11,6 @@ public interface IncomeSourceRepository extends JpaRepository<IncomeSource, UUID
     List<IncomeSource> findByUserIdAndActiveTrue(UUID userId);
 
     long countByUserIdAndActiveTrue(UUID userId);
+
+    long countByUserId(UUID userId);
 }

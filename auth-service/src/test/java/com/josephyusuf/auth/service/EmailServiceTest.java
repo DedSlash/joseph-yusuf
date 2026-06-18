@@ -285,4 +285,27 @@ class EmailServiceTest {
 
         verify(mailSender).send((MimeMessage) org.mockito.ArgumentMatchers.any());
     }
+
+    @Test
+    @DisplayName("getSender : from au format 'Name <email>' parsé via InternetAddress")
+    void getSender_fromWithDisplayName_parsesViaInternetAddress() throws Exception {
+        ReflectionTestUtils.setField(emailService, "from", "Joseph·Yusuf <no-reply@josephyusuf.com>");
+
+        emailService.sendTrialWelcome(trialUser());
+
+        MimeMessage sent = captureSentMessage();
+        assertThat(sent.getFrom()[0].toString()).contains("no-reply@josephyusuf.com");
+    }
+
+    @Test
+    @DisplayName("getSender : from blank → fallback vers mailUsername")
+    void getSender_fromBlank_fallsBackToMailUsername() throws Exception {
+        ReflectionTestUtils.setField(emailService, "from", "");
+        ReflectionTestUtils.setField(emailService, "mailUsername", "fallback@josephyusuf.com");
+
+        emailService.sendTrialWelcome(trialUser());
+
+        MimeMessage sent = captureSentMessage();
+        assertThat(sent.getFrom()[0].toString()).contains("fallback@josephyusuf.com");
+    }
 }
