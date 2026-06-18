@@ -4,13 +4,16 @@ import { BehaviorSubject, Observable, of, shareReplay, tap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
+import { IncomeService } from './income.service';
+import { IncomeSource } from '../../shared/models/income.model';
 
 /**
  * Source unique de vérité pour l'affichage des montants côté UI :
  * - Les montants sont stockés et calculés en XOF côté backend
  * - On les convertit en devise utilisateur uniquement pour l'affichage
- * - La devise utilisateur est posée à la création de la 1ère source de revenus
- *   (auto-sync via income-service → auth-service)
+ * - La devise d'affichage = devise de la source de revenu la plus ancienne
+ *   du user (fallback : user.currency, puis XOF). Ça marche sans backfill
+ *   pour les users existants qui ont déjà des sources.
  */
 @Injectable({ providedIn: 'root' })
 export class CurrencyDisplayService {
@@ -21,15 +24,48 @@ export class CurrencyDisplayService {
 
   private rates: Record<string, number> = { XOF: 1 };
   private rates$: Observable<Record<string, number>> | null = null;
+  private oldestSourceCurrency: string | null = null;
+  private userCurrency: string = 'XOF';
 
-  constructor(private http: HttpClient, private authService: AuthService) {
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+    private incomeService: IncomeService
+  ) {
     this.authService.currentUser$.subscribe(user => {
-      const currency = (user?.currency || 'XOF').toUpperCase();
-      if (currency !== this.displayCurrencySubject.value) {
-        this.displayCurrencySubject.next(currency);
-      }
+      this.userCurrency = (user?.currency || 'XOF').toUpperCase();
+      this.recomputeDisplay();
+      if (user) this.refreshSources();
     });
+    this.incomeService.incomeUpdated$.subscribe(() => this.refreshSources());
     this.loadRates().subscribe();
+  }
+
+  private refreshSources(): void {
+    this.incomeService.getSources().subscribe({
+      next: (sources) => {
+        const oldest = this.pickOldestActive(sources);
+        this.oldestSourceCurrency = oldest ? oldest.currency.toUpperCase() : null;
+        this.recomputeDisplay();
+      },
+      error: () => { /* offline / unauthenticated : on garde la devise courante */ }
+    });
+  }
+
+  private pickOldestActive(sources: IncomeSource[]): IncomeSource | null {
+    const active = sources.filter(s => s.active && s.currency);
+    if (active.length === 0) return null;
+    return active.reduce((oldest, s) => {
+      if (!oldest) return s;
+      return (s.createdAt && oldest.createdAt && s.createdAt < oldest.createdAt) ? s : oldest;
+    });
+  }
+
+  private recomputeDisplay(): void {
+    const next = this.oldestSourceCurrency || this.userCurrency || 'XOF';
+    if (next !== this.displayCurrencySubject.value) {
+      this.displayCurrencySubject.next(next);
+    }
   }
 
   loadRates(): Observable<Record<string, number>> {

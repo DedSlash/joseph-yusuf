@@ -169,9 +169,6 @@ interface ImportRow {
                   <label class="entry-label">{{ entry.sourceName }}</label>
                   <span class="entry-badge entry-badge-update" *ngIf="entry.entryId">Modifier</span>
                   <span class="entry-badge entry-badge-new" *ngIf="!entry.entryId">Nouveau</span>
-                  <span class="entry-converted" *ngIf="entry.currency !== displayCurrency && entry.amount > 0">
-                    ≈ {{ formatCurrency(toXOF(entry.amount, entry.currency)) }}
-                  </span>
                 </div>
                 <div class="entry-input-wrapper">
                   <p-inputNumber
@@ -269,9 +266,6 @@ interface ImportRow {
               filterPlaceholder="Rechercher…"
               appendTo="body"
             ></p-dropdown>
-            <span class="currency-hint" *ngIf="newSource.currency && newSource.currency !== 'XOF'">
-              Les montants seront convertis en XOF pour l'analyse (taux indicatif).
-            </span>
           </div>
         </div>
         <ng-template pTemplate="footer">
