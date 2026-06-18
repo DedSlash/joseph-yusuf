@@ -88,9 +88,9 @@ public class MoneyTipsService {
         List<MoneyTipDto> result = new ArrayList<>();
 
         for (MoneyTip tip : MoneyTipsCatalog.TIPS) {
-            if (!matchesCountry(tip, country)) continue;
-            if (status == MonthStatus.LEAN && tip.isHiddenInLean()) continue;
-
+            if (!matchesCountry(tip, country) || (status == MonthStatus.LEAN && tip.isHiddenInLean())) {
+                continue;
+            }
             boolean locked = isLocked(plan, tip.getRequiredPlan());
             result.add(toDto(tip, locked, recommendedSavings, currency, french));
         }
