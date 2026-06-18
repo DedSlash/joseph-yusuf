@@ -1,5 +1,6 @@
 package com.josephyusuf.auth.service;
 
+import com.josephyusuf.auth.dto.AccessTokenClaims;
 import com.josephyusuf.auth.entity.Plan;
 import com.josephyusuf.auth.entity.Role;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -141,5 +143,36 @@ class JwtServiceTest {
         String extractedRole = jwtService.extractRole(token);
 
         assertThat(extractedRole).isEqualTo(Role.USER.name());
+    }
+
+    @Test
+    @DisplayName("generateAccessToken(claims) - country/currency null fallback to SN/XOF")
+    void generateAccessToken_nullCountryAndCurrency_fallbackToDefaults() {
+        AccessTokenClaims claims = AccessTokenClaims.builder()
+                .userId(userId).email(email).plan(plan).role(Role.USER)
+                .country(null).currency(null)
+                .inTrial(false).trialEndsAt(null)
+                .build();
+
+        String token = jwtService.generateAccessToken(claims);
+
+        assertThat(jwtService.extractCountry(token)).isEqualTo("SN");
+        assertThat(jwtService.extractCurrency(token)).isEqualTo("XOF");
+    }
+
+    @Test
+    @DisplayName("generateAccessToken(claims) - trialEndsAt non null ajoute la claim")
+    void generateAccessToken_withTrialEndsAt_addsClaim() {
+        LocalDateTime trialEnd = LocalDateTime.of(2026, 6, 25, 12, 0);
+        AccessTokenClaims claims = AccessTokenClaims.builder()
+                .userId(userId).email(email).plan(plan).role(Role.USER)
+                .country("SN").currency("XOF")
+                .inTrial(true).trialEndsAt(trialEnd)
+                .build();
+
+        String token = jwtService.generateAccessToken(claims);
+
+        assertThat(token).isNotEmpty();
+        assertThat(token.split("\\.")).hasSize(3);
     }
 }
