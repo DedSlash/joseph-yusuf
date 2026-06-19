@@ -26,7 +26,11 @@ describe('IncomesComponent', () => {
     incomeSpy.getMoneyTips.and.returnValue(EMPTY);
     incomeSpy.incomeUpdated$ = new Subject<void>().asObservable();
 
-    authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan', 'isLoggedIn', 'getCurrentUser']);
+    authSpy = jasmine.createSpyObj<AuthService>(
+      'AuthService',
+      ['getPlan', 'isLoggedIn', 'getCurrentUser'],
+      { currentUser$: of(null) }
+    );
     authSpy.getPlan.and.returnValue('FREE');
     authSpy.isLoggedIn.and.returnValue(true);
 

@@ -114,6 +114,7 @@ describe('MoneyTipsModalComponent', () => {
   });
 
   it('headerTitle() utilise la devise d\'affichage et n\'appose plus tips.currency', () => {
+    component.currentLang = 'fr';
     const title = component.headerTitle();
     expect(title).toContain('Revenu de Mai');
     expect(title).toContain('500000 XOF');

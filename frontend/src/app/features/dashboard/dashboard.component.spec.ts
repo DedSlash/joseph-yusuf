@@ -32,7 +32,11 @@ describe('DashboardComponent', () => {
     ruleSpy.getConfig.and.returnValue(EMPTY);
     ruleSpy.calculate.and.returnValue(EMPTY);
 
-    authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['getPlan']);
+    authSpy = jasmine.createSpyObj<AuthService>(
+      'AuthService',
+      ['getPlan'],
+      { currentUser$: of(null) }
+    );
     authSpy.getPlan.and.returnValue('FREE');
 
     reportSpy = jasmine.createSpyObj<ReportService>('ReportService', ['generateMonthly', 'generateAnnual', 'download']);
