@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { BehaviorSubject } from 'rxjs';
 import { MoneyTipsModalComponent } from './money-tips-modal.component';
 import { MoneyTips } from '../../../shared/models/income.model';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 describe('MoneyTipsModalComponent', () => {
   let component: MoneyTipsModalComponent;
@@ -19,10 +21,23 @@ describe('MoneyTipsModalComponent', () => {
     ]
   };
 
+  let currencyStub: Partial<CurrencyDisplayService>;
+
   beforeEach(async () => {
+    currencyStub = {
+      displayCurrency$: new BehaviorSubject<string>('XOF').asObservable(),
+      displayCurrency: 'XOF',
+      formatAmount: (xof: number | null | undefined) => `${xof ?? 0} XOF`,
+      fromXof: (xof: number) => xof,
+      loadRates: () => new BehaviorSubject<Record<string, number>>({ XOF: 1 }).asObservable() as any
+    };
+
     await TestBed.configureTestingModule({
       imports: [MoneyTipsModalComponent],
-      providers: [provideAnimations()]
+      providers: [
+        provideAnimations(),
+        { provide: CurrencyDisplayService, useValue: currencyStub }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(MoneyTipsModalComponent);
@@ -92,5 +107,27 @@ describe('MoneyTipsModalComponent', () => {
 
   it('lockedCount() compte les tips verrouillés', () => {
     expect(component.lockedCount()).toBe(1);
+  });
+
+  it('formatAmount() délègue à CurrencyDisplayService (devise d\'affichage)', () => {
+    expect(component.formatAmount(500_000)).toBe('500000 XOF');
+  });
+
+  it('headerTitle() utilise la devise d\'affichage et n\'appose plus tips.currency', () => {
+    const title = component.headerTitle();
+    expect(title).toContain('Revenu de Mai');
+    expect(title).toContain('500000 XOF');
+    expect(title.match(/XOF/g)?.length).toBe(1);
+  });
+
+  it('resolveDescription() substitue {recommendedSavings} {currency} via la devise d\'affichage', () => {
+    const out = component.resolveDescription(
+      'Montant recommandé ce mois : {recommendedSavings} {currency}.'
+    );
+    expect(out).toBe('Montant recommandé ce mois : 100000 XOF.');
+  });
+
+  it('resolveDescription() ne touche pas une description sans placeholder', () => {
+    expect(component.resolveDescription('Texte simple sans placeholder.')).toBe('Texte simple sans placeholder.');
   });
 });

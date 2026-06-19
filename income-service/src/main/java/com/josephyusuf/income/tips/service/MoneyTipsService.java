@@ -43,8 +43,7 @@ public class MoneyTipsService {
                 summary.getAverageLast3Months(), summary.getStatus());
         RecommendedSplitDto split = computeSplit(totalIncome);
 
-        List<MoneyTipDto> tips = filterAndLocalize(safeCountry, safePlan, summary.getStatus(),
-                recommendedSavings, safeCurrency, french);
+        List<MoneyTipDto> tips = filterAndLocalize(safeCountry, safePlan, summary.getStatus(), french);
 
         return MoneyTipsDto.builder()
                 .josephStatus(summary.getStatus())
@@ -83,7 +82,6 @@ public class MoneyTipsService {
     }
 
     private List<MoneyTipDto> filterAndLocalize(String country, String plan, MonthStatus status,
-                                                 BigDecimal recommendedSavings, String currency,
                                                  boolean french) {
         List<MoneyTipDto> result = new ArrayList<>();
 
@@ -92,7 +90,7 @@ public class MoneyTipsService {
                 continue;
             }
             boolean locked = isLocked(plan, tip.getRequiredPlan());
-            result.add(toDto(tip, locked, recommendedSavings, currency, french));
+            result.add(toDto(tip, locked, french));
         }
 
         sortByPriority(result, status);
@@ -115,14 +113,8 @@ public class MoneyTipsService {
         return 0;
     }
 
-    private MoneyTipDto toDto(MoneyTip tip, boolean locked, BigDecimal recommendedSavings,
-                               String currency, boolean french) {
+    private MoneyTipDto toDto(MoneyTip tip, boolean locked, boolean french) {
         String description = french ? tip.getDescriptionFr() : tip.getDescriptionEn();
-        if ("TIP_008".equals(tip.getId())) {
-            description = description
-                    .replace("{recommendedSavings}", recommendedSavings.toPlainString())
-                    .replace("{currency}", currency);
-        }
         return MoneyTipDto.builder()
                 .id(tip.getId())
                 .title(french ? tip.getTitleFr() : tip.getTitleEn())
