@@ -198,8 +198,8 @@ export class SavingsWidgetComponent implements OnInit, OnDestroy {
 
   constructor(
     private savingsService: SavingsService,
-    private incomeService: IncomeService,
-    private currencyDisplay: CurrencyDisplayService
+    private readonly incomeService: IncomeService,
+    private readonly currencyDisplay: CurrencyDisplayService
   ) {}
 
   ngOnInit(): void {

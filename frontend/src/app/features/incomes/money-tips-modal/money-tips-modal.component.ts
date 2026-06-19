@@ -1,8 +1,10 @@
-import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CheckboxModule } from 'primeng/checkbox';
+import { Subscription } from 'rxjs';
 import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
+import { CurrencyDisplayService } from '../../../core/services/currency-display.service';
 
 @Component({
   selector: 'app-money-tips-modal',
@@ -58,7 +60,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
                 <span class="tip-icon">{{ tip.icon }}</span>
                 <span class="tip-title">{{ tip.title }}</span>
               </div>
-              <p class="tip-description">{{ tip.description }}</p>
+              <p class="tip-description">{{ resolveDescription(tip.description) }}</p>
 
               <div class="tip-actions" *ngIf="tip.actionUrl">
                 <button class="btn-outline" (click)="openExternal(tip.actionUrl!)">
@@ -354,7 +356,7 @@ import { MoneyTips, MonthStatus } from '../../../shared/models/income.model';
     }
   `]
 })
-export class MoneyTipsModalComponent implements OnChanges {
+export class MoneyTipsModalComponent implements OnChanges, OnInit, OnDestroy {
   @Input() visible = false;
   @Input() tips: MoneyTips | null = null;
   @Input() monthLabel = '';
@@ -368,15 +370,23 @@ export class MoneyTipsModalComponent implements OnChanges {
   dismissForMonth = false;
   currentLang: 'fr' | 'en' = 'fr';
 
-  private readonly currencyFormatter = new Intl.NumberFormat('fr-SN', {
-    maximumFractionDigits: 0
-  });
+  private displaySub?: Subscription;
 
-  constructor() {
+  constructor(private readonly currencyDisplay: CurrencyDisplayService) {
     try {
       const saved = localStorage.getItem('joseph_tips_lang');
       if (saved === 'en' || saved === 'fr') this.currentLang = saved;
     } catch {}
+  }
+
+  ngOnInit(): void {
+    // Force ré-évaluation des bindings quand la devise d'affichage change
+    // (ex. l'utilisateur vient d'ajouter sa 1ère source dans une autre devise).
+    this.displaySub = this.currencyDisplay.displayCurrency$.subscribe();
+  }
+
+  ngOnDestroy(): void {
+    this.displaySub?.unsubscribe();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -414,12 +424,26 @@ export class MoneyTipsModalComponent implements OnChanges {
   headerTitle(): string {
     if (!this.tips) return '';
     const amount = this.formatAmount(this.tips.totalAmount);
-    return `Revenu de ${this.monthLabel} enregistré : ${amount} ${this.tips.currency}`;
+    const prefix = this.currentLang === 'en' ? 'Income for' : 'Revenu de';
+    const suffix = this.currentLang === 'en' ? 'recorded' : 'enregistré';
+    return `${prefix} ${this.monthLabel} ${suffix} : ${amount}`;
   }
 
   formatAmount(value: number): string {
-    if (value === null || value === undefined) return '0';
-    return this.currencyFormatter.format(value);
+    return this.currencyDisplay.formatAmount(value ?? 0);
+  }
+
+  resolveDescription(description: string): string {
+    if (!description) return '';
+    if (!this.tips) return description;
+    if (!description.includes('{recommendedSavings}') && !description.includes('{currency}')) {
+      return description;
+    }
+    const amount = this.formatAmount(this.tips.recommendedSavings);
+    return description
+      .replace(/\{recommendedSavings\}\s*\{currency\}/g, amount)
+      .replace(/\{recommendedSavings\}/g, amount)
+      .replace(/\{currency\}/g, '');
   }
 
   planLabel(plan: 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS'): string {

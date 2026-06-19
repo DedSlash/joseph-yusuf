@@ -1539,8 +1539,8 @@ export class IncomesComponent implements OnInit {
   constructor(
     private incomeService: IncomeService,
     private authService: AuthService,
-    private router: Router,
-    private currencyDisplay: CurrencyDisplayService
+    private readonly router: Router,
+    private readonly currencyDisplay: CurrencyDisplayService
   ) {
     const now = new Date();
     this.currentMonth = now.getMonth() + 1;

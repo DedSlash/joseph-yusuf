@@ -117,7 +117,7 @@ describe('SubscriptionService', () => {
   });
 
   it('createPayTechPayment() → POST /paytech/create avec paytechMethodCode', () => {
-    const body = { planTier: 'PREMIUM', couponCode: 'EARLY50', paytechMethodCode: 'wave' };
+    const body = { planTier: 'PREMIUM', couponCode: 'EARLY50', paytechMethodCode: 'wave', monthsCount: 1 };
     service.createPayTechPayment(body).subscribe();
     const req = httpMock.expectOne(`${apiUrl}/paytech/create`);
     expect(req.request.method).toBe('POST');

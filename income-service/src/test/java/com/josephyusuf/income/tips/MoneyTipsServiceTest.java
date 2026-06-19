@@ -141,8 +141,8 @@ class MoneyTipsServiceTest {
     }
 
     @Test
-    @DisplayName("TIP_008 : description personnalisée avec recommendedSavings et devise")
-    void tip008_descriptionContainsRecommendedAmount() {
+    @DisplayName("TIP_008 : description contient placeholders {recommendedSavings} et {currency} pour résolution frontend")
+    void tip008_descriptionKeepsPlaceholdersForFrontend() {
         stubSummary(MonthStatus.NORMAL, new BigDecimal("500000"), new BigDecimal("500000"));
 
         MoneyTipsDto result = moneyTipsService.getTips(USER_ID, 4, 2026, "PREMIUM", "SN", "XOF", Locale.FRENCH);
@@ -152,11 +152,9 @@ class MoneyTipsServiceTest {
                 .findFirst()
                 .orElseThrow();
 
-        // Pour NORMAL avec revenu 500000, recommendedSavings = 20% = 100000.00
-        assertThat(tip008.getDescription()).contains("100000.00");
-        assertThat(tip008.getDescription()).contains("XOF");
-        assertThat(tip008.getDescription()).doesNotContain("{recommendedSavings}");
-        assertThat(tip008.getDescription()).doesNotContain("{currency}");
+        // Le frontend substitue {recommendedSavings} et {currency} dans la devise d'affichage du user.
+        assertThat(tip008.getDescription()).contains("{recommendedSavings}");
+        assertThat(tip008.getDescription()).contains("{currency}");
     }
 
     @Test
