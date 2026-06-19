@@ -7,7 +7,7 @@ import { CurrencyDisplayService } from '../../core/services/currency-display.ser
   pure: false
 })
 export class DisplayAmountPipe implements PipeTransform {
-  constructor(private currency: CurrencyDisplayService) {}
+  constructor(private readonly currency: CurrencyDisplayService) {}
 
   transform(amountXof: number | null | undefined, currency?: string): string {
     return this.currency.formatAmount(amountXof, currency);

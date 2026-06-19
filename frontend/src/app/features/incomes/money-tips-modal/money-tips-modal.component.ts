@@ -372,7 +372,7 @@ export class MoneyTipsModalComponent implements OnChanges, OnInit, OnDestroy {
 
   private displaySub?: Subscription;
 
-  constructor(private currencyDisplay: CurrencyDisplayService) {
+  constructor(private readonly currencyDisplay: CurrencyDisplayService) {
     try {
       const saved = localStorage.getItem('joseph_tips_lang');
       if (saved === 'en' || saved === 'fr') this.currentLang = saved;

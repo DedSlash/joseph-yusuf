@@ -28,12 +28,12 @@ export class CurrencyDisplayService {
   private userCurrency: string = 'XOF';
 
   constructor(
-    private http: HttpClient,
-    private authService: AuthService,
-    private incomeService: IncomeService
+    private readonly http: HttpClient,
+    private readonly authService: AuthService,
+    private readonly incomeService: IncomeService
   ) {
     this.authService.currentUser$.subscribe(user => {
-      this.userCurrency = (user?.currency || 'XOF').toUpperCase();
+      this.userCurrency = (user?.currency ?? 'XOF').toUpperCase();
       this.recomputeDisplay();
       if (user) this.refreshSources();
     });
@@ -55,14 +55,14 @@ export class CurrencyDisplayService {
   private pickOldestActive(sources: IncomeSource[]): IncomeSource | null {
     const active = sources.filter(s => s.active && s.currency);
     if (active.length === 0) return null;
-    return active.reduce((oldest, s) => {
+    return active.reduce<IncomeSource | null>((oldest, s) => {
       if (!oldest) return s;
       return (s.createdAt && oldest.createdAt && s.createdAt < oldest.createdAt) ? s : oldest;
-    });
+    }, null);
   }
 
   private recomputeDisplay(): void {
-    const next = this.oldestSourceCurrency || this.userCurrency || 'XOF';
+    const next = this.oldestSourceCurrency ?? this.userCurrency ?? 'XOF';
     if (next !== this.displayCurrencySubject.value) {
       this.displayCurrencySubject.next(next);
     }
@@ -84,13 +84,13 @@ export class CurrencyDisplayService {
   }
 
   fromXof(amountXof: number, currency?: string): number {
-    const code = (currency || this.displayCurrency).toUpperCase();
+    const code = (currency ?? this.displayCurrency).toUpperCase();
     const rate = this.rates[code] ?? 1;
     return amountXof / rate;
   }
 
   formatAmount(amountXof: number | null | undefined, currency?: string): string {
-    const code = (currency || this.displayCurrency).toUpperCase();
+    const code = (currency ?? this.displayCurrency).toUpperCase();
     const value = this.fromXof(amountXof ?? 0, code);
     const locale = this.localeFor(code);
     const fractionDigits = this.zeroDecimal(code) ? 0 : 2;
