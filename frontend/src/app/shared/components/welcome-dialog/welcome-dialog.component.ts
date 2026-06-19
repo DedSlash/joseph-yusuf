@@ -30,7 +30,7 @@ import { DialogModule } from 'primeng/dialog';
             <span class="help-step-num">1</span>
             <div>
               <strong>Ajoutez une source de revenu</strong>
-              <p>Menu <em>« Mes Revenus »</em> → onglet <em>« Sources »</em> → bouton <em>« Ajouter une source »</em>.</p>
+              <p>Ouvrez <em>« Mes Revenus »</em> via le bouton <em>« Commencer maintenant »</em> ci-dessous (ou le menu <em>☰</em> en haut à gauche sur mobile) → onglet <em>« Sources »</em> → <em>« Ajouter une source »</em>.</p>
             </div>
           </div>
           <div class="help-step">
