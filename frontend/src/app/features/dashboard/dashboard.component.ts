@@ -1638,8 +1638,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!user) return;
     const key = `joseph.onboardingShown.${user.id}`;
     if (localStorage.getItem(key)) return;
-    localStorage.setItem(key, '1');
-    setTimeout(() => { this.showWelcomeDialog = true; }, 350);
+    // N'afficher que si l'utilisateur n'a encore aucune source de revenu.
+    // Sinon il connaît déjà l'app — accès uniquement via "Comment ça marche".
+    this.incomeService.getSources().subscribe({
+      next: (sources) => {
+        localStorage.setItem(key, '1');
+        if (!sources || sources.length === 0) {
+          setTimeout(() => { this.showWelcomeDialog = true; }, 350);
+        }
+      },
+      error: () => { /* en cas d'erreur API, ne pas afficher */ }
+    });
   }
 
   private loadTrialStatus(): void {
