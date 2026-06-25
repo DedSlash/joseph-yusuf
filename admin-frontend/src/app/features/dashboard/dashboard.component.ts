@@ -14,7 +14,7 @@ type PreviewTemplate = 'trial-active' | 'grace-24h';
   standalone: true,
   imports: [CommonModule, FormsModule, DatePipe, DecimalPipe, PercentPipe],
   template: `
-    <h1>Dashboard</h1>
+    <h1>Tableau de bord</h1>
     <p class="subtitle">Indicateurs clés Joseph · Yusuf</p>
 
     <div *ngIf="errorMessage()" class="alert error">{{ errorMessage() }}</div>

@@ -33,7 +33,7 @@ const PLANS: PlanMeta[] = [
     name: 'Free',
     tagline: 'Découverte du Principe de Joseph',
     priceEur: 0, priceXof: 0,
-    features: ['1 source de revenu', 'Règle 50/30/20 uniquement', 'Dashboard de base'],
+    features: ['1 source de revenu', 'Règle 50/30/20 uniquement', 'Tableau de bord de base'],
     rank: 0
   },
   {
@@ -49,7 +49,7 @@ const PLANS: PlanMeta[] = [
     name: 'Premium +',
     tagline: 'Pour ceux qui veulent aller plus loin',
     priceEur: 9.99, priceXof: 5990,
-    features: ['Tout Premium', 'Dashboard avancé', 'Support prioritaire', 'Accès anticipé'],
+    features: ['Tout Premium', 'Tableau de bord avancé', 'Support prioritaire', 'Accès anticipé'],
     rank: 2
   }
 ];
@@ -120,7 +120,7 @@ const METHOD_LOGO: Record<string, string> = {
             <p>
               Code <strong>EARLY50</strong> r&eacute;serv&eacute; aux
               <strong>100 premiers inscrits</strong> pour b&eacute;n&eacute;ficier de
-              <strong>-50% &agrave; vie</strong> d&egrave;s l'ouverture des paiements.
+              <strong>-50% &agrave; vie</strong> sur votre abonnement.
             </p>
           </div>
 

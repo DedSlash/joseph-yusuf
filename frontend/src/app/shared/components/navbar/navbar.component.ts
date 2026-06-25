@@ -26,7 +26,7 @@ import { WelcomeDialogComponent } from '../welcome-dialog/welcome-dialog.compone
           <span class="logo-text">Joseph &middot; Yusuf</span>
         </a>
         <div class="nav-links">
-          <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
+          <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Tableau de bord</a>
           <a routerLink="/incomes" routerLinkActive="active" class="nav-link">Mes Revenus</a>
         </div>
       </div>
@@ -80,7 +80,7 @@ import { WelcomeDialogComponent } from '../welcome-dialog/welcome-dialog.compone
     <!-- Drawer mobile -->
     <div class="nav-drawer-overlay" *ngIf="drawerOpen" (click)="drawerOpen = false"></div>
     <aside class="nav-drawer" [class.open]="drawerOpen">
-      <a routerLink="/dashboard" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Dashboard</a>
+      <a routerLink="/dashboard" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Tableau de bord</a>
       <a routerLink="/incomes" routerLinkActive="active" class="drawer-link" (click)="drawerOpen = false">Mes Revenus</a>
       <a routerLink="/subscription" class="drawer-link" (click)="drawerOpen = false" *ngIf="paymentsActive">Abonnement</a>
       <a class="drawer-link" (click)="goToAccount()">Mon compte</a>
