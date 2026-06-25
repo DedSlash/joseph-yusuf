@@ -145,7 +145,7 @@ Chart.register(...registerables);
             <ng-template #gaugeBlocked>
               <div class="gauge-premium-hint">
                 <span>📊</span>
-                <span>La jauge de positionnement et les seuils précis seront disponibles en <strong>Premium</strong> dès l'ouverture des paiements.</span>
+                <span>La jauge de positionnement et les seuils précis sont réservés aux plans <strong>Premium</strong>. <a routerLink="/subscription" class="gauge-upgrade-link">Passer en Premium →</a></span>
               </div>
             </ng-template>
           </div>
@@ -175,9 +175,9 @@ Chart.register(...registerables);
               <span class="overlay-icon">✦</span>
               <p class="overlay-title">Votre réserve Joseph vous attend</p>
               <p class="overlay-sub">
-                Le calcul détaillé de votre réserve sera disponible en <strong>Premium</strong>
-                dès l'ouverture des paiements.
+                Le calcul détaillé de votre réserve est réservé aux plans <strong>Premium</strong>.
               </p>
+              <a routerLink="/subscription" class="btn-overlay-upgrade">Passer en Premium →</a>
             </div>
           </div>
         </div>
@@ -192,7 +192,7 @@ Chart.register(...registerables);
           </div>
           <div class="section-header-right">
             <button *ngIf="hasTipsAvailable" class="tips-button" (click)="openMoneyTips()">💡 Astuces répartition</button>
-            <button class="btn-change-rule" (click)="showRuleDialog = true">Changer de règle</button>
+            <button *ngIf="isPremium()" class="btn-change-rule" (click)="showRuleDialog = true">Changer de règle</button>
           </div>
         </div>
 
@@ -221,7 +221,7 @@ Chart.register(...registerables);
         </div>
 
         <!-- Suggestion RULE_JOSEPH si non active -->
-        <div class="joseph-suggestion" *ngIf="allocations.rule !== 'RULE_JOSEPH' && summary && josephComparison">
+        <div class="joseph-suggestion" *ngIf="isPremium() && allocations.rule !== 'RULE_JOSEPH' && summary && josephComparison">
           <span class="suggestion-icon">✦</span>
           <div>
             <strong>Et avec le Principe de Joseph ?</strong>
@@ -348,7 +348,7 @@ Chart.register(...registerables);
               <strong>{{ trialDaysRemaining }} {{ trialDaysRemaining === 1 ? 'jour' : 'jours' }}</strong>.
             </p>
             <p class="trial-dashboard-promo">
-              🎁 Code <strong>EARLY50</strong> réservé aux 100 premiers inscrits — souscription bientôt disponible.
+              🎁 Code <strong>EARLY50</strong> réservé aux 100 premiers inscrits — <strong>-50% à vie</strong> sur votre abonnement.
             </p>
           </ng-container>
           <ng-template #giftView>
@@ -1837,6 +1837,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private loadAllocations(summary: MonthSummary, month: number, year: number): void {
     if (!summary || summary.totalIncome === 0) return;
+    // FREE : forcer 50/30/20 (config peut pointer sur une règle Premium hors d'accès).
+    if (!this.isPremium()) {
+      this.ruleService.calculate({
+        rule: 'RULE_50_30_20',
+        totalIncome: summary.totalIncome,
+        month,
+        year
+      }).subscribe({
+        next: (result) => this.allocations = result,
+        error: () => this.allocations = null
+      });
+      return;
+    }
     this.ruleService.getConfig().subscribe({
       next: (config) => {
         this.ruleService.calculate({
@@ -1854,6 +1867,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private loadJosephComparison(summary: MonthSummary, month: number, year: number): void {
     if (!summary || summary.totalIncome === 0) return;
+    if (!this.isPremium()) {
+      this.josephComparison = null;
+      return;
+    }
     this.ruleService.calculate({
       rule: 'RULE_JOSEPH',
       totalIncome: summary.totalIncome,
@@ -2140,7 +2157,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   goToSubscription(): void {
-    // Souscription désactivée tant que les moyens de paiement ne sont pas activés.
+    this.router.navigate(['/subscription']);
   }
 
   onDashboardTipsDismiss(): void {}

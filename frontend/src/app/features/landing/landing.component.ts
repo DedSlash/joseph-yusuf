@@ -27,7 +27,7 @@ const PLANS: PlanCard[] = [
     features: [
       '1 source de revenu',
       'Règle 50/30/20',
-      'Dashboard de base',
+      'Tableau de bord de base',
       'Alertes automatiques',
     ],
     highlight: false,
@@ -57,7 +57,7 @@ const PLANS: PlanCard[] = [
     priceXof: 6000,
     features: [
       'Tout ce qu\'inclut Premium',
-      'Dashboard avancé',
+      'Tableau de bord avancé',
       'Support prioritaire',
       'Accès anticipé aux nouvelles fonctionnalités',
     ],

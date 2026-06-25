@@ -99,7 +99,7 @@ public class EmailService {
                 + "   Onglet « Saisie mensuelle ».\n"
                 + "   Tu as déjà un historique sur Excel, CSV ou JSON ? Bouton\n"
                 + "   « Importer » au même endroit (PREMIUM, inclus dans ton essai).\n\n"
-                + "3. Reviens sur le Dashboard\n"
+                + "3. Reviens sur le Tableau de bord\n"
                 + "   Le Principe de Joseph y calcule ta répartition\n"
                 + "   (abondance / normal / disette) et te dit combien épargner\n"
                 + "   ce mois-ci. Il faut au moins 3 mois de données pour que\n"
@@ -146,9 +146,10 @@ public class EmailService {
                 + "Sans action de votre part, votre compte passera automatiquement en FREE demain. "
                 + "Vous garderez vos données et toutes vos saisies — seules les fonctionnalités "
                 + "avancées seront désactivées.\n\n"
-                + "Les moyens de paiement seront ouverts très bientôt. Quand ce sera le cas, "
-                + "le code EARLY50 vous donnera -50% à vie — réservé aux 100 premiers inscrits.\n\n"
-                + "Nous vous préviendrons dès l'ouverture des paiements.\n\n"
+                + "Pour continuer en PREMIUM ou PREMIUM_PLUS, rendez-vous sur "
+                + "https://josephyusuf.com/subscription. Le code EARLY50 vous donne -50% à vie "
+                + "(réservé aux 100 premiers inscrits).\n\n"
+                + "Moyens de paiement disponibles : Wave, Orange Money, Free Money, carte bancaire.\n\n"
                 + "🌾 L'équipe Joseph·Yusuf";
 
         sendEmail(user.getEmail(),
@@ -160,10 +161,10 @@ public class EmailService {
         String body = GREETING + user.getFirstName() + ",\n\n"
                 + "Votre période d'essai est terminée.\n"
                 + "Votre compte est maintenant en FREE — toutes vos données restent disponibles.\n\n"
-                + "Les moyens de paiement ne sont pas encore activés. Dès qu'ils le seront, "
-                + "vous pourrez passer en PREMIUM ou PREMIUM_PLUS, et utiliser le code EARLY50 "
+                + "Pour repasser en PREMIUM ou PREMIUM_PLUS à tout moment, rendez-vous sur "
+                + "https://josephyusuf.com/subscription. Le code EARLY50 reste valable "
                 + "(-50% à vie, réservé aux 100 premiers inscrits) s'il est encore disponible.\n\n"
-                + "Nous vous préviendrons par email dès l'ouverture des paiements.\n\n"
+                + "Moyens de paiement disponibles : Wave, Orange Money, Free Money, carte bancaire.\n\n"
                 + "🌾 L'équipe Joseph·Yusuf";
 
         sendEmail(user.getEmail(),
